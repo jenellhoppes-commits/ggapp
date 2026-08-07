@@ -481,7 +481,7 @@ const logColumns: DataTableColumns<RepairLog> = [
           <div class="mb-5 grid grid-cols-1 gap-3 md:grid-cols-4">
             <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="建議操作">{{ actionLabel[currentRow.suggested_action] }}</n-statistic></div>
             <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="重試次數">{{ currentRow.retry_count }} / {{ currentRow.max_retry }}</n-statistic></div>
-            <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="顯示金額"><MoneyText :value="currentRow.display_amount" :currency="currentRow.display_currency" compact show-sign /></n-statistic></div>
+            <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="原幣金額"><MoneyText :value="currentRow.display_amount" :currency="currentRow.display_currency" compact show-sign /></n-statistic></div>
             <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="USDT 金額"><MoneyText :value="currentRow.settlement_amount" currency="USDT" compact show-sign /></n-statistic></div>
           </div>
 

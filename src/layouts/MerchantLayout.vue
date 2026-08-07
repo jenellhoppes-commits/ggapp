@@ -133,19 +133,19 @@ const themeOverrides: GlobalThemeOverrides = {
             </div>
           </div>
 
-          <div class="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-3 md:flex-none md:gap-4">
+          <div class="flex shrink-0 items-center justify-end gap-2 md:flex-none md:gap-4">
             <div class="hidden text-right md:block">
               <div class="text-sm font-bold text-white">{{ portalTitle }}</div>
               <div class="text-xs text-gray-400">{{ portalSubtitle }}</div>
             </div>
             <LanguageSwitcher />
-            <div class="flex min-w-0 items-center gap-2">
-              <span class="max-w-[180px] truncate text-sm text-gray-400">
+            <div class="flex items-center gap-2">
+              <span class="hidden max-w-[180px] truncate text-sm text-gray-400 md:inline">
                 {{ t('common.hi') }} <span class="font-bold text-gray-200">{{ authStore.userInfo?.name || portalTag }}</span>
               </span>
-              <n-button strong secondary type="error" size="small" @click="handleLogout">
+              <n-button strong secondary type="error" size="small" aria-label="登出" @click="handleLogout">
                 <template #icon><n-icon><ExitToAppOutlined /></n-icon></template>
-                {{ t('common.logout') }}
+                <span class="hidden md:inline">{{ t('common.logout') }}</span>
               </n-button>
             </div>
           </div>

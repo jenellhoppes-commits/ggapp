@@ -56,6 +56,7 @@ interface MerchantCreateForm {
   default_display_currency: MerchantCurrency
   settlement_currency: 'USDT'
   service_fee_rate: number
+  default_merchant_markup_rate: number
   authorized_providers: string[]
   game_package: string
   agent_name: string
@@ -71,6 +72,7 @@ interface AgentMeta {
   root: string
   settlement: string
   path: string
+  service_fee_rate: number
   rates: Record<string, number>
 }
 
@@ -112,6 +114,7 @@ const defaultForm = (): MerchantCreateForm => ({
   default_display_currency: 'TWD',
   settlement_currency: 'USDT',
   service_fee_rate: 0.005,
+  default_merchant_markup_rate: 0.01,
   authorized_providers: ['pg'],
   game_package: 'Default Global Pack',
   agent_name: '平台直營代理',
@@ -188,10 +191,10 @@ const agentOptions = [
 ]
 
 const agentMeta: Record<string, AgentMeta> = {
-  '平台直營代理': { id: 1, code: 'AGT-DIRECT', direct: true, level: 1, parent: null, root: 'AGT-DIRECT', settlement: 'AGT-DIRECT', path: 'AGT-DIRECT', rates: { pg: 0.07, jili: 0.085, evo: 0.1, pp: 0.082, habanero: 0.09 } },
-  'SEA Growth Agent': { id: 2, code: 'AGT-SEA-001', direct: false, level: 1, parent: null, root: 'AGT-SEA-001', settlement: 'AGT-SEA-001', path: 'AGT-SEA-001', rates: { pg: 0.075, jili: 0.09, evo: 0.095, pp: 0.078, habanero: 0.088 } },
-  'SEA Sub Agent 01': { id: 3, code: 'AGT-SEA-SUB01', direct: false, level: 2, parent: 'AGT-SEA-001', root: 'AGT-SEA-001', settlement: 'AGT-SEA-001', path: 'AGT-SEA-001 / AGT-SEA-SUB01', rates: { pg: 0.088, jili: 0.102, evo: 0.108, pp: 0.092, habanero: 0.1 } },
-  'SEA Local Desk L3': { id: 4, code: 'AGT-SEA-SUB01-L3', direct: false, level: 3, parent: 'AGT-SEA-SUB01', root: 'AGT-SEA-001', settlement: 'AGT-SEA-001', path: 'AGT-SEA-001 / AGT-SEA-SUB01 / AGT-SEA-SUB01-L3', rates: { pg: 0.096, jili: 0.11, evo: 0.116, pp: 0.1, habanero: 0.108 } }
+  '平台直營代理': { id: 1, code: 'AGT-DIRECT', direct: true, level: 1, parent: null, root: 'AGT-DIRECT', settlement: 'AGT-DIRECT', path: 'AGT-DIRECT', service_fee_rate: 0.005, rates: { pg: 0.07, jili: 0.085, evo: 0.1, pp: 0.082, habanero: 0.09 } },
+  'SEA Growth Agent': { id: 2, code: 'AGT-SEA-001', direct: false, level: 1, parent: null, root: 'AGT-SEA-001', settlement: 'AGT-SEA-001', path: 'AGT-SEA-001', service_fee_rate: 0.004, rates: { pg: 0.075, jili: 0.09, evo: 0.095, pp: 0.078, habanero: 0.088 } },
+  'SEA Sub Agent 01': { id: 3, code: 'AGT-SEA-SUB01', direct: false, level: 2, parent: 'AGT-SEA-001', root: 'AGT-SEA-001', settlement: 'AGT-SEA-001', path: 'AGT-SEA-001 / AGT-SEA-SUB01', service_fee_rate: 0.004, rates: { pg: 0.088, jili: 0.102, evo: 0.108, pp: 0.092, habanero: 0.1 } },
+  'SEA Local Desk L3': { id: 4, code: 'AGT-SEA-SUB01-L3', direct: false, level: 3, parent: 'AGT-SEA-SUB01', root: 'AGT-SEA-001', settlement: 'AGT-SEA-001', path: 'AGT-SEA-001 / AGT-SEA-SUB01 / AGT-SEA-SUB01-L3', service_fee_rate: 0.004, rates: { pg: 0.096, jili: 0.11, evo: 0.116, pp: 0.1, habanero: 0.108 } }
 }
 
 const providerCostMeta: Record<string, ProviderCostMeta> = {
@@ -206,13 +209,17 @@ const defaultAgent = agentMeta['平台直營代理'] as AgentMeta
 const defaultProvider = providerCostMeta.pg as ProviderCostMeta
 const selectedAgent = computed<AgentMeta>(() => agentMeta[formValue.agent_name] ?? defaultAgent)
 const serviceFeePercent = computed(() => `${(formValue.service_fee_rate * 100).toFixed(2)}%`)
+const merchantMarkupPercent = computed(() => `${(formValue.default_merchant_markup_rate * 100).toFixed(2)}%`)
+watch(() => formValue.agent_name, () => {
+  formValue.service_fee_rate = selectedAgent.value.service_fee_rate
+})
 const formatRate = (value: number) => `${(value * 100).toFixed(2)}%`
 
 const quotePreview = computed(() => formValue.authorized_providers.map((providerKey) => {
   const provider = providerCostMeta[providerKey] ?? defaultProvider
   const upstreamRate = selectedAgent.value.rates[providerKey] ?? provider.cost + 0.03
   const overrideMarkup = formValue.merchant_quote_markups[providerKey]
-  const quoteMarkup = typeof overrideMarkup === 'number' ? overrideMarkup : formValue.service_fee_rate
+  const quoteMarkup = typeof overrideMarkup === 'number' ? overrideMarkup : formValue.default_merchant_markup_rate
   const quoteRate = upstreamRate + quoteMarkup
   return {
     provider_key: providerKey,
@@ -221,7 +228,7 @@ const quotePreview = computed(() => formValue.authorized_providers.map((provider
     provider_cost_rate_snapshot: provider.cost,
     agent_upstream_rate: upstreamRate,
     quote_markup_rate: quoteMarkup,
-    quote_markup_source: typeof overrideMarkup === 'number' ? 'provider_override' as const : 'service_fee_default' as const,
+    quote_markup_source: typeof overrideMarkup === 'number' ? 'provider_override' as const : 'merchant_default' as const,
     merchant_quote_rate: quoteRate,
     merchant_margin_rate: quoteRate - upstreamRate,
     rate_source_agent_id: selectedAgent.value.code,
@@ -266,11 +273,14 @@ const handleCreate = async () => {
       remarks: formValue.remarks,
       currency_type: formValue.default_display_currency,
       multi_currency_enabled: formValue.multi_currency_enabled,
+      transaction_currencies: formValue.display_currencies,
       display_currencies: formValue.display_currencies,
+      default_transaction_currency: formValue.default_display_currency,
       default_display_currency: formValue.default_display_currency,
       settlement_currency: 'USDT',
-      callback_amount_mode: 'settlement_currency',
+      callback_amount_mode: 'transaction_currency',
       service_fee_rate: formValue.service_fee_rate,
+      default_merchant_markup_rate: formValue.default_merchant_markup_rate,
       percent: 0,
       settlement_cycle: 'daily',
       authorized_providers: formValue.authorized_providers,
@@ -328,7 +338,7 @@ const handleCreate = async () => {
   <n-drawer :show="show" :width="920" @update:show="(v) => emit('update:show', v)">
     <n-drawer-content title="新增商戶" closable>
       <n-alert type="info" :show-icon="false" class="mb-4">
-        商戶必須綁定代理；未指定時預設歸屬平台直營代理。正式結算幣別固定 USDT，商戶顯示幣別可多選。
+        商戶必須綁定代理；未指定時預設歸屬平台直營代理。交易依 Provider 幣別線使用原幣，正式日結幣別固定 USDT。
       </n-alert>
 
       <n-steps :current="currentStep" size="small" class="mb-5">
@@ -367,11 +377,12 @@ const handleCreate = async () => {
         </template>
 
         <template v-else-if="currentStep === 4">
-          <n-form-item label="多顯示幣別"><n-switch v-model:value="formValue.multi_currency_enabled" /></n-form-item>
-          <n-form-item label="可用顯示幣別"><n-select v-model:value="formValue.display_currencies" multiple :options="displayCurrencyOptions" /></n-form-item>
-          <n-form-item label="預設顯示幣別"><n-select v-model:value="formValue.default_display_currency" :options="displayCurrencyOptions" /></n-form-item>
+          <n-form-item label="多交易幣別"><n-switch v-model:value="formValue.multi_currency_enabled" /></n-form-item>
+          <n-form-item label="可用交易幣別"><n-select v-model:value="formValue.display_currencies" multiple :options="displayCurrencyOptions" /></n-form-item>
+          <n-form-item label="預設交易／錢包幣別"><n-select v-model:value="formValue.default_display_currency" :options="displayCurrencyOptions" /></n-form-item>
           <n-form-item label="正式結算幣別"><n-tag type="success" :bordered="false">USDT</n-tag></n-form-item>
-          <n-form-item label="結算服務費率"><n-input-number v-model:value="formValue.service_fee_rate" :min="0" :max="0.2" :step="0.001" /></n-form-item>
+          <n-form-item label="匯率服務費（繼承）"><n-input :value="serviceFeePercent" readonly /></n-form-item>
+          <n-alert type="info" :show-icon="false">匯率服務費由 GGAP 獨立計收，不會自動併入商戶報價。</n-alert>
         </template>
 
         <template v-else-if="currentStep === 5">
@@ -381,14 +392,15 @@ const handleCreate = async () => {
 
         <template v-else-if="currentStep === 6">
           <n-form-item label="所屬代理"><n-select v-model:value="formValue.agent_name" :options="agentOptions" /></n-form-item>
+          <n-form-item label="預設商戶加價"><n-input-number v-model:value="formValue.default_merchant_markup_rate" :min="0" :max="0.2" :step="0.001" /></n-form-item>
           <n-alert type="warning" :show-icon="false" class="mb-4">
-            代理費率會先帶入商戶報價；若單一供應商未指定加成，預設使用統一結算服務費率 {{ serviceFeePercent }}。
+            代理費率會先帶入商戶報價；若單一供應商未指定加成，套用預設商戶加價 {{ merchantMarkupPercent }}。匯率服務費 {{ serviceFeePercent }} 另行計算。
           </n-alert>
           <div class="space-y-3">
             <div v-for="rate in quotePreview" :key="rate.provider_id" class="rounded border border-white/10 bg-[#202026] p-4">
               <div class="mb-2 flex items-center justify-between">
                 <strong>{{ rate.provider_name }}</strong>
-                <n-tag :bordered="false">{{ rate.quote_markup_source === 'provider_override' ? '供應商指定' : '服務費預設' }}</n-tag>
+                <n-tag :bordered="false">{{ rate.quote_markup_source === 'provider_override' ? '供應商指定' : '商戶預設' }}</n-tag>
               </div>
               <div class="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
                 <span>供應商成本 {{ formatRate(rate.provider_cost_rate_snapshot) }}</span>
@@ -405,7 +417,7 @@ const handleCreate = async () => {
             <n-descriptions-item label="商戶名稱">{{ formValue.merchant_name }}</n-descriptions-item>
             <n-descriptions-item label="Site Code">{{ formValue.site_code }}</n-descriptions-item>
             <n-descriptions-item label="錢包模式">{{ formValue.walletMode }}</n-descriptions-item>
-            <n-descriptions-item label="顯示幣別">{{ formValue.display_currencies.join(', ') }}</n-descriptions-item>
+            <n-descriptions-item label="交易幣別">{{ formValue.display_currencies.join(', ') }}</n-descriptions-item>
             <n-descriptions-item label="正式結算幣別">USDT</n-descriptions-item>
             <n-descriptions-item label="所屬代理">{{ formValue.agent_name }}</n-descriptions-item>
             <n-descriptions-item label="商戶報價" :span="2">{{ quotePreview.length }} 組供應商費率將同步建立</n-descriptions-item>

@@ -1,4 +1,5 @@
 import { apiClient } from '../apiClient'
+import type { Portal } from '../../stores/auth'
 
 export interface PortalDashboardData {
   wallet: {
@@ -36,8 +37,8 @@ export interface PortalDashboardData {
 }
 
 export const portalDashboardService = {
-  async getStats() {
-    const response = await apiClient.get<PortalDashboardData>('/api/v2/merchant/dashboard/stats')
+  async getStats(portal: Extract<Portal, 'agent' | 'merchant'>) {
+    const response = await apiClient.get<PortalDashboardData>(`/api/v2/${portal}/dashboard/stats`)
     return response.data
   }
 }

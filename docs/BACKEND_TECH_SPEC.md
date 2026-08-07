@@ -185,3 +185,4 @@ interface Invoice {
 * **Webhook Endpoint**: `POST /api/v2/webhook/transaction`
 * **Seamless Wallet Endpoint**: `POST /merchant/api/wallet/change`
 * **關鍵欄位**: `amount` 必須為 String 格式。
+> **舊版文件提示：** Provider 幣別、錢包路由、逐筆注單與 00:00 日結規則，請以 `PROVIDER_MULTI_CURRENCY_AND_TRANSACTION_SPEC.md` 與 `GGAP_final_system_spec_tech.html` 為準。本文件僅保留作舊架構參考。

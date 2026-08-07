@@ -102,7 +102,7 @@ const rows = ref<InvoiceRow[]>([
     status: 'confirmed',
     generated_at: '2026-07-07T09:45:00.000Z',
     confirmed_at: '2026-07-07T10:35:00.000Z',
-    remark: '供應商成本帳，依 provider_id + settlement_currency + period 產生。'
+    remark: '供應商成本帳，依 provider_id + provider_currency_id + original_currency + settlement_currency + period 產生。'
   }
 ])
 

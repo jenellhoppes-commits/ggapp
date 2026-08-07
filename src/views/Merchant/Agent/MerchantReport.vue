@@ -23,7 +23,7 @@ const rows: Row[] = [
 const columns: DataTableColumns<Row> = [
   { title: '商戶代碼', key: 'merchant_id', render: (row) => h('span', { class: 'font-mono text-cyan-300' }, row.merchant_id) },
   { title: '商戶名稱', key: 'merchant_name' },
-  { title: '顯示幣別', key: 'display_currency', width: 110 },
+  { title: '交易幣別', key: 'display_currency', width: 110 },
   { title: '總投注額', key: 'total_bet', align: 'right', render: (row) => `USDT ${row.total_bet.toLocaleString()}` },
   { title: '結算 GGR', key: 'settlement_ggr', align: 'right', render: (row) => `USDT ${row.settlement_ggr.toLocaleString()}` },
   { title: '代理應收', key: 'receivable', align: 'right', render: (row) => `USDT ${row.receivable.toLocaleString()}` },

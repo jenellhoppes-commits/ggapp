@@ -66,6 +66,7 @@ interface RepairRecord {
 
 interface TransactionRow {
   transaction_id: string
+  bet_id: string
   round_id: string
   provider_tx_id: string
   type: TransactionType
@@ -78,6 +79,11 @@ interface TransactionRow {
   player_wallet_id: string
   provider_id: string
   provider_name: string
+  provider_currency_line_id: string
+  provider_currency_id: string
+  provider_merchant_id: string
+  provider_currency: string
+  provider_amount: number
   game_code: string
   game_name: string
   wallet_mode: WalletMode
@@ -85,6 +91,8 @@ interface TransactionRow {
   display_amount: number
   settlement_currency: 'USDT'
   settlement_amount: number
+  settlement_status: 'pending_daily' | 'settled' | 'locked'
+  settlement_batch_id: string
   exchange_rate_id: string
   exchange_rate: number
   exchange_fee_rate: number
@@ -125,6 +133,7 @@ const differenceFilter = ref<string | null>(null)
 const rows = ref<TransactionRow[]>([
   {
     transaction_id: 'TX-20260707-000184',
+    bet_id: 'BET-20260707-000884',
     round_id: 'R-PG-8842-78231',
     provider_tx_id: 'PG-TX-78231-BET',
     type: 'Bet',
@@ -137,6 +146,11 @@ const rows = ref<TransactionRow[]>([
     player_wallet_id: 'PW-OP1001-mem_8842-TWD',
     provider_id: 'PG',
     provider_name: 'PG Soft',
+    provider_currency_line_id: 'PC-PG-TWD',
+    provider_currency_id: 'PG-CUR-TWD-01',
+    provider_merchant_id: 'PG-MCH-YOTA-TWD',
+    provider_currency: 'TWD',
+    provider_amount: -3200,
     game_code: 'PG-FORTUNE-TIGER',
     game_name: 'Fortune Tiger',
     wallet_mode: 'seamless',
@@ -144,10 +158,12 @@ const rows = ref<TransactionRow[]>([
     display_amount: -3200,
     settlement_currency: 'USDT',
     settlement_amount: -100.38,
+    settlement_status: 'locked',
+    settlement_batch_id: 'SET-20260708-0001',
     exchange_rate_id: 'FX-20260707-TWD',
     exchange_rate: 31.8786,
     exchange_fee_rate: 0.005,
-    rate_locked_at: '2026-07-07T01:00:00.000Z',
+    rate_locked_at: '2026-07-07T00:00:00.000Z',
     has_difference: false,
     repairable: false,
     idempotency_key: 'idem-op1001-bet-78231',
@@ -157,7 +173,7 @@ const rows = ref<TransactionRow[]>([
     provider_returned_at: '2026-07-07T09:18:13.000Z',
     request_payload: '{"merchant_player_id":"mem_8842","amount":3200,"currency":"TWD","round_id":"R-PG-8842-78231"}',
     response_payload: '{"code":0,"balance":125200,"tx_id":"MCH-78231"}',
-    provider_request_payload: '{"player":"GGAP-mem_8842","amount":"100.38","currency":"USDT","game":"PG-FORTUNE-TIGER"}',
+    provider_request_payload: '{"player":"GGAP-mem_8842","providerCurrencyId":"PG-CUR-TWD-01","providerMerchantId":"PG-MCH-YOTA-TWD","amount":"3200.00","currency":"TWD","game":"PG-FORTUNE-TIGER"}',
     provider_response_payload: '{"status":"SUCCESS","provider_tx_id":"PG-TX-78231-BET"}',
     created_at: '2026-07-07T09:18:12.000Z',
     completed_at: '2026-07-07T09:18:14.000Z',
@@ -172,6 +188,7 @@ const rows = ref<TransactionRow[]>([
   },
   {
     transaction_id: 'TX-20260707-000185',
+    bet_id: 'BET-20260707-000884',
     round_id: 'R-PG-8842-78231',
     provider_tx_id: 'PG-TX-78231-WIN',
     type: 'Win',
@@ -184,6 +201,11 @@ const rows = ref<TransactionRow[]>([
     player_wallet_id: 'PW-OP1001-mem_8842-TWD',
     provider_id: 'PG',
     provider_name: 'PG Soft',
+    provider_currency_line_id: 'PC-PG-TWD',
+    provider_currency_id: 'PG-CUR-TWD-01',
+    provider_merchant_id: 'PG-MCH-YOTA-TWD',
+    provider_currency: 'TWD',
+    provider_amount: 2850,
     game_code: 'PG-FORTUNE-TIGER',
     game_name: 'Fortune Tiger',
     wallet_mode: 'seamless',
@@ -191,10 +213,12 @@ const rows = ref<TransactionRow[]>([
     display_amount: 2850,
     settlement_currency: 'USDT',
     settlement_amount: 89.4,
+    settlement_status: 'locked',
+    settlement_batch_id: 'SET-20260708-0001',
     exchange_rate_id: 'FX-20260707-TWD',
     exchange_rate: 31.8786,
     exchange_fee_rate: 0.005,
-    rate_locked_at: '2026-07-07T01:00:00.000Z',
+    rate_locked_at: '2026-07-07T00:00:00.000Z',
     has_difference: false,
     repairable: false,
     idempotency_key: 'idem-op1001-win-78231',
@@ -204,7 +228,7 @@ const rows = ref<TransactionRow[]>([
     provider_returned_at: '2026-07-07T09:19:02.000Z',
     request_payload: '{"merchant_player_id":"mem_8842","amount":2850,"currency":"TWD","round_id":"R-PG-8842-78231"}',
     response_payload: '{"code":0,"balance":128050,"tx_id":"MCH-78232"}',
-    provider_request_payload: '{"player":"GGAP-mem_8842","amount":"89.40","currency":"USDT","game":"PG-FORTUNE-TIGER"}',
+    provider_request_payload: '{"player":"GGAP-mem_8842","providerCurrencyId":"PG-CUR-TWD-01","providerMerchantId":"PG-MCH-YOTA-TWD","amount":"2850.00","currency":"TWD","game":"PG-FORTUNE-TIGER"}',
     provider_response_payload: '{"status":"SUCCESS","provider_tx_id":"PG-TX-78231-WIN"}',
     created_at: '2026-07-07T09:19:01.000Z',
     completed_at: '2026-07-07T09:19:03.000Z',
@@ -219,6 +243,7 @@ const rows = ref<TransactionRow[]>([
   },
   {
     transaction_id: 'TX-20260706-000774',
+    bet_id: 'BET-20260706-000925',
     round_id: 'R-PP-9255-77410',
     provider_tx_id: 'PP-TX-77410-BET',
     type: 'Bet',
@@ -231,6 +256,11 @@ const rows = ref<TransactionRow[]>([
     player_wallet_id: 'PW-OP1007-dragon_9255-VND',
     provider_id: 'PP',
     provider_name: 'Pragmatic Play',
+    provider_currency_line_id: 'PC-PP-VND',
+    provider_currency_id: 'PP-CUR-VND-01',
+    provider_merchant_id: 'PP-MCH-VND',
+    provider_currency: 'VND',
+    provider_amount: -1200000,
     game_code: 'PP-GATES-OLYMPUS',
     game_name: 'Gates of Olympus',
     wallet_mode: 'transfer',
@@ -238,10 +268,12 @@ const rows = ref<TransactionRow[]>([
     display_amount: -1200000,
     settlement_currency: 'USDT',
     settlement_amount: -45.36,
+    settlement_status: 'pending_daily',
+    settlement_batch_id: '-',
     exchange_rate_id: 'FX-20260706-VND',
     exchange_rate: 26455.2,
     exchange_fee_rate: 0.005,
-    rate_locked_at: '2026-07-06T01:00:00.000Z',
+    rate_locked_at: '2026-07-06T00:00:00.000Z',
     has_difference: true,
     repairable: true,
     idempotency_key: 'idem-ledger-out-77410',
@@ -251,7 +283,7 @@ const rows = ref<TransactionRow[]>([
     provider_returned_at: '2026-07-06T14:15:44.700Z',
     request_payload: '{"ledger_id":"LED-9255-0003","action":"Transfer Out","amount":1200000,"currency":"VND"}',
     response_payload: '{"ledger_status":"FAILED","reason":"balance frozen"}',
-    provider_request_payload: '{"player":"GGAP-dragon_9255","amount":"45.36","currency":"USDT","game":"PP-GATES-OLYMPUS"}',
+    provider_request_payload: '{"player":"GGAP-dragon_9255","providerCurrencyId":"PP-CUR-VND-01","providerMerchantId":"PP-MCH-VND","amount":"1200000","currency":"VND","game":"PP-GATES-OLYMPUS"}',
     provider_response_payload: '{"status":"SUCCESS","amount":"45.34","provider_tx_id":"PP-TX-77410-BET"}',
     created_at: '2026-07-06T14:15:44.000Z',
     flow_steps: [
@@ -431,6 +463,7 @@ const columns: DataTableColumns<TransactionRow> = [
       onClick: () => openDetail(row)
     }, row.transaction_id)
   },
+  { title: '注單 ID', key: 'bet_id', width: 185, render: row => h('span', { class: 'font-mono text-xs' }, row.bet_id) },
   { title: 'Round ID', key: 'round_id', width: 170, render: row => h('span', { class: 'font-mono text-xs' }, row.round_id) },
   { title: '類型', key: 'type', width: 105, render: row => h(NTag, { bordered: false }, { default: () => row.type }) },
   { title: '狀態', key: 'status', width: 140, render: row => h(NTag, { type: statusMeta[row.status].type, bordered: false }, { default: () => statusMeta[row.status].label }) },
@@ -445,10 +478,12 @@ const columns: DataTableColumns<TransactionRow> = [
   },
   { title: '會員', key: 'merchant_player_id', width: 150, render: row => h('span', { class: 'font-mono' }, row.merchant_player_id) },
   { title: '供應商', key: 'provider_name', width: 145 },
+  { title: 'Provider 幣別線', key: 'provider_currency_id', width: 165, render: row => h('div', {}, [h(NTag, { type: 'info', size: 'small', bordered: false }, { default: () => row.provider_currency }), h('div', { class: 'mt-1 font-mono text-xs text-gray-500' }, row.provider_currency_id)]) },
   { title: '遊戲', key: 'game_name', width: 180 },
   { title: 'Wallet 模式', key: 'wallet_mode', width: 120, render: row => h(NTag, { type: row.wallet_mode === 'transfer' ? 'warning' : 'info', bordered: false }, { default: () => walletModeLabel(row.wallet_mode) }) },
-  { title: '顯示金額', key: 'display_amount', width: 150, align: 'right', render: row => h(MoneyText, { value: row.display_amount, currency: row.display_currency, compact: true, showSign: true }) },
-  { title: '結算金額', key: 'settlement_amount', width: 150, align: 'right', render: row => h(MoneyText, { value: row.settlement_amount, currency: row.settlement_currency, compact: true, showSign: true }) },
+  { title: 'Provider 原幣', key: 'provider_amount', width: 150, align: 'right', render: row => h(MoneyText, { value: row.provider_amount, currency: row.provider_currency, compact: true, showSign: true }) },
+  { title: 'USDT 日結', key: 'settlement_amount', width: 150, align: 'right', render: row => h(MoneyText, { value: row.settlement_amount, currency: row.settlement_currency, compact: true, showSign: true }) },
+  { title: '日結批次', key: 'settlement_batch_id', width: 160, render: row => h('span', { class: 'font-mono text-xs text-gray-400' }, row.settlement_batch_id) },
   { title: '匯率快照', key: 'exchange_rate_id', width: 160, render: row => h('span', { class: 'font-mono text-xs text-gray-400' }, row.exchange_rate_id) },
   { title: '差異', key: 'has_difference', width: 95, render: row => h(NTag, { type: row.has_difference ? 'error' : 'success', bordered: false }, { default: () => row.has_difference ? '有差異' : '正常' }) },
   { title: '建立時間', key: 'created_at', width: 180, render: row => formatDateTime(row.created_at) },
@@ -477,7 +512,7 @@ const transferColumns: DataTableColumns<TransferRecord> = [
   { title: '轉點 ID', key: 'transfer_id', width: 170, render: row => h('span', { class: 'font-mono text-xs' }, row.transfer_id) },
   { title: 'Ledger ID', key: 'ledger_id', width: 150, render: row => h('span', { class: 'font-mono text-xs' }, row.ledger_id) },
   { title: '操作', key: 'action', width: 120 },
-  { title: '顯示金額', key: 'display_amount', width: 140, align: 'right', render: row => h(MoneyText, { value: row.display_amount, currency: row.display_currency, compact: true, showSign: true }) },
+  { title: '原幣金額', key: 'display_amount', width: 140, align: 'right', render: row => h(MoneyText, { value: row.display_amount, currency: row.display_currency, compact: true, showSign: true }) },
   { title: '結算金額', key: 'settlement_amount', width: 140, align: 'right', render: row => h(MoneyText, { value: row.settlement_amount, currency: row.settlement_currency, compact: true, showSign: true }) },
   { title: '異動前', key: 'before_balance', width: 120, align: 'right', render: row => h(MoneyText, { value: row.before_balance, currency: row.display_currency, compact: true, color: 'text-slate-100' }) },
   { title: '異動後', key: 'after_balance', width: 120, align: 'right', render: row => h(MoneyText, { value: row.after_balance, currency: row.display_currency, compact: true, color: 'text-slate-100' }) },
@@ -501,7 +536,7 @@ const repairColumns: DataTableColumns<RepairRecord> = [
       <div>
         <h1 class="text-2xl font-bold">交易流水</h1>
         <p class="mt-1 text-sm text-gray-500">
-          查詢 Bet、Win、Refund、Rollback 與 Adjustment 的雙幣別金額、Wallet 流程、Callback 與補單紀錄。
+          查詢每筆 Bet、Win、Refund、Rollback 與 Adjustment 的 Provider 原幣、幣別線、USDT 日結、Wallet 與補單紀錄。
         </p>
       </div>
       <n-button type="primary" secondary>
@@ -536,7 +571,7 @@ const repairColumns: DataTableColumns<RepairRecord> = [
     </div>
 
     <n-alert type="info" :show-icon="false">
-      交易流水只保存交易快照與雙幣別金額；正式財務仍由代理帳務、供應商帳務與平台毛利各自彙總，不在此頁直接產生帳單。
+      每筆流水保留 Provider 幣別線、原幣金額、逐筆注單關聯與不可變 Payload；平台於 00:00 關帳、00:05 鎖定公告匯率，並於 00:10 產生 USDT 日結金額，正式帳單仍由各帳務模組彙總。
     </n-alert>
 
     <div class="rounded border border-white/10 bg-[#202026] p-4">
@@ -552,7 +587,7 @@ const repairColumns: DataTableColumns<RepairRecord> = [
         <n-select v-model:value="typeFilter" clearable placeholder="交易類型" :options="typeOptions" class="xl:col-span-1" />
         <n-select v-model:value="statusFilter" clearable placeholder="狀態" :options="statusOptions" class="xl:col-span-1" />
         <n-select v-model:value="walletFilter" clearable placeholder="Wallet 模式" :options="walletOptions" class="xl:col-span-2" />
-        <n-select v-model:value="currencyFilter" clearable placeholder="顯示幣別" :options="currencyOptions" class="xl:col-span-2" />
+        <n-select v-model:value="currencyFilter" clearable placeholder="Provider 幣別" :options="currencyOptions" class="xl:col-span-2" />
         <n-select v-model:value="differenceFilter" clearable placeholder="差異 / 補單" :options="differenceOptions" class="xl:col-span-2" />
         <n-button secondary class="xl:col-span-1" @click="resetFilters">重置</n-button>
       </div>
@@ -563,7 +598,7 @@ const repairColumns: DataTableColumns<RepairRecord> = [
       :data="filteredRows"
       :loading="loading"
       :pagination="DEFAULT_TABLE_PAGINATION"
-      :scroll-x="2420"
+      :scroll-x="2830"
     />
 
     <n-drawer v-model:show="showDetail" width="min(1180px, 100vw)">
@@ -581,8 +616,8 @@ const repairColumns: DataTableColumns<RepairRecord> = [
         <template v-if="currentRow">
           <div class="mb-5 grid grid-cols-1 gap-3 md:grid-cols-4">
             <div class="rounded border border-white/10 bg-[#202026] p-4">
-              <n-statistic label="顯示金額">
-                <MoneyText :value="currentRow.display_amount" :currency="currentRow.display_currency" compact show-sign />
+              <n-statistic label="Provider 原幣">
+                <MoneyText :value="currentRow.provider_amount" :currency="currentRow.provider_currency" compact show-sign />
               </n-statistic>
             </div>
             <div class="rounded border border-white/10 bg-[#202026] p-4">
@@ -602,6 +637,7 @@ const repairColumns: DataTableColumns<RepairRecord> = [
             <n-tab-pane name="basic" tab="基本資料">
               <n-descriptions bordered :column="2" label-placement="left">
                 <n-descriptions-item label="交易 ID">{{ currentRow.transaction_id }}</n-descriptions-item>
+                <n-descriptions-item label="注單 ID">{{ currentRow.bet_id }}</n-descriptions-item>
                 <n-descriptions-item label="Provider Tx">{{ currentRow.provider_tx_id }}</n-descriptions-item>
                 <n-descriptions-item label="商戶">{{ currentRow.merchant_name }} / {{ currentRow.merchant_id }}</n-descriptions-item>
                 <n-descriptions-item label="代理">{{ currentRow.agent_name }} / {{ currentRow.agent_id }}</n-descriptions-item>
@@ -609,6 +645,8 @@ const repairColumns: DataTableColumns<RepairRecord> = [
                 <n-descriptions-item label="會員錢包">{{ currentRow.player_wallet_id }}</n-descriptions-item>
                 <n-descriptions-item label="供應商">{{ currentRow.provider_name }} / {{ currentRow.provider_id }}</n-descriptions-item>
                 <n-descriptions-item label="遊戲">{{ currentRow.game_name }} / {{ currentRow.game_code }}</n-descriptions-item>
+                <n-descriptions-item label="Provider 幣別 ID">{{ currentRow.provider_currency_id }}</n-descriptions-item>
+                <n-descriptions-item label="Provider 廠商 ID">{{ currentRow.provider_merchant_id }}</n-descriptions-item>
                 <n-descriptions-item label="建立時間">{{ formatDateTime(currentRow.created_at) }}</n-descriptions-item>
                 <n-descriptions-item label="完成時間">{{ formatDateTime(currentRow.completed_at) }}</n-descriptions-item>
               </n-descriptions>
@@ -616,14 +654,16 @@ const repairColumns: DataTableColumns<RepairRecord> = [
 
             <n-tab-pane name="amount" tab="金額 / 匯率">
               <n-descriptions bordered :column="2" label-placement="left">
-                <n-descriptions-item label="顯示幣別">{{ currentRow.display_currency }}</n-descriptions-item>
-                <n-descriptions-item label="顯示金額">
-                  <MoneyText :value="currentRow.display_amount" :currency="currentRow.display_currency" compact show-sign />
+                <n-descriptions-item label="Provider 交易幣別">{{ currentRow.provider_currency }}</n-descriptions-item>
+                <n-descriptions-item label="Provider 原幣金額">
+                  <MoneyText :value="currentRow.provider_amount" :currency="currentRow.provider_currency" compact show-sign />
                 </n-descriptions-item>
                 <n-descriptions-item label="結算幣別">{{ currentRow.settlement_currency }}</n-descriptions-item>
                 <n-descriptions-item label="結算金額">
                   <MoneyText :value="currentRow.settlement_amount" :currency="currentRow.settlement_currency" compact show-sign />
                 </n-descriptions-item>
+                <n-descriptions-item label="日結狀態">{{ currentRow.settlement_status }}</n-descriptions-item>
+                <n-descriptions-item label="日結批次">{{ currentRow.settlement_batch_id }}</n-descriptions-item>
                 <n-descriptions-item label="匯率 ID">{{ currentRow.exchange_rate_id }}</n-descriptions-item>
                 <n-descriptions-item label="公告匯率">{{ currentRow.exchange_rate }}</n-descriptions-item>
                 <n-descriptions-item label="匯率服務費">{{ formatPercent(currentRow.exchange_fee_rate) }}</n-descriptions-item>

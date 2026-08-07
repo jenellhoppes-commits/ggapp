@@ -97,7 +97,8 @@ interface PagedResponse<T> {
 | `merchant_id` | string | 商戶 ID。 |
 | `agent_id` | string | 代理 ID。 |
 | `provider_id` | string | 供應商 ID。 |
-| `display_currency` | string | 顯示幣別。 |
+| `transaction_currency` | string | 會員錢包、Merchant Callback 與 Provider 即時交易使用的真實原幣。 |
+| `display_currency` | string | 相容舊欄位；新 API 應回傳 `transaction_currency`。 |
 | `settlement_currency` | string | 結算幣別，MVP 預設 USDT。 |
 | `page` | number | 頁碼。 |
 | `page_size` | number | 每頁筆數。 |
@@ -245,6 +246,8 @@ Response：
 | --- | --- |
 | `/api/admin/providers` | `/api/v2/admin/providers` |
 | `/api/v2/providers/update` | `/api/v2/admin/providers/:provider_id` |
+| - | `/api/v2/admin/providers/:provider_id/currency-connections` |
+| - | `/api/v2/admin/providers/:provider_id/currency-connections/:connection_id/bet-groups` |
 | `/api/v2/game/list` | `/api/v2/admin/games` |
 | `/api/v2/game/update` | `/api/v2/admin/games/:game_id` |
 | `/api/v2/game/rtp` | `/api/v2/admin/games/rtp` |
@@ -258,13 +261,68 @@ Provider 重點欄位：
   provider_name: string
   status: 'active' | 'maintenance' | 'disabled'
   settlement_currency: 'USDT'
-  wallet_mode: 'single_usdt_wallet'
   provider_cost_rate: number
-  negative_ggr_policy: 'carry_forward' | 'clear_zero'
+  negative_ggr_policy: 'carry_forward' | 'zero_out'
   api_endpoint?: string
   callback_endpoint?: string
   contract_start_at?: string
   contract_end_at?: string
+}
+```
+
+Provider 幣別線：
+
+```ts
+{
+  provider_currency_connection_id: string
+  provider_id: string
+  provider_currency_id: string
+  provider_merchant_id: string
+  currency: string
+  wallet_mode: 'seamless' | 'transfer'
+  api_url: string
+  callback_url: string
+  amount_precision: number
+  invoice_currency: string
+  payment_currency: string
+  credential_version: string
+  status: 'active' | 'maintenance' | 'disabled'
+}
+```
+
+供應商帳務需同時回傳 `provider_report_ggr_original`、`original_currency`、`exchange_rate_id`、`exchange_rate`、`provider_report_ggr_usdt`、`provider_payable_original` 與 `provider_payable_usdt`。負 GGR 結轉另存 `opening_carry_forward`、`applied_carry_forward`、`closing_carry_forward`，正式應付不得小於 0。
+
+Provider 幣別線下注限額方案：
+
+```ts
+{
+  provider_bet_group_id: string
+  provider_bet_group_code: string
+  provider_bet_group_name: string
+  provider_id: string
+  provider_currency_connection_id: string
+  min_bet: string
+  max_bet: string
+  bet_step: string
+  supported_game_count: number
+  is_selected: boolean
+  is_default: boolean
+  version: string
+  synced_at: string
+  status: 'available' | 'deprecated'
+}
+```
+
+群組適用遊戲不可只保存數量，必須另有映射：
+
+```ts
+{
+  provider_bet_group_id: string
+  provider_game_id: string
+  provider_game_name: string
+  game_type: string
+  version: string
+  status: 'active' | 'disabled'
 }
 ```
 
@@ -273,6 +331,9 @@ Provider 重點欄位：
 1. 供應商成本費率在供應商管理內設定。
 2. 供應商結算是平台自己的成本帳，不直接掛代理或商戶。
 3. 代理 / 商戶費率可以依供應商調整，但那是報價與應收邏輯，不代表代理與供應商有直接帳務關係。
+4. 下注限額方案由 Provider 依幣別線提供；GGAP 只維護勾選狀態，不可新增或修改上下限。
+5. 代理、商戶及會員只能引用上游已勾選的群組；每筆注單必須保存實際生效的群組、版本與數值快照。
+6. 已淘汰群組不可新指派，但歷史 Session 與注單仍可查詢。
 
 Game 重點欄位：
 
@@ -287,7 +348,6 @@ Game 重點欄位：
   game_type: string
   status: 'active' | 'maintenance' | 'disabled'
   rtp: number
-  max_bet: number
   maintenance?: {
     mode: 'none' | 'once' | 'weekly' | 'monthly'
     start_at?: string
@@ -319,13 +379,21 @@ Game 重點欄位：
   agent_id: string
   wallet_mode: 'seamless' | 'transfer'
   status: 'active' | 'disabled' | 'maintenance'
-  display_currencies: string[]
+  transaction_currencies: string[]
+  default_transaction_currency: string
+  display_currencies?: string[] // 舊版相容別名
   settlement_currency: 'USDT'
-  callback_amount_mode: 'settlement_currency'
+  callback_amount_mode: 'transaction_currency' | 'settlement_currency'
+  exchange_service_fee_rate: number
+  default_merchant_markup_rate: number
   api_status: 'enabled' | 'disabled'
   created_at: string
 }
 ```
+
+`callback_amount_mode` 預設必須為 `transaction_currency`；只有會員錢包本身是 USDT 的商戶才可使用 `settlement_currency`。
+
+`exchange_service_fee_rate` 是平台換匯服務費；`default_merchant_markup_rate` 是代理對商戶的預設報價加價。兩者不得互相作為備援值。
 
 商戶供應商授權：
 
@@ -415,7 +483,7 @@ Game 重點欄位：
 
 財務核心規則：
 
-1. 供應商帳務：`provider_id + settlement_currency + period`。
+1. 供應商帳務：`provider_id + provider_currency_id + original_currency + settlement_currency + period`。
 2. 代理帳務：`agent_id + settlement_currency + period`。
 3. 代理帳務內可展開下級代理結算與商戶結算。
 4. 平台毛利：代理應收 - 供應商成本 + 匯率服務費 - 調帳。
@@ -452,6 +520,7 @@ POST /api/v2/admin/reports/financial
 | --- | --- | --- | --- | --- |
 | `/api/v2/admin/transactions/players` | `GET` | `MASTER` | `global` | P1 |
 | `/api/v2/admin/transactions/bets` | `GET` | `MASTER` | `global` | P1 |
+| `/api/v2/admin/transactions/round-settlements` | `GET` | `MASTER` | `global` | P1 |
 | `/api/v2/admin/transactions/flows` | `GET` | `MASTER` | `global` | P1 |
 | `/api/v2/admin/transactions/repairs` | `GET` | `MASTER` | `global` | P1 |
 | `/api/v2/admin/transactions/repairs/:id/retry` | `POST` | `MASTER` | `global` | P1 |
@@ -462,26 +531,53 @@ POST /api/v2/admin/reports/financial
 
 ```ts
 {
-  round_id: string
   bet_id: string
+  round_id: string
+  transaction_id: string
+  provider_transaction_id: string
+  idempotency_key: string
   merchant_id: string
   agent_id: string
   provider_id: string
   player_id: string
   game_id: string
   wallet_mode: 'seamless' | 'transfer'
-  display_currency: string
-  display_amount: number
+  transaction_currency: string
+  provider_currency_connection_id: string
+  provider_currency: string
+  provider_bet_amount: string
+  provider_payout_amount: string | null
+  payout_scope: 'bet' | 'round' | 'unallocated'
+  round_settlement_id: string | null
   settlement_currency: 'USDT'
-  settlement_amount: number
-  exchange_rate_id: string
-  exchange_rate: number
-  exchange_fee_rate: number
-  rate_locked_at: string
+  settlement_bet_amount: string | null
+  settlement_payout_amount: string | null
+  settlement_ggr: string | null
+  settlement_batch_id: string | null
+  exchange_rate_id: string | null
+  exchange_rate: string | null
+  exchange_fee_rate: string | null
+  rate_locked_at: string | null
+  provider_bet_group_id: string
+  provider_bet_group_snapshot: {
+    provider_game_id: string
+    provider_bet_group_code: string
+    provider_bet_group_version: string
+    limit_source: 'player_override' | 'merchant_game_assignment' | 'merchant_currency_default' | 'agent_assignment' | 'provider_default'
+    min_bet: string
+    max_bet: string
+    bet_step: string
+  }
   status: 'pending' | 'settled' | 'void' | 'failed'
   created_at: string
 }
 ```
+
+每列只代表一位會員的一次下注。唯一鍵為 `provider_currency_connection_id + provider_bet_id`；`round_id` 只作回合關聯，不得拿來彙總覆蓋逐筆注單。日結前所有 USDT、匯率及批次欄位必須為 `null`。
+
+Provider 只回傳 Round 級 Win 時，需另建 `round_settlement`；單筆 Bet 的 payout / GGR 保持 `null`，不得自行平均分配。Launch Game 必須鎖定唯一下注限額方案，解析優先序為會員覆寫、商戶遊戲、商戶交易幣別預設、代理、Provider 預設。
+
+延遲 Callback 必要欄位：`original_trade_date`、`accepted_at`、`accounting_date`、`late_accounting_status`、`adjustment_batch_id`。已鎖定帳期不得自動重開；延遲事件預設建立次期調整，人工重開需獨立核准與稽核紀錄。
 
 ### 4.8 Quality Center
 
@@ -644,7 +740,7 @@ Bet log：
 正式建議：
 
 1. Agent 與 Merchant 可共用報表 service，但後端必須依 token scope 限制資料。
-2. 報表需同時支援 `display_currency` 與 `settlement_currency`，正式結算以 USDT 為準。
+2. 報表需同時支援 `transaction_currency` 與 `settlement_currency`；`display_currency` 只作舊版相容別名，正式結算以 USDT 為準。
 
 ### 5.4 Portal Finance
 
@@ -695,33 +791,33 @@ Invoice：
 
 | API | Method | Role | 狀態 | 優先級 | Frontend Service |
 | --- | --- | --- | --- | --- | --- |
-| `/api/v2/agents` | `GET` | `AGENT` | 已使用 | P1 | `portal/organization.ts` |
-| `/api/v2/agent/sub-agents` | `GET` | `AGENT` | 已使用 | P1 | `portal/organization.ts` |
-| `/api/v2/merchant/agents` | `POST` | `AGENT` | 已使用 | P1 | `portal/organization.ts` |
-| `/api/v2/merchant/agents/:agentId` | `PUT` | `AGENT` | 已使用 | P1 | `portal/organization.ts` |
-| `/api/v2/merchant/agents/:agentId/transfer` | `POST` | `AGENT` | 已使用 | P2 | `portal/organization.ts` |
-
-建議正式路徑：
-
-| 現有路徑 | 建議正式路徑 |
-| --- | --- |
-| `/api/v2/agents` | `/api/v2/agent/tree` |
-| `/api/v2/agent/sub-agents` | `/api/v2/agent/sub-agents` |
-| `/api/v2/merchant/agents` | `/api/v2/agent/sub-agents` |
-| `/api/v2/merchant/agents/:agentId` | `/api/v2/agent/sub-agents/:agent_id` |
-| `/api/v2/merchant/agents/:agentId/transfer` | `/api/v2/agent/sub-agents/:agent_id/transfer` |
+| `/api/v2/agent/tree` | `GET` | `AGENT` | 待串接 | P1 | `portal/organization.ts` |
+| `/api/v2/agent/sub-agents` | `POST` | `AGENT` | 待串接 | P1 | `portal/organization.ts` |
+| `/api/v2/agent/sub-agents/:agent_id` | `PUT` | `AGENT` | 待串接 | P1 | `portal/organization.ts` |
+| `/api/v2/agent/sub-agents/:agent_id/rate-versions` | `POST` | `AGENT` | 待串接 | P1 | `portal/organization.ts` |
+| `/api/v2/agent/sub-agents/:agent_id/bet-group-access` | `PUT` | `AGENT` | 待串接 | P1 | `portal/organization.ts` |
+| `/api/v2/agent/sub-agents/:agent_id/transfer` | `POST` | `AGENT` | 後續專用流程 | P2 | `portal/organization.ts` |
 
 Create / update agent payload：
 
 ```ts
 {
-  id?: number
-  account: string
-  password?: string
-  commission_rate: number
-  status?: boolean
-  state: 'active' | 'disabled'
-  note?: string
+  agent_code: string
+  agent_name: string
+  agent_level: 2 | 3
+  parent_agent_code: string
+  status: 'active' | 'suspended' | 'disabled'
+  settlement_currency: 'USDT'
+  fx_service_fee_rate: number
+  negative_ggr_policy: 'carry_forward' | 'zero_out'
+  provider_rates: Array<{
+    provider_id: string
+    upstream_rate: number
+    agent_rate: number
+    rate_version: string
+    effective_at: string
+  }>
+  provider_bet_group_ids: string[]
 }
 ```
 
@@ -730,6 +826,9 @@ Create / update agent payload：
 1. 代理只可新增自己下一層代理。
 2. L1 可新增 L2，L2 可新增 L3，L3 不可新增代理。
 3. 下級代理與商戶的應收彙總應進代理帳務。
+4. 代理代碼、層級與上級建立後不可在一般編輯中修改；轉移必須走專用流程並留下生效日與稽核紀錄。
+5. 代理費率依供應商建立版本，不得以單一全域費率取代。
+6. 下注限額授權只能從 Provider 幣別線已同步且上級已開放的方案勾選，不得自行輸入區間。
 
 ### 5.6 Portal Developer
 
@@ -758,12 +857,12 @@ Response：
 
 ## 6. Legacy API 待整理
 
-目前 `src/services/legacy.ts` 保留以下 API，代表仍有舊版 composable 或頁面引用：
+舊版代理／商戶混用 API 已自前端移除；後端不應再新增下列路徑：
 
 | 現有 API | 用途 | 建議處理 |
 | --- | --- | --- |
 | `/api/v2/report/bet-logs` | 舊版注單查詢 | 併入 `/api/v2/merchant/reports/bet-logs` 或 admin transactions。 |
-| `/api/v2/agent/list` | 舊版商戶 / 代理列表 | 依角色拆成 admin merchant / agent tree。 |
+| `/api/v2/agent/list` | 舊版商戶 / 代理列表 | 已拆成 `/api/v2/admin/merchants` 與 `/api/v2/agent/tree`。 |
 | `/api/v2/agent/:id` | 舊版商戶 / 代理詳情 | 依角色拆正式路徑。 |
 | `/api/v2/agent/update` | 舊版更新 | 改為 RESTful `PUT`。 |
 | `/api/v2/agent/management/agents` | 舊版新增 | 改為 admin / agent 對應正式路徑。 |
@@ -773,9 +872,9 @@ Response：
 整理方向：
 
 1. 不要讓後端再新增 v1 API。
-2. 既有 demo 可暫時保留 legacy service。
-3. 正式串接時逐頁移到 admin / portal service。
-4. 完成後移除 `src/services/legacy.ts`。
+2. 管理者商戶 API 統一由 `services/admin/merchants.ts` 封裝。
+3. 代理樹 API 統一由 `services/portal/organization.ts` 封裝；目前頁面為本地演示資料，接後端時依本節契約實作。
+4. 不得重新引入 `legacyService` 或代理／商戶共用 DTO。
 
 ## 7. API 命名統一建議
 
@@ -815,7 +914,7 @@ Response：
 1. 管理者總覽。
 2. 商戶管理。
 3. 代理管理與三級代理。
-4. 內容管理：供應商、遊戲、遊戲分組、維護排程。
+4. 內容管理：供應商、供應商幣別線、下注限額方案勾選、遊戲、維護排程、活動直接指定遊戲。
 5. 交易中心：會員、注單、流水、補單、Wallet Router、轉點紀錄。
 6. 財務中心：供應商帳務、代理帳務、平台毛利、匯率管理。
 
@@ -857,7 +956,7 @@ Response：
 4. 是否依 token claims 限制資料。
 5. `AGENT` 是否只能讀代理樹資料。
 6. `MERCHANT` 是否只能讀自身資料。
-7. 金額欄位是否區分 `display_currency` 與 `settlement_currency`。
+7. 金額欄位是否區分 `transaction_currency` 與 `settlement_currency`，並僅將 `display_currency` 作為舊版相容別名。
 8. 正式結算幣別是否為 USDT。
 9. 供應商帳務是否未掛代理或商戶作為主體。
 10. 代理帳務是否包含下級代理結算與商戶結算展開。

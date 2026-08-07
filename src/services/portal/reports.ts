@@ -1,5 +1,6 @@
 import { apiClient } from '../apiClient'
 import type { RevenueReportRow, TransactionDetailRow } from '../../types/table'
+import type { BetLog as SharedBetLog } from '../../types/report'
 
 export interface DailyReportSummary {
   total_bet: number
@@ -10,17 +11,7 @@ export interface DailyReportSummary {
   rtp: number
 }
 
-export interface BetLog {
-  id: string
-  created_at: string
-  player_id: string
-  game_name: string
-  bet: number
-  win: number
-  currency: string
-  status: 'win' | 'loss' | 'refund'
-  detail?: unknown
-}
+export type BetLog = SharedBetLog
 
 export interface WinLossRow {
   id: string
@@ -49,7 +40,10 @@ export const portalReportService = {
     date_start?: string
     date_end?: string
     player_id?: string
+    bet_id?: string
     round_id?: string
+    cursor?: string
+    page_size?: number
   }) {
     const response = await apiClient.post<{ list: BetLog[]; total: number }>('/api/v2/merchant/reports/bet-logs', params)
     return response.data

@@ -1,5 +1,6 @@
 import { mockApiResponse } from '../apiClient'
 import type { ListResult, QueryParams } from '../apiClient'
+import type { DailySettlementStatus } from '../../domain/finance'
 import {
   betDetails,
   betList,
@@ -8,6 +9,7 @@ import {
   playerList,
   repairDetails,
   repairList,
+  roundSettlements,
   transactionDetails,
   transactionList,
   transferRecords,
@@ -25,6 +27,7 @@ export type RepairPriority = 'high' | 'medium' | 'low'
 export type RouterStatus = 'success' | 'pending' | 'failed' | 'manual_review'
 export type TransferAction = 'Transfer In' | 'Transfer Out' | 'Lock' | 'Unlock' | 'Manual Adjust'
 export type CallbackStatus = 'success' | 'pending' | 'failed' | 'duplicated' | 'skipped'
+export type LateCallbackAccountingStatus = 'on_time' | 'queued_before_lock' | 'next_period_adjustment' | 'manual_reopen'
 export type PlayerStatus = 'active' | 'locked' | 'risk_review'
 
 export interface OperationLog {
@@ -43,14 +46,24 @@ export interface FlowStep {
 }
 
 export interface MoneySnapshot {
+  transaction_currency: string
+  transaction_amount: number
+  /** @deprecated Use transaction_currency. */
   display_currency: string
   display_amount: number
+  provider_currency_line_id: string
+  provider_currency_id: string
+  provider_merchant_id: string
+  provider_currency: string
+  provider_amount: number
   settlement_currency: 'USDT'
-  settlement_amount: number
-  exchange_rate_id: string
-  exchange_rate: number
+  settlement_amount: number | null
+  settlement_status: DailySettlementStatus
+  settlement_batch_id: string | null
+  exchange_rate_id: string | null
+  exchange_rate: number | null
   exchange_fee_rate: number
-  rate_locked_at: string
+  rate_locked_at: string | null
 }
 
 export interface BetListItem {
@@ -66,18 +79,33 @@ export interface BetListItem {
   wallet_mode: WalletMode
   provider_id: string
   provider_name: string
+  provider_currency_line_id: string
+  provider_currency_id: string
+  provider_merchant_id: string
+  provider_currency: string
   game_id: string
   game_name: string
   game_type: GameType
   status: BetStatus
+  transaction_currency: string
+  transaction_bet_amount: number
+  transaction_payout_amount: number | null
+  payout_scope: 'bet' | 'round' | 'unallocated'
+  round_settlement_id: string | null
+  /** @deprecated Use transaction_currency and transaction_*_amount. */
   display_currency: string
   display_bet_amount: number
-  display_payout_amount: number
-  display_ggr: number
+  display_payout_amount: number | null
+  display_ggr: number | null
+  provider_bet_amount: number
+  provider_payout_amount: number | null
   settlement_currency: 'USDT'
-  settlement_bet_amount: number
-  settlement_payout_amount: number
-  settlement_ggr: number
+  settlement_bet_amount: number | null
+  settlement_payout_amount: number | null
+  settlement_ggr: number | null
+  settlement_status: DailySettlementStatus
+  settlement_batch_id: string | null
+  settlement_rate_date: string | null
   provider_tx_id: string
   provider_round_status: string
   created_at: string
@@ -85,12 +113,12 @@ export interface BetListItem {
 }
 
 export interface BetDetail extends BetListItem {
-  settlement_bet_amount: number
-  settlement_payout_amount: number
-  exchange_rate_id: string
-  exchange_rate: number
+  settlement_bet_amount: number | null
+  settlement_payout_amount: number | null
+  exchange_rate_id: string | null
+  exchange_rate: number | null
   exchange_fee_rate: number
-  rate_locked_at: string
+  rate_locked_at: string | null
   provider_payload: string
   wallet_payload: string
   transaction_flows: Array<{
@@ -111,8 +139,27 @@ export interface BetDetail extends BetListItem {
   logs: OperationLog[]
 }
 
+export interface RoundSettlementRecord {
+  round_settlement_id: string
+  round_id: string
+  provider_id: string
+  provider_currency_line_id: string
+  provider_currency: string
+  provider_round_win_amount: number
+  payout_scope: 'round'
+  allocation_status: 'not_required' | 'provider_allocated' | 'unallocated'
+  related_bet_ids: string[]
+  settlement_currency: 'USDT'
+  settlement_win_amount: number | null
+  settlement_status: DailySettlementStatus
+  settlement_batch_id: string | null
+  provider_payload: string
+  created_at: string
+}
+
 export interface TransactionListItem {
   transaction_id: string
+  bet_id: string
   round_id: string
   provider_tx_id: string
   type: TransactionType
@@ -125,14 +172,24 @@ export interface TransactionListItem {
   player_wallet_id: string
   provider_id: string
   provider_name: string
+  provider_currency_line_id: string
+  provider_currency_id: string
+  provider_merchant_id: string
+  provider_currency: string
+  provider_amount: number
   game_code: string
   game_name: string
   wallet_mode: WalletMode
+  transaction_currency?: string
+  transaction_amount?: number
+  /** @deprecated Use transaction_currency and transaction_amount. */
   display_currency: string
   display_amount: number
   settlement_currency: 'USDT'
-  settlement_amount: number
-  exchange_rate_id: string
+  settlement_amount: number | null
+  settlement_status: DailySettlementStatus
+  settlement_batch_id: string | null
+  exchange_rate_id: string | null
   has_difference: boolean
   repairable: boolean
   idempotency_key: string
@@ -142,9 +199,9 @@ export interface TransactionListItem {
 }
 
 export interface TransactionDetail extends TransactionListItem {
-  exchange_rate: number
+  exchange_rate: number | null
   exchange_fee_rate: number
-  rate_locked_at: string
+  rate_locked_at: string | null
   merchant_callback_url: string
   provider_status_code: string
   provider_returned_at: string
@@ -179,6 +236,9 @@ export interface RepairJobListItem {
   round_id: string
   transfer_id: string
   callback_id: string
+  transaction_currency?: string
+  transaction_amount?: number
+  /** @deprecated Use transaction_currency and transaction_amount. */
   display_currency: string
   display_amount: number
   settlement_currency: 'USDT'
@@ -222,6 +282,8 @@ export interface WalletRouteRecord {
   agent_id: string
   agent_name: string
   merchant_player_id: string
+  transaction_currency?: string
+  /** @deprecated Use transaction_currency. */
   display_currency: string
   wallet_mode: WalletMode
   route_target: string
@@ -243,6 +305,9 @@ export interface TransferRecord {
   agent_name: string
   merchant_player_id: string
   player_wallet_id: string
+  transaction_currency?: string
+  transaction_amount?: number
+  /** @deprecated Use transaction_currency and transaction_amount. */
   display_currency: string
   action: TransferAction
   display_amount: number
@@ -267,6 +332,8 @@ export interface LedgerWallet {
   agent_id: string
   agent_name: string
   merchant_player_id: string
+  transaction_currency?: string
+  /** @deprecated Use transaction_currency. */
   display_currency: string
   settlement_currency: 'USDT'
   available_balance: number
@@ -289,6 +356,12 @@ export interface CallbackRecord {
   retry_count: number
   related_transaction_id: string
   related_transfer_id: string
+  transaction_currency: string
+  transaction_amount: number
+  original_trade_date: string
+  accounting_date: string
+  late_accounting_status: LateCallbackAccountingStatus
+  adjustment_batch_id: string | null
   created_at: string
   last_attempt_at: string
 }
@@ -300,6 +373,8 @@ export interface PlayerWallet {
   agent_id: string
   agent_name: string
   merchant_player_id: string
+  transaction_currency?: string
+  /** @deprecated Use transaction_currency. */
   display_currency: string
   settlement_currency: 'USDT'
   wallet_mode: WalletMode
@@ -325,6 +400,11 @@ export const adminTransactionService = {
 
   getBetDetail(betId: string) {
     return mockApiResponse<BetDetail>(betDetails[betId] || betDetails['BET-20260707-000884']!)
+  },
+
+  listRoundSettlements(roundId?: string) {
+    const items = roundId ? roundSettlements.filter(item => item.round_id === roundId) : roundSettlements
+    return mockApiResponse(listResult<RoundSettlementRecord>(items))
   },
 
   listTransactions(params?: QueryParams) {

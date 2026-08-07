@@ -32,11 +32,10 @@ import { DEFAULT_TABLE_PAGINATION, withTableSorters } from '../../../utils/table
 type CampaignType = 'jackpot' | 'free_spin' | 'tournament' | 'mission' | 'display'
 type CampaignStatus = 'draft' | 'pending' | 'running' | 'paused' | 'ended' | 'disabled'
 
-interface AppliedGameGroup {
-  group_code: string
-  group_name: string
-  game_count: number
-  provider_count: number
+interface AppliedGame {
+  game_id: string
+  game_name: string
+  provider_name: string
   status: 'active' | 'disabled'
   applied_at: string
 }
@@ -89,12 +88,12 @@ interface CampaignRow {
   start_at: string
   end_at: string
   schedule_mode: 'one_time' | 'weekly' | 'monthly'
-  applied_group_count: number
+  applied_game_count: number
   applied_merchant_count: number
   description: string
   remark: string
   updated_at: string
-  groups: AppliedGameGroup[]
+  games: AppliedGame[]
   merchants: AppliedMerchant[]
   reward_settings: RewardSetting[]
   metrics: CampaignMetrics
@@ -110,7 +109,6 @@ const currentRow = ref<CampaignRow | null>(null)
 const keyword = ref('')
 const typeFilter = ref<CampaignType | null>(null)
 const statusFilter = ref<CampaignStatus | null>(null)
-const groupFilter = ref<string | null>(null)
 
 const blankCampaign = (): CampaignRow => ({
   campaign_id: `CMP-${Date.now()}`,
@@ -128,12 +126,12 @@ const blankCampaign = (): CampaignRow => ({
   start_at: '2026-07-08T00:00:00.000+08:00',
   end_at: '2026-07-31T23:59:59.000+08:00',
   schedule_mode: 'one_time',
-  applied_group_count: 0,
+  applied_game_count: 0,
   applied_merchant_count: 0,
   description: '',
   remark: '',
   updated_at: new Date().toISOString(),
-  groups: [],
+  games: [],
   merchants: [],
   reward_settings: [],
   metrics: {
@@ -167,14 +165,15 @@ const rows = ref<CampaignRow[]>([
     start_at: '2026-07-01T00:00:00.000+08:00',
     end_at: '2026-07-31T23:59:59.000+08:00',
     schedule_mode: 'one_time',
-    applied_group_count: 2,
+    applied_game_count: 3,
     applied_merchant_count: 12,
-    description: '以熱門電子與七月活動分組計算累積獎池。',
+    description: '直接指定三款遊戲計算累積獎池。',
     remark: '獎池支出僅作活動報表與營運統計，不影響代理正式結算。',
     updated_at: '2026-07-07T10:20:00.000Z',
-    groups: [
-      { group_code: 'HOT_SLOT', group_name: '熱門電子', game_count: 42, provider_count: 3, status: 'active', applied_at: '2026-07-01T00:00:00.000+08:00' },
-      { group_code: 'JULY_CAMPAIGN', group_name: '七月活動', game_count: 18, provider_count: 2, status: 'active', applied_at: '2026-07-01T00:00:00.000+08:00' }
+    games: [
+      { game_id: 'PG-001', game_name: 'Mahjong Ways', provider_name: 'PG Soft', status: 'active', applied_at: '2026-07-01T00:00:00.000+08:00' },
+      { game_id: 'PG-002', game_name: 'Fortune Tiger', provider_name: 'PG Soft', status: 'active', applied_at: '2026-07-01T00:00:00.000+08:00' },
+      { game_id: 'PP-001', game_name: 'Gates of Olympus', provider_name: 'Pragmatic Play', status: 'active', applied_at: '2026-07-01T00:00:00.000+08:00' }
     ],
     merchants: [
       { merchant_id: 'OP-1001', merchant_name: 'Blue Whale Interactive', agent_name: '平台直營代理', status: 'applied', applied_at: '2026-07-01T09:00:00.000+08:00', override_sort: false },
@@ -215,13 +214,14 @@ const rows = ref<CampaignRow[]>([
     start_at: '2026-07-10T00:00:00.000+08:00',
     end_at: '2026-07-17T23:59:59.000+08:00',
     schedule_mode: 'one_time',
-    applied_group_count: 1,
+    applied_game_count: 2,
     applied_merchant_count: 8,
-    description: '套用 PG 精選遊戲包，展示 Free Spin 活動設定。',
+    description: '直接指定 PG 遊戲，展示 Free Spin 活動設定。',
     remark: '待審核後啟用。',
     updated_at: '2026-07-07T09:30:00.000Z',
-    groups: [
-      { group_code: 'PG_SLOT', group_name: 'PG 精選', game_count: 28, provider_count: 1, status: 'active', applied_at: '2026-07-07T09:30:00.000+08:00' }
+    games: [
+      { game_id: 'PG-001', game_name: 'Mahjong Ways', provider_name: 'PG Soft', status: 'active', applied_at: '2026-07-07T09:30:00.000+08:00' },
+      { game_id: 'PG-002', game_name: 'Fortune Tiger', provider_name: 'PG Soft', status: 'active', applied_at: '2026-07-07T09:30:00.000+08:00' }
     ],
     merchants: [
       { merchant_id: 'OP-1008', merchant_name: 'NovaPlay Entertainment', agent_name: 'L2 Asia Agent', status: 'applied', applied_at: '2026-07-07T09:35:00.000+08:00', override_sort: false }
@@ -260,13 +260,13 @@ const rows = ref<CampaignRow[]>([
     start_at: '2026-07-03T00:00:00.000+08:00',
     end_at: '2026-07-20T23:59:59.000+08:00',
     schedule_mode: 'weekly',
-    applied_group_count: 1,
+    applied_game_count: 1,
     applied_merchant_count: 6,
     description: '真人遊戲排行榜活動。',
     remark: '暫停中，等待調整排行規則。',
     updated_at: '2026-07-07T08:40:00.000Z',
-    groups: [
-      { group_code: 'LIVE_CASINO', group_name: '真人娛樂', game_count: 16, provider_count: 1, status: 'active', applied_at: '2026-07-03T00:00:00.000+08:00' }
+    games: [
+      { game_id: 'EVO-001', game_name: 'Baccarat A', provider_name: 'Evolution', status: 'active', applied_at: '2026-07-03T00:00:00.000+08:00' }
     ],
     merchants: [
       { merchant_id: 'OP-1009', merchant_name: 'Golden Dragon Gaming', agent_name: 'L3 Growth Team', status: 'paused', applied_at: '2026-07-03T10:00:00.000+08:00', override_sort: false }
@@ -306,13 +306,13 @@ const rows = ref<CampaignRow[]>([
     start_at: '2026-07-08T00:00:00.000+08:00',
     end_at: '2026-07-15T23:59:59.000+08:00',
     schedule_mode: 'one_time',
-    applied_group_count: 1,
+    applied_game_count: 1,
     applied_merchant_count: 0,
     description: '展示型公告，不發放獎勵。',
     remark: '草稿待確認。',
     updated_at: '2026-07-07T10:12:00.000Z',
-    groups: [
-      { group_code: 'JILI_OBSERVE', group_name: 'JILI 測試', game_count: 9, provider_count: 1, status: 'active', applied_at: '2026-07-07T10:12:00.000+08:00' }
+    games: [
+      { game_id: 'JILI-001', game_name: 'Super Ace', provider_name: 'JILI Gaming', status: 'disabled', applied_at: '2026-07-07T10:12:00.000+08:00' }
     ],
     merchants: [],
     reward_settings: [
@@ -359,12 +359,6 @@ const scheduleOptions = [
   { label: '每月週期', value: 'monthly' }
 ]
 
-const groupOptions = computed(() => {
-  const groups = new Map<string, string>()
-  rows.value.forEach(row => row.groups.forEach(group => groups.set(group.group_code, group.group_name)))
-  return Array.from(groups.entries()).map(([value, label]) => ({ label, value }))
-})
-
 const filteredRows = computed(() => {
   const text = keyword.value.trim().toLowerCase()
   return rows.value.filter(row => {
@@ -372,8 +366,7 @@ const filteredRows = computed(() => {
       .some(value => value.toLowerCase().includes(text))
     const matchesType = !typeFilter.value || row.campaign_type === typeFilter.value
     const matchesStatus = !statusFilter.value || row.status === statusFilter.value
-    const matchesGroup = !groupFilter.value || row.groups.some(group => group.group_code === groupFilter.value)
-    return matchesText && matchesType && matchesStatus && matchesGroup
+    return matchesText && matchesType && matchesStatus
   })
 })
 
@@ -397,7 +390,6 @@ const resetFilters = () => {
   keyword.value = ''
   typeFilter.value = null
   statusFilter.value = null
-  groupFilter.value = null
 }
 
 const openDetail = (row: CampaignRow) => {
@@ -487,7 +479,7 @@ const columns: DataTableColumns<CampaignRow> = [
   },
   { title: '類型', key: 'campaign_type', width: 120, render: row => h(NTag, { type: campaignTypeMeta[row.campaign_type].type, size: 'small', bordered: false }, { default: () => campaignTypeMeta[row.campaign_type].label }) },
   { title: '狀態', key: 'status', width: 105, render: row => h(NTag, { type: statusMeta[row.status].type, size: 'small', bordered: false }, { default: () => statusMeta[row.status].label }) },
-  { title: '套用分組', key: 'applied_group_count', width: 110, align: 'right', render: row => `${row.applied_group_count} 組` },
+  { title: '指定遊戲', key: 'applied_game_count', width: 110, align: 'right', render: row => `${row.applied_game_count} 款` },
   { title: '套用商戶', key: 'applied_merchant_count', width: 110, align: 'right', render: row => `${row.applied_merchant_count} 家` },
   { title: '期間', key: 'period', width: 230, render: row => h('div', { class: 'text-xs' }, [h('div', formatDateTime(row.start_at)), h('div', { class: 'text-slate-500' }, formatDateTime(row.end_at))]) },
   { title: '預算 / 獎池', key: 'budget_amount', width: 150, align: 'right', render: row => h('div', {}, [h(MoneyText, { value: row.budget_amount, currency: 'USDT', compact: true }), h('div', { class: 'text-xs text-slate-500' }, `獎池 ${row.prize_pool_amount.toLocaleString()}`)]) },
@@ -509,11 +501,10 @@ const columns: DataTableColumns<CampaignRow> = [
   }
 ]
 
-const groupColumns: DataTableColumns<AppliedGameGroup> = [
-  { title: '分組代碼', key: 'group_code', width: 130 },
-  { title: '分組名稱', key: 'group_name' },
-  { title: '遊戲數', key: 'game_count', width: 90, align: 'right' },
-  { title: '供應商數', key: 'provider_count', width: 100, align: 'right' },
+const gameColumns: DataTableColumns<AppliedGame> = [
+  { title: '遊戲 ID', key: 'game_id', width: 130, render: row => h('span', { class: 'font-mono text-xs' }, row.game_id) },
+  { title: '遊戲名稱', key: 'game_name' },
+  { title: '供應商', key: 'provider_name', width: 160 },
   { title: '狀態', key: 'status', width: 100, render: row => h(NTag, { type: row.status === 'active' ? 'success' : 'default', size: 'small', bordered: false }, { default: () => row.status === 'active' ? '啟用' : '停用' }) },
   { title: '套用時間', key: 'applied_at', width: 175, render: row => formatDateTime(row.applied_at) }
 ]
@@ -565,7 +556,6 @@ const rewardColumns: DataTableColumns<RewardSetting> = [
       </n-input>
       <n-select v-model:value="typeFilter" clearable :options="typeOptions" placeholder="活動類型" style="width: 150px;" />
       <n-select v-model:value="statusFilter" clearable :options="statusOptions" placeholder="狀態" style="width: 130px;" />
-      <n-select v-model:value="groupFilter" clearable :options="groupOptions" placeholder="遊戲分組" style="width: 150px;" />
       <n-button secondary @click="resetFilters">重置</n-button>
     </div>
 
@@ -614,8 +604,9 @@ const rewardColumns: DataTableColumns<RewardSetting> = [
               </n-descriptions>
             </n-tab-pane>
 
-            <n-tab-pane name="groups" tab="套用分組">
-              <n-data-table :columns="withTableSorters(groupColumns)" :data="currentRow.groups" :pagination="DEFAULT_TABLE_PAGINATION" />
+            <n-tab-pane name="games" tab="指定遊戲">
+              <n-alert type="info" :show-icon="false" class="mb-3">活動直接指定遊戲清單，變更只影響活動展示與參與範圍。</n-alert>
+              <n-data-table :columns="withTableSorters(gameColumns)" :data="currentRow.games" :pagination="DEFAULT_TABLE_PAGINATION" />
             </n-tab-pane>
 
             <n-tab-pane name="merchants" tab="套用商戶">
@@ -664,7 +655,7 @@ const rewardColumns: DataTableColumns<RewardSetting> = [
           <div v-if="currentRow" class="flex flex-wrap justify-end gap-2">
             <n-button secondary @click="openEditor('edit', currentRow)">編輯活動</n-button>
             <n-button secondary @click="actionMessage('套用商戶', currentRow)">套用商戶</n-button>
-            <n-button secondary @click="actionMessage('調整遊戲分組', currentRow)">調整遊戲分組</n-button>
+            <n-button secondary @click="actionMessage('選擇活動遊戲', currentRow)">選擇遊戲</n-button>
             <n-button secondary @click="toggleCampaign(currentRow)">{{ currentRow.status === 'running' ? '暫停活動' : '啟用活動' }}</n-button>
             <n-button type="primary" secondary @click="copyCampaign(currentRow)">複製活動</n-button>
           </div>

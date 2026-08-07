@@ -73,7 +73,7 @@ function onProcessAlert(alert: any) {
 
 onMounted(async () => {
   try {
-    stats.value = await portalDashboardService.getStats()
+    stats.value = await portalDashboardService.getStats(isAgentPortal.value ? 'agent' : 'merchant')
   } finally {
     loading.value = false
     loadingAlerts.value = false

@@ -21,11 +21,12 @@ const description = computed(() => isAgentPortal.value
   ? '代理端 API 僅提供自身代理樹內的商戶、帳務與報表資料，不提供遊戲 Launch 或 Wallet Callback。'
   : '商戶端 API 用於遊戲 Launch、錢包 Callback、Transfer Wallet 與 Callback 測試。')
 const codeLabel = computed(() => isAgentPortal.value ? '代理代碼' : '商戶代碼')
+const currentPortal = computed(() => isAgentPortal.value ? 'agent' as const : 'merchant' as const)
 
 const fetchCreds = async () => {
   loading.value = true
   try {
-    credentials.value = await portalDeveloperService.getCredentials()
+    credentials.value = await portalDeveloperService.getCredentials(currentPortal.value)
     if (isAgentPortal.value) credentials.value.merchant_code = 'AGT-SEA-001'
   } finally {
     loading.value = false
@@ -35,7 +36,7 @@ const fetchCreds = async () => {
 const updateWhitelist = async (newList: string[]) => {
   credentials.value.whitelist = newList
   try {
-    await portalDeveloperService.updateWhitelist(newList)
+    await portalDeveloperService.updateWhitelist(currentPortal.value, newList)
     message.success('IP 白名單已更新')
   } catch {
     message.error('IP 白名單更新失敗')
@@ -99,7 +100,7 @@ onMounted(() => fetchCreds())
       <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div class="rounded border border-gray-700 bg-gray-800 p-4">
           <h4 class="mb-1 font-medium text-white">{{ isAgentPortal ? '商戶清單' : 'Launch Game' }}</h4>
-          <p class="text-sm text-gray-400">{{ isAgentPortal ? '查詢代理樹內商戶資料。' : '建立遊戲入口並鎖定 display_currency。' }}</p>
+          <p class="text-sm text-gray-400">{{ isAgentPortal ? '查詢代理樹內商戶資料。' : '建立遊戲入口並鎖定 Provider 幣別線、交易原幣與下注限額方案版本。' }}</p>
         </div>
         <div class="rounded border border-gray-700 bg-gray-800 p-4">
           <h4 class="mb-1 font-medium text-white">{{ isAgentPortal ? '帳務報表' : 'Wallet Callback' }}</h4>

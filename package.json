@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "validate": "node scripts/validate-frontend.mjs",
+    "validate:business": "node --experimental-strip-types scripts/validate-business-logic.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

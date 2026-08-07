@@ -38,9 +38,10 @@ interface PlayerSession {
   session_id: string
   provider_id: string
   game_code: string
-  display_currency: string
+  transaction_currency: string
+  provider_currency_connection_id: string
+  provider_bet_group_id: string
   settlement_currency: 'USDT'
-  exchange_rate_id: string
   wallet_mode: WalletMode
   status: SessionStatus
   launched_at: string
@@ -149,11 +150,11 @@ const rows = ref<PlayerWallet[]>([
     last_login_at: '2026-07-07T09:10:00.000Z',
     last_transaction_at: '2026-07-07T09:22:12.000Z',
     sessions: [
-      { session_id: 'SES-OP1001-TWD-8842', provider_id: 'PG', game_code: 'PG-FORTUNE-TIGER', display_currency: 'TWD', settlement_currency: 'USDT', exchange_rate_id: 'FX-20260707-TWD', wallet_mode: 'seamless', status: 'online', launched_at: '2026-07-07T09:02:00.000Z', last_active_at: '2026-07-07T09:22:12.000Z', expired_at: '2026-07-07T11:02:00.000Z' }
+      { session_id: 'SES-OP1001-TWD-8842', provider_id: 'PG', game_code: 'PG-FORTUNE-TIGER', transaction_currency: 'TWD', provider_currency_connection_id: 'PC-PG-TWD', provider_bet_group_id: 'PBG-PG-TWD-002', settlement_currency: 'USDT', wallet_mode: 'seamless', status: 'online', launched_at: '2026-07-07T09:02:00.000Z', last_active_at: '2026-07-07T09:22:12.000Z', expired_at: '2026-07-07T11:02:00.000Z' }
     ],
     transactions: [
-      { transaction_id: 'TX-8842-0001', type: 'Bet', provider_id: 'PG', game_code: 'PG-FORTUNE-TIGER', display_currency: 'TWD', display_amount: -3200, settlement_currency: 'USDT', settlement_amount: -100.38, exchange_rate_id: 'FX-20260707-TWD', exchange_rate: 31.8786, rate_locked_at: '2026-07-07T01:00:00.000Z', wallet_mode: 'seamless', status: 'success', created_at: '2026-07-07T09:18:12.000Z' },
-      { transaction_id: 'TX-8842-0002', type: 'Win', provider_id: 'PG', game_code: 'PG-FORTUNE-TIGER', display_currency: 'TWD', display_amount: 5400, settlement_currency: 'USDT', settlement_amount: 169.39, exchange_rate_id: 'FX-20260707-TWD', exchange_rate: 31.8786, rate_locked_at: '2026-07-07T01:00:00.000Z', wallet_mode: 'seamless', status: 'success', created_at: '2026-07-07T09:19:01.000Z' }
+      { transaction_id: 'TX-8842-0001', type: 'Bet', provider_id: 'PG', game_code: 'PG-FORTUNE-TIGER', display_currency: 'TWD', display_amount: -3200, settlement_currency: 'USDT', settlement_amount: -100.38, exchange_rate_id: 'FX-20260707-TWD', exchange_rate: 31.8786, rate_locked_at: '2026-07-07T00:00:00.000Z', wallet_mode: 'seamless', status: 'success', created_at: '2026-07-07T09:18:12.000Z' },
+      { transaction_id: 'TX-8842-0002', type: 'Win', provider_id: 'PG', game_code: 'PG-FORTUNE-TIGER', display_currency: 'TWD', display_amount: 5400, settlement_currency: 'USDT', settlement_amount: 169.39, exchange_rate_id: 'FX-20260707-TWD', exchange_rate: 31.8786, rate_locked_at: '2026-07-07T00:00:00.000Z', wallet_mode: 'seamless', status: 'success', created_at: '2026-07-07T09:19:01.000Z' }
     ],
     risk_logs: [
       { rule: '短時間連續投注', level: 'info', hit_at: '2026-07-07T09:20:00.000Z', note: '低風險提示，未限制會員操作。' }
@@ -188,10 +189,10 @@ const rows = ref<PlayerWallet[]>([
     last_login_at: '2026-07-06T21:32:00.000Z',
     last_transaction_at: '2026-07-06T21:47:30.000Z',
     sessions: [
-      { session_id: 'SES-OP1001-PHP-8842', provider_id: 'JILI', game_code: 'JILI-SUPER-ACE', display_currency: 'PHP', settlement_currency: 'USDT', exchange_rate_id: 'FX-20260706-PHP', wallet_mode: 'seamless', status: 'expired', launched_at: '2026-07-06T21:20:00.000Z', last_active_at: '2026-07-06T21:47:30.000Z', expired_at: '2026-07-06T23:20:00.000Z' }
+      { session_id: 'SES-OP1001-PHP-8842', provider_id: 'JILI', game_code: 'JILI-SUPER-ACE', transaction_currency: 'PHP', provider_currency_connection_id: 'PC-JILI-PHP', provider_bet_group_id: 'PBG-JILI-PHP-001', settlement_currency: 'USDT', wallet_mode: 'seamless', status: 'expired', launched_at: '2026-07-06T21:20:00.000Z', last_active_at: '2026-07-06T21:47:30.000Z', expired_at: '2026-07-06T23:20:00.000Z' }
     ],
     transactions: [
-      { transaction_id: 'TX-8842-PHP-0001', type: 'Bet', provider_id: 'JILI', game_code: 'JILI-SUPER-ACE', display_currency: 'PHP', display_amount: -1800, settlement_currency: 'USDT', settlement_amount: -30.54, exchange_rate_id: 'FX-20260706-PHP', exchange_rate: 58.9332, rate_locked_at: '2026-07-07T01:00:00.000Z', wallet_mode: 'seamless', status: 'success', created_at: '2026-07-06T21:40:12.000Z' }
+      { transaction_id: 'TX-8842-PHP-0001', type: 'Bet', provider_id: 'JILI', game_code: 'JILI-SUPER-ACE', display_currency: 'PHP', display_amount: -1800, settlement_currency: 'USDT', settlement_amount: -30.54, exchange_rate_id: 'FX-20260706-PHP', exchange_rate: 58.9332, rate_locked_at: '2026-07-07T00:00:00.000Z', wallet_mode: 'seamless', status: 'success', created_at: '2026-07-06T21:40:12.000Z' }
     ],
     risk_logs: [],
     audit_logs: [
@@ -223,11 +224,11 @@ const rows = ref<PlayerWallet[]>([
     last_login_at: '2026-07-07T08:15:00.000Z',
     last_transaction_at: '2026-07-07T08:49:28.000Z',
     sessions: [
-      { session_id: 'SES-OP1008-THB-7711', provider_id: 'PG', game_code: 'PG-MAHJONG-WAYS', display_currency: 'THB', settlement_currency: 'USDT', exchange_rate_id: 'FX-20260707-THB', wallet_mode: 'transfer', status: 'idle', launched_at: '2026-07-07T08:11:00.000Z', last_active_at: '2026-07-07T08:49:28.000Z', expired_at: '2026-07-07T10:11:00.000Z' }
+      { session_id: 'SES-OP1008-THB-7711', provider_id: 'PG', game_code: 'PG-MAHJONG-WAYS', transaction_currency: 'THB', provider_currency_connection_id: 'PC-PG-THB', provider_bet_group_id: 'PBG-PG-THB-001', settlement_currency: 'USDT', wallet_mode: 'transfer', status: 'idle', launched_at: '2026-07-07T08:11:00.000Z', last_active_at: '2026-07-07T08:49:28.000Z', expired_at: '2026-07-07T10:11:00.000Z' }
     ],
     transactions: [
-      { transaction_id: 'TX-7711-0001', type: 'Transfer In', provider_id: 'GGAP', game_code: '-', display_currency: 'THB', display_amount: 50000, settlement_currency: 'USDT', settlement_amount: 1366.42, exchange_rate_id: 'FX-20260707-THB', exchange_rate: 36.5921, rate_locked_at: '2026-07-07T01:00:00.000Z', wallet_mode: 'transfer', status: 'success', created_at: '2026-07-07T08:10:30.000Z' },
-      { transaction_id: 'TX-7711-0002', type: 'Bet', provider_id: 'PG', game_code: 'PG-MAHJONG-WAYS', display_currency: 'THB', display_amount: -3200, settlement_currency: 'USDT', settlement_amount: -87.45, exchange_rate_id: 'FX-20260707-THB', exchange_rate: 36.5921, rate_locked_at: '2026-07-07T01:00:00.000Z', wallet_mode: 'transfer', status: 'pending', created_at: '2026-07-07T08:49:28.000Z' }
+      { transaction_id: 'TX-7711-0001', type: 'Transfer In', provider_id: 'GGAP', game_code: '-', display_currency: 'THB', display_amount: 50000, settlement_currency: 'USDT', settlement_amount: 1366.42, exchange_rate_id: 'FX-20260707-THB', exchange_rate: 36.5921, rate_locked_at: '2026-07-07T00:00:00.000Z', wallet_mode: 'transfer', status: 'success', created_at: '2026-07-07T08:10:30.000Z' },
+      { transaction_id: 'TX-7711-0002', type: 'Bet', provider_id: 'PG', game_code: 'PG-MAHJONG-WAYS', display_currency: 'THB', display_amount: -3200, settlement_currency: 'USDT', settlement_amount: -87.45, exchange_rate_id: 'FX-20260707-THB', exchange_rate: 36.5921, rate_locked_at: '2026-07-07T00:00:00.000Z', wallet_mode: 'transfer', status: 'pending', created_at: '2026-07-07T08:49:28.000Z' }
     ],
     risk_logs: [
       { rule: '大額 Transfer In', level: 'warning', hit_at: '2026-07-07T08:12:00.000Z', note: '已加入觀察名單，未凍結錢包。' }
@@ -261,10 +262,10 @@ const rows = ref<PlayerWallet[]>([
     last_login_at: '2026-07-06T14:10:00.000Z',
     last_transaction_at: '2026-07-06T14:15:44.000Z',
     sessions: [
-      { session_id: 'SES-OP1009-VND-9255', provider_id: 'PP', game_code: 'PP-GATES-OLYMPUS', display_currency: 'VND', settlement_currency: 'USDT', exchange_rate_id: 'FX-20260706-VND', wallet_mode: 'transfer', status: 'expired', launched_at: '2026-07-06T14:00:00.000Z', last_active_at: '2026-07-06T14:15:44.000Z', expired_at: '2026-07-06T16:00:00.000Z' }
+      { session_id: 'SES-OP1009-VND-9255', provider_id: 'PP', game_code: 'PP-GATES-OLYMPUS', transaction_currency: 'VND', provider_currency_connection_id: 'PC-PP-VND', provider_bet_group_id: 'PBG-PP-VND-001', settlement_currency: 'USDT', wallet_mode: 'transfer', status: 'expired', launched_at: '2026-07-06T14:00:00.000Z', last_active_at: '2026-07-06T14:15:44.000Z', expired_at: '2026-07-06T16:00:00.000Z' }
     ],
     transactions: [
-      { transaction_id: 'TX-9255-0001', type: 'Bet', provider_id: 'PP', game_code: 'PP-GATES-OLYMPUS', display_currency: 'VND', display_amount: -1200000, settlement_currency: 'USDT', settlement_amount: -45.36, exchange_rate_id: 'FX-20260706-VND', exchange_rate: 26451.6, rate_locked_at: '2026-07-07T01:00:00.000Z', wallet_mode: 'transfer', status: 'failed', created_at: '2026-07-06T14:15:44.000Z' }
+      { transaction_id: 'TX-9255-0001', type: 'Bet', provider_id: 'PP', game_code: 'PP-GATES-OLYMPUS', display_currency: 'VND', display_amount: -1200000, settlement_currency: 'USDT', settlement_amount: -45.36, exchange_rate_id: 'FX-20260706-VND', exchange_rate: 26451.6, rate_locked_at: '2026-07-07T00:00:00.000Z', wallet_mode: 'transfer', status: 'failed', created_at: '2026-07-06T14:15:44.000Z' }
     ],
     risk_logs: [
       { rule: '異常失敗交易', level: 'error', hit_at: '2026-07-06T14:16:00.000Z', note: '連續失敗且 Ledger 狀態異常，已凍結會員錢包。' }
@@ -386,7 +387,7 @@ const columns: DataTableColumns<PlayerWallet> = [
       h('span', { class: 'font-mono text-xs text-gray-500' }, `L1: ${row.settlement_agent_id}`)
     ])
   },
-  { title: '顯示幣別', key: 'display_currency', width: 110, render: row => h(NTag, { bordered: false }, { default: () => row.display_currency }) },
+  { title: '交易幣別', key: 'display_currency', width: 110, render: row => h(NTag, { bordered: false }, { default: () => row.display_currency }) },
   { title: '結算幣別', key: 'settlement_currency', width: 110, render: row => h(NTag, { type: 'success', bordered: false }, { default: () => row.settlement_currency }) },
   { title: '錢包模式', key: 'wallet_mode', width: 120, render: row => h(NTag, { type: row.wallet_mode === 'transfer' ? 'warning' : 'info', bordered: false }, { default: () => walletModeLabel(row.wallet_mode) }) },
   { title: '可用餘額', key: 'available_balance', width: 140, align: 'right', render: row => row.wallet_mode === 'transfer'
@@ -420,8 +421,9 @@ const sessionColumns: DataTableColumns<PlayerSession> = [
   { title: 'Session ID', key: 'session_id', width: 210, render: row => h('span', { class: 'font-mono text-xs' }, row.session_id) },
   { title: 'Provider', key: 'provider_id', width: 110 },
   { title: '遊戲', key: 'game_code', width: 180 },
-  { title: '顯示幣別', key: 'display_currency', width: 100 },
-  { title: '匯率快照', key: 'exchange_rate_id', width: 170, render: row => h('span', { class: 'font-mono text-xs text-gray-400' }, row.exchange_rate_id) },
+  { title: '交易幣別', key: 'transaction_currency', width: 100 },
+  { title: 'Provider 幣別線', key: 'provider_currency_connection_id', width: 180, render: row => h('span', { class: 'font-mono text-xs text-gray-400' }, row.provider_currency_connection_id) },
+  { title: '下注限額方案', key: 'provider_bet_group_id', width: 180, render: row => h('span', { class: 'font-mono text-xs text-gray-400' }, row.provider_bet_group_id) },
   { title: '錢包模式', key: 'wallet_mode', width: 120, render: row => walletModeLabel(row.wallet_mode) },
   { title: '狀態', key: 'status', width: 100, render: row => h(NTag, { type: sessionMeta[row.status].type, bordered: false }, { default: () => sessionMeta[row.status].label }) },
   { title: '最後活躍', key: 'last_active_at', width: 180, render: row => formatDateTime(row.last_active_at) }
@@ -430,7 +432,7 @@ const sessionColumns: DataTableColumns<PlayerSession> = [
 const limitColumns: DataTableColumns<PlayerBetLimit> = [
   { title: 'Provider', key: 'provider_id', width: 100 },
   { title: '遊戲類型', key: 'game_type', width: 100 },
-  { title: '單槍群組', key: 'limit_group_name', width: 200 },
+  { title: '下注限額方案', key: 'provider_bet_group_name', width: 200 },
   { title: '最小投注', key: 'min_bet', align: 'right', render: row => formatDisplayAmount(row.min_bet, row.display_currency) },
   { title: '最大投注', key: 'max_bet', align: 'right', render: row => formatDisplayAmount(row.max_bet, row.display_currency) },
   { title: '來源', key: 'source', width: 130, render: row => h(NTag, { type: row.source === 'player_override' ? 'warning' : 'success', size: 'small', bordered: false }, { default: () => gameLimitSourceLabel[row.source] }) },
@@ -443,7 +445,7 @@ const transactionColumns: DataTableColumns<PlayerTransaction> = [
   { title: '類型', key: 'type', width: 110 },
   { title: 'Provider', key: 'provider_id', width: 100 },
   { title: '遊戲', key: 'game_code', width: 180 },
-  { title: '顯示金額', key: 'display_amount', width: 150, align: 'right', render: row => h(MoneyText, { value: row.display_amount, currency: row.display_currency, compact: true, showSign: true }) },
+  { title: '原幣金額', key: 'display_amount', width: 150, align: 'right', render: row => h(MoneyText, { value: row.display_amount, currency: row.display_currency, compact: true, showSign: true }) },
   { title: 'USDT 金額', key: 'settlement_amount', width: 150, align: 'right', render: row => h(MoneyText, { value: row.settlement_amount, currency: row.settlement_currency, compact: true, showSign: true }) },
   { title: '匯率 ID', key: 'exchange_rate_id', width: 160, render: row => h('span', { class: 'font-mono text-xs text-gray-400' }, row.exchange_rate_id) },
   { title: '匯率', key: 'exchange_rate', width: 120, align: 'right', render: row => row.exchange_rate.toLocaleString() },
@@ -459,7 +461,7 @@ const transactionColumns: DataTableColumns<PlayerTransaction> = [
       <div>
         <h1 class="text-2xl font-bold">會員管理</h1>
         <p class="mt-1 text-sm text-gray-500">
-          以 merchant_id + merchant_player_id + display_currency 識別會員錢包，檢視 Session、交易快照與風控紀錄。
+          以 merchant_id + merchant_player_id + transaction_currency 識別會員錢包，檢視 Session、交易快照與風控紀錄。
         </p>
       </div>
       <n-button type="primary" secondary @click="message.info('已匯出會員錢包演示資料')">
@@ -487,7 +489,7 @@ const transactionColumns: DataTableColumns<PlayerTransaction> = [
       </n-input>
       <n-select v-model:value="merchantFilter" clearable filterable placeholder="商戶" :options="merchantOptions" style="width: 180px;" />
       <n-select v-model:value="agentFilter" clearable filterable placeholder="所屬代理" :options="agentOptions" style="width: 170px;" />
-      <n-select v-model:value="currencyFilter" clearable placeholder="顯示幣別" :options="currencyOptions" style="width: 130px;" />
+      <n-select v-model:value="currencyFilter" clearable placeholder="交易幣別" :options="currencyOptions" style="width: 130px;" />
       <n-select v-model:value="walletFilter" clearable placeholder="錢包模式" :options="walletOptions" style="width: 140px;" />
       <n-select v-model:value="sessionFilter" clearable placeholder="Session" :options="sessionOptions" style="width: 130px;" />
       <n-select v-model:value="riskFilter" clearable placeholder="風控狀態" :options="riskOptions" style="width: 130px;" />
@@ -529,7 +531,7 @@ const transactionColumns: DataTableColumns<PlayerTransaction> = [
                 <n-descriptions-item label="商戶會員 ID">{{ currentRow.merchant_player_id }}</n-descriptions-item>
                 <n-descriptions-item label="所屬代理">{{ currentRow.agent_name }} / {{ currentRow.agent_id }}</n-descriptions-item>
                 <n-descriptions-item label="L1 結算代理">{{ currentRow.settlement_agent_name }} / {{ currentRow.settlement_agent_id }}</n-descriptions-item>
-                <n-descriptions-item label="顯示幣別">{{ currentRow.display_currency }}</n-descriptions-item>
+                <n-descriptions-item label="交易幣別">{{ currentRow.display_currency }}</n-descriptions-item>
                 <n-descriptions-item label="正式結算幣別">{{ currentRow.settlement_currency }}</n-descriptions-item>
                 <n-descriptions-item label="建立時間">{{ formatDateTime(currentRow.created_at) }}</n-descriptions-item>
                 <n-descriptions-item label="最後登入">{{ formatDateTime(currentRow.last_login_at) }}</n-descriptions-item>
@@ -539,7 +541,7 @@ const transactionColumns: DataTableColumns<PlayerTransaction> = [
             <n-tab-pane name="wallet" tab="錢包模式">
               <n-alert :type="currentRow.wallet_mode === 'transfer' ? 'warning' : 'info'" :show-icon="false" class="mb-4">
                 <template v-if="currentRow.wallet_mode === 'transfer'">
-                  Transfer Wallet 由 GGAP 內部 Ledger 維護餘額；Provider 仍只看到 GGAP 單一 USDT 錢包。
+                  Transfer Wallet 由 GGAP 內部 Ledger 維護餘額；進入遊戲時依會員幣別選擇對應的 Provider 幣別線與錢包設定。
                 </template>
                 <template v-else>
                   Seamless Wallet 透過商戶 Callback 查詢與扣款；GGAP 僅保留 request / response 與交易快照。
@@ -547,7 +549,7 @@ const transactionColumns: DataTableColumns<PlayerTransaction> = [
               </n-alert>
               <n-descriptions bordered :column="2" label-placement="left">
                 <n-descriptions-item label="wallet_mode">{{ walletModeLabel(currentRow.wallet_mode) }}</n-descriptions-item>
-                <n-descriptions-item label="display_currency">{{ currentRow.display_currency }}</n-descriptions-item>
+                <n-descriptions-item label="transaction_currency">{{ currentRow.display_currency }}</n-descriptions-item>
                 <n-descriptions-item label="available_balance"><MoneyText :value="currentRow.available_balance ?? currentRow.last_callback_balance ?? 0" :currency="currentRow.display_currency" color="text-slate-100" /></n-descriptions-item>
                 <n-descriptions-item label="locked_balance"><MoneyText :value="currentRow.locked_balance || 0" :currency="currentRow.display_currency" color="text-slate-100" /></n-descriptions-item>
                 <n-descriptions-item label="帳務說明" :span="2">會員錢包只作營運與交易追溯，不作 GGAP 對代理或供應商的正式帳務主體。</n-descriptions-item>
@@ -556,14 +558,14 @@ const transactionColumns: DataTableColumns<PlayerTransaction> = [
 
             <n-tab-pane name="sessions" tab="Session">
               <n-alert type="info" :show-icon="false" class="mb-4">
-                Launch Game 帶入 display_currency，Session 保存 exchange_rate_id；Provider 交易正式以 USDT 入帳。
+                Launch Game 帶入 transaction_currency，Session 鎖定 Provider 幣別線與下注限額方案；交易先以 Provider 原幣入帳，日結後再建立 USDT 帳務快照。
               </n-alert>
               <n-data-table :columns="withTableSorters(sessionColumns)" :data="currentRow.sessions" :pagination="DEFAULT_TABLE_PAGINATION" :scroll-x="1140" />
             </n-tab-pane>
 
-            <n-tab-pane name="limits" tab="單槍限額">
+            <n-tab-pane name="limits" tab="下注限額方案">
               <n-alert type="info" :show-icon="false" class="mb-4">
-                套用順序：特殊會員覆寫 > 會員分層 > 商戶遊戲限額 > 遊戲預設群組。正式注單會保存當次 Session 的限額快照。
+                套用順序：特殊會員覆寫 > 商戶指定方案 > 代理可用方案 > 供應商預設方案。正式注單會保存當次 Session 的限額快照。
               </n-alert>
               <n-data-table :columns="withTableSorters(limitColumns)" :data="currentRow.bet_limits" :pagination="DEFAULT_TABLE_PAGINATION" :scroll-x="1080" />
             </n-tab-pane>

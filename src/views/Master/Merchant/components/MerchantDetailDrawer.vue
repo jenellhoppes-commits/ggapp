@@ -20,7 +20,7 @@ import { ContentCopyRound } from '@vicons/material'
 import type { Merchant, MerchantStatus } from '../../../../types/merchant'
 import MoneyText from '../../../../components/Common/MoneyText.vue'
 import { formatDisplayAmount } from '../../../../utils/format'
-import { makeMerchantLimitGroups } from '../../../../mocks/gameLimits'
+import { makeMerchantBetLimitAssignments } from '../../../../mocks/gameLimits'
 
 const props = defineProps<{
   show: boolean
@@ -49,14 +49,22 @@ const merchantStatus = computed(() => {
 const merchantName = computed(() => props.merchant?.merchant_name || props.merchant?.name || '-')
 const walletMode = computed(() => props.merchant?.walletMode || props.merchant?.wallet_mode || 'seamless')
 const walletLabel = computed(() => walletMode.value === 'seamless' ? 'Seamless Wallet' : 'Transfer Wallet')
-const displayCurrency = computed(() => props.merchant?.default_display_currency || props.merchant?.currency_type || 'TWD')
+const transactionCurrency = computed(() => props.merchant?.default_transaction_currency || props.merchant?.default_display_currency || props.merchant?.currency_type || 'TWD')
 const settlementCurrency = computed(() => props.merchant?.settlement_currency || 'USDT')
-const displayCurrencies = computed(() => props.merchant?.display_currencies || props.merchant?.supported_currencies || [displayCurrency.value])
+const callbackAmountModeLabel = computed(() => props.merchant?.callback_amount_mode === 'settlement_currency'
+  ? '正式結算幣別（僅 USDT 錢包）'
+  : '交易／錢包原幣')
+const transactionCurrencies = computed(() => props.merchant?.transaction_currencies || props.merchant?.display_currencies || props.merchant?.supported_currencies || [transactionCurrency.value])
 const serviceFeeRate = computed(() => props.merchant?.service_fee_rate ?? props.merchant?.exchange_fee_rate)
 const quoteRates = computed(() => props.merchant?.merchant_quote_rates || [])
 const agentName = computed(() => props.merchant?.agent_name || props.merchant?.parent_agent || '平台直營代理')
-const playerWalletKey = computed(() => `${props.merchant?.display_id || 'merchant_id'} + merchant_player_id + ${displayCurrency.value}`)
-const merchantLimitGroups = computed(() => makeMerchantLimitGroups(displayCurrencies.value, displayCurrency.value))
+const playerWalletKey = computed(() => `${props.merchant?.display_id || 'merchant_id'} + merchant_player_id + transaction_currency`)
+const merchantBetLimitAssignments = computed(() => props.merchant?.bet_limit_assignments?.length
+  ? props.merchant.bet_limit_assignments
+  : makeMerchantBetLimitAssignments(transactionCurrencies.value, transactionCurrency.value, {
+      agentCode: props.merchant?.agent_code,
+      authorizedProviderIds: quoteRates.value.map(rate => rate.provider_id)
+    }))
 
 const formatDateTime = (value?: string) => {
   if (!value) return '-'
@@ -97,12 +105,12 @@ const runAction = (action: string) => {
         <div class="mb-5 grid grid-cols-1 gap-3 md:grid-cols-4">
           <div class="rounded border border-white/10 bg-[#202026] p-4">
             <n-statistic label="今日投注額">
-              <MoneyText :value="merchant.today_bet || 0" :currency="displayCurrency" compact color="text-slate-100" />
+              <MoneyText :value="merchant.today_bet || 0" :currency="transactionCurrency" compact color="text-slate-100" />
             </n-statistic>
           </div>
           <div class="rounded border border-white/10 bg-[#202026] p-4">
             <n-statistic label="今日派彩">
-              <MoneyText :value="merchant.today_payout || 0" :currency="displayCurrency" compact color="text-slate-100" />
+              <MoneyText :value="merchant.today_payout || 0" :currency="transactionCurrency" compact color="text-slate-100" />
             </n-statistic>
           </div>
           <div class="rounded border border-white/10 bg-[#202026] p-4">
@@ -146,7 +154,7 @@ const runAction = (action: string) => {
               </n-descriptions-item>
               <n-descriptions-item label="API Secret">{{ merchant.api_secret_masked || 'sk_live_****************' }}</n-descriptions-item>
               <n-descriptions-item label="Callback URL">{{ merchant.callback_url || '-' }}</n-descriptions-item>
-              <n-descriptions-item label="Callback 金額模式">USDT 結算幣別</n-descriptions-item>
+              <n-descriptions-item label="Callback 金額模式">{{ callbackAmountModeLabel }}</n-descriptions-item>
               <n-descriptions-item label="簽名方式">{{ merchant.sign_method || '-' }}</n-descriptions-item>
               <n-descriptions-item label="環境">{{ merchant.environment === 'production' ? 'Production' : 'Sandbox' }}</n-descriptions-item>
               <n-descriptions-item label="API 狀態">{{ merchant.api_status || '-' }}</n-descriptions-item>
@@ -176,7 +184,7 @@ const runAction = (action: string) => {
               <n-descriptions-item label="Transfer Ledger" :span="2">
                 {{ walletMode === 'transfer'
                   ? 'GGAP 內部帳本記錄 Transfer In / Out、Bet、Win、Rollback 與餘額快照。'
-                  : 'Seamless Wallet 由商戶 Callback 即時處理餘額，Provider 側仍只認 GGAP 單一 USDT 錢包。' }}
+                  : 'Seamless Wallet 由商戶 Callback 即時處理餘額；Launch Game 時依會員幣別路由至對應的 Provider 幣別線。' }}
               </n-descriptions-item>
               <n-descriptions-item label="Balance URL" :span="2">{{ merchant.balance_url || '-' }}</n-descriptions-item>
               <n-descriptions-item label="Bet URL" :span="2">{{ merchant.bet_url || '-' }}</n-descriptions-item>
@@ -188,11 +196,11 @@ const runAction = (action: string) => {
 
           <n-tab-pane name="currency" tab="幣別設定">
             <n-descriptions bordered :column="2" label-placement="left">
-              <n-descriptions-item label="多顯示幣別">{{ merchant.multi_currency_enabled ? '啟用' : '停用' }}</n-descriptions-item>
-              <n-descriptions-item label="預設顯示幣別">{{ displayCurrency }}</n-descriptions-item>
-              <n-descriptions-item label="可用顯示幣別">
+              <n-descriptions-item label="多交易幣別">{{ merchant.multi_currency_enabled ? '啟用' : '停用' }}</n-descriptions-item>
+              <n-descriptions-item label="預設交易幣別">{{ transactionCurrency }}</n-descriptions-item>
+              <n-descriptions-item label="可用交易幣別">
                 <div class="flex flex-wrap gap-1">
-                  <n-tag v-for="currency in displayCurrencies" :key="currency" size="small" :bordered="false">
+                  <n-tag v-for="currency in transactionCurrencies" :key="currency" size="small" :bordered="false">
                     {{ currency }}
                   </n-tag>
                 </div>
@@ -200,9 +208,9 @@ const runAction = (action: string) => {
               <n-descriptions-item label="正式結算幣別">
                 <n-tag type="success" :bordered="false">{{ settlementCurrency }}</n-tag>
               </n-descriptions-item>
-              <n-descriptions-item label="匯率 ID">{{ merchant.exchange_rate_id || '-' }}</n-descriptions-item>
-              <n-descriptions-item label="匯率鎖定時間">{{ formatDateTime(merchant.rate_locked_at) }}</n-descriptions-item>
-              <n-descriptions-item label="基準匯率">{{ merchant.base_rate || '-' }}</n-descriptions-item>
+              <n-descriptions-item label="日結排程">00:00 關帳 / 00:05 鎖匯率 / 00:10 完成</n-descriptions-item>
+              <n-descriptions-item label="匯率規則">按交易日公告匯率建立不可變快照</n-descriptions-item>
+              <n-descriptions-item label="Provider 即時交易">使用幣別線原幣，不於遊戲 Session 轉換 USDT</n-descriptions-item>
               <n-descriptions-item label="結算服務費率">{{ formatRate(serviceFeeRate) }}</n-descriptions-item>
             </n-descriptions>
           </n-tab-pane>
@@ -216,21 +224,21 @@ const runAction = (action: string) => {
             </n-descriptions>
           </n-tab-pane>
 
-          <n-tab-pane name="limits" tab="遊戲限額">
+          <n-tab-pane name="limits" tab="下注限額">
             <n-alert type="info" :show-icon="false" class="mb-4">
-              商戶只可使用所屬代理已開放的單槍群組；特殊會員可在會員層再覆寫更高區間，交易時會保存 Session 限額快照。
+              商戶只可使用所屬代理已開放的 Provider 幣別線下注限額方案；特殊會員只能改指派其他已開放方案，不可自行輸入區間，交易時會保存方案快照。
             </n-alert>
             <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div v-for="limit in merchantLimitGroups" :key="`${limit.provider_name}-${limit.limit_group_name}-${limit.display_currency}`" class="rounded border border-white/10 bg-[#202026] p-4">
+              <div v-for="limit in merchantBetLimitAssignments" :key="`${limit.provider_name}-${limit.provider_bet_group_name}-${limit.transaction_currency}`" class="rounded border border-white/10 bg-[#202026] p-4">
                 <div class="mb-3 flex items-center justify-between gap-2">
                   <div>
-                    <div class="font-semibold">{{ limit.limit_group_name }}</div>
+                    <div class="font-semibold">{{ limit.provider_bet_group_name }}</div>
                     <div class="text-xs text-gray-500">{{ limit.provider_name }} / {{ limit.game_type }}</div>
                   </div>
                   <n-tag type="success" size="small" :bordered="false">{{ limit.status }}</n-tag>
                 </div>
                 <div class="space-y-2 text-sm">
-                  <div class="flex justify-between gap-3"><span class="text-gray-500">投注區間</span><span>{{ formatDisplayAmount(limit.min_bet, limit.display_currency) }} - {{ formatDisplayAmount(limit.max_bet, limit.display_currency) }}</span></div>
+                  <div class="flex justify-between gap-3"><span class="text-gray-500">投注區間</span><span>{{ formatDisplayAmount(limit.min_bet, limit.transaction_currency) }} - {{ formatDisplayAmount(limit.max_bet, limit.transaction_currency) }}</span></div>
                   <div class="flex justify-between gap-3"><span class="text-gray-500">來源</span><span>{{ limit.source }}</span></div>
                 </div>
               </div>

@@ -54,15 +54,15 @@ const defaultProvider = (): Partial<Provider> => ({
         costPercent: 0,
         expiryDate: Date.now()
     },
-    provider_settlement_currency: 'USDT',
-    provider_wallet_currency: 'USDT',
+    platform_accounting_currency: 'USDT',
+    provider_wallet_currency: 'TWD',
     cost_billing_mode: 'GGR',
     provider_cost_rate: 0.04,
     negative_ggr_policy: 'carry_forward',
     cost_rate_version: 'COST-2026.07',
     cost_rate_effective_at: '2026-07-01T00:00',
     contractConfig: {
-        settlement_currency: 'USDT',
+        accounting_currency: 'USDT',
         rules: {
             slot_free_spin: { enabled: false, provider_share: 0 },
             live_tip: { enabled: false, provider_share: 0 },
@@ -87,8 +87,7 @@ watch(() => props.show, (newVal) => {
 
     if (!formModel.value.apiConfig) formModel.value.apiConfig = {}
     if (!formModel.value.contract) formModel.value.contract = { costPercent: 0, expiryDate: Date.now() }
-    formModel.value.provider_settlement_currency = 'USDT'
-    formModel.value.provider_wallet_currency = 'USDT'
+    formModel.value.platform_accounting_currency = 'USDT'
     formModel.value.cost_billing_mode = 'GGR'
     formModel.value.provider_cost_rate = formModel.value.provider_cost_rate ?? 0.04
     formModel.value.negative_ggr_policy = formModel.value.negative_ggr_policy ?? 'carry_forward'
@@ -100,6 +99,12 @@ watch(() => props.show, (newVal) => {
 })
 
 const currencyOptions = [
+    { label: 'TWD', value: 'TWD' },
+    { label: 'THB', value: 'THB' },
+    { label: 'PHP', value: 'PHP' },
+    { label: 'VND', value: 'VND' },
+    { label: 'IDR', value: 'IDR' },
+    { label: 'USD', value: 'USD' },
     { label: 'USDT', value: 'USDT' }
 ]
 
@@ -171,19 +176,19 @@ const handleSave = async () => {
             <n-tab-pane name="wallet" tab="錢包 / 結算">
                 <n-form label-placement="left" label-width="160" require-mark-placement="right-hanging" class="mt-4">
                     <n-alert type="info" :show-icon="false" class="mb-4">
-                        Provider 只串 GGAP 單一 USDT 錢包；供應商不需要知道代理、商戶或會員顯示幣別。
+                        此處只設定供應商預設值；儲存供應商後，請至供應商詳情的「幣別管理」逐一設定幣別 ID、廠商 ID、API Key、憑證、URL 與錢包種類。
                     </n-alert>
                     <n-form-item label="Provider 串接錢包">
-                        <n-tag type="success" :bordered="false">GGAP 單一 USDT 錢包</n-tag>
+                        <n-tag type="info" :bordered="false">依幣別線分別設定</n-tag>
                     </n-form-item>
-                    <n-form-item label="Provider 對帳幣別">
-                        <n-select v-model:value="formModel.provider_settlement_currency" :options="currencyOptions" disabled />
+                    <n-form-item label="平台帳務幣別">
+                        <n-select v-model:value="formModel.platform_accounting_currency" :options="currencyOptions" disabled />
                     </n-form-item>
                     <n-form-item label="Provider Wallet 幣別">
-                        <n-select v-model:value="formModel.provider_wallet_currency" :options="currencyOptions" disabled />
+                        <n-select v-model:value="formModel.provider_wallet_currency" :options="currencyOptions" />
                     </n-form-item>
                     <n-form-item label="供應商帳務維度">
-                        <n-input value="provider_id + settlement_currency + period" readonly />
+                        <n-input value="provider_id + provider_currency_connection_id + provider_currency_id + original_currency + settlement_currency + period" readonly />
                     </n-form-item>
                 </n-form>
             </n-tab-pane>
@@ -215,8 +220,8 @@ const handleSave = async () => {
 
             <n-tab-pane name="rules" :tab="t('provider.contract')">
                 <n-form label-placement="left" label-width="160" require-mark-placement="right-hanging" class="mt-4">
-                    <n-form-item :label="t('provider.settlementCurrency')">
-                        <n-select v-model:value="formModel.contractConfig!.settlement_currency" :options="currencyOptions" disabled />
+                    <n-form-item label="平台成本帳務幣別">
+                        <n-select v-model:value="formModel.contractConfig!.accounting_currency" :options="currencyOptions" disabled />
                     </n-form-item>
 
                     <n-card :title="t('provider.advancedRules')" size="small" class="mt-4 bg-gray-50 border-gray-200">

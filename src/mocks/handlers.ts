@@ -1,8 +1,8 @@
 import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
 import type { Merchant, MerchantDetail } from '../types/merchant'
-import type { Agent } from '../types/agent'
 import type { Provider } from '../types/provider'
+import { buildFinancialReport } from './financialReport'
 import { mockGames } from './data/games'
 import { financeHandlers } from './finance'
 import { systemHandlers } from './system'
@@ -12,26 +12,6 @@ import { fundsHandlers } from './funds'
 // ... existing code ...
 
 // Helper Functions
-function createRandomAgent(id: number, parentId: number | null = null, level: number = 1): Agent {
-    const pct = faker.number.int({ min: 10, max: 90 })
-    return {
-        id,
-        account: faker.internet.username(),
-        site_code: faker.string.alpha({ length: 4, casing: 'upper' }),
-        level,
-        parent_id: parentId,
-        balance: faker.number.float({ min: 1000, max: 100000, fractionDigits: 2 }),
-        percent: pct,
-        commission_rate: pct,
-        player_count: faker.number.int({ min: 0, max: 200 }),
-        monthly_performance: faker.number.float({ min: 0, max: 50000, fractionDigits: 2 }),
-        promotion_code: faker.string.alphanumeric(8).toUpperCase(),
-        state: faker.helpers.arrayElement(['active', 'disabled']),
-        created_at: faker.date.past().toISOString(),
-        children_count: level < 3 ? faker.number.int({ min: 0, max: 5 }) : 0
-    }
-}
-
 function createRandomMerchant(id: number): Merchant {
     const walletMode = faker.helpers.arrayElement(['transfer', 'seamless']) as 'transfer' | 'seamless'
     const displayId = `OP-${(1000 + id).toString()}`
@@ -119,19 +99,20 @@ function createRandomMerchant(id: number): Merchant {
         currency_type: displayCurrency,
         supported_currencies: displayCurrencies,
         multi_currency_enabled: true,
+        transaction_currencies: displayCurrencies,
         display_currencies: displayCurrencies,
+        default_transaction_currency: displayCurrency,
         default_display_currency: displayCurrency,
         settlement_currency: 'USDT',
-        callback_amount_mode: 'settlement_currency',
+        callback_amount_mode: 'transaction_currency',
         service_fee_rate: serviceFeeRate,
         service_fee_amount: Number(serviceFeeAmount.toFixed(4)),
         base_usdt_amount: Number(settlementTodayGgr.toFixed(4)),
         final_settlement_usdt: Number((settlementTodayGgr + serviceFeeAmount).toFixed(4)),
-        daily_settlement_time: '01:00 BJT',
-        fx_rate_update_time: '00:00 BJT',
+        daily_settlement_time: '00:10 Asia/Taipei',
+        fx_rate_update_time: '00:05 Asia/Taipei',
         exchange_fee_rate: serviceFeeRate,
         base_rate: baseRate,
-        final_rate: baseRate,
         exchange_rate_id: `FX-${displayCurrency}-USDT-${faker.date.recent({ days: 1 }).toISOString().slice(0, 10).replace(/-/g, '')}`,
         rate_locked_at: faker.date.recent({ days: 1 }).toISOString(),
         percent: faker.number.float({ min: 10, max: 90, fractionDigits: 2 }), // Refers to revenue_share
@@ -234,8 +215,13 @@ export const mockProviders: Provider[] = [
         status: 'active',
         type: 'Slot',
         gameCount: 128,
-        provider_settlement_currency: 'USDT',
-        provider_wallet_currency: 'USDT',
+        platform_accounting_currency: 'USDT',
+        provider_wallet_currency: 'TWD',
+        currency_connections: [
+            { connection_id: 'PC-PG-TWD', provider_currency_id: 'PG-CUR-TWD-01', provider_merchant_id: 'PG-MCH-YOTA-TWD', currency: 'TWD', wallet_mode: 'seamless', api_url: 'https://api.pgsoft.com/twd', api_key_mask: 'pg_twd_****91A2', credential_mask: 'cert_****TWD', callback_url: 'https://api.ggap.example/provider/pg/twd/callback', amount_precision: 2, status: 'connected', is_default: true, last_tested_at: '2026-07-07T08:30:00.000Z' },
+            { connection_id: 'PC-PG-THB', provider_currency_id: 'PG-CUR-THB-01', provider_merchant_id: 'PG-MCH-SEA-THB', currency: 'THB', wallet_mode: 'seamless', api_url: 'https://api.pgsoft.com/thb', api_key_mask: 'pg_thb_****73C4', credential_mask: 'cert_****THB', callback_url: 'https://api.ggap.example/provider/pg/thb/callback', amount_precision: 2, status: 'connected', last_tested_at: '2026-07-07T08:35:00.000Z' },
+            { connection_id: 'PC-PG-USDT', provider_currency_id: 'PG-CUR-USDT-01', provider_merchant_id: 'PG-MCH-USDT', currency: 'USDT', wallet_mode: 'transfer', api_url: 'https://api.pgsoft.com/usdt', api_key_mask: 'pg_usdt_****45E6', credential_mask: 'cert_****USDT', callback_url: 'https://api.ggap.example/provider/pg/usdt/callback', amount_precision: 2, status: 'testing', last_tested_at: '2026-07-07T08:40:00.000Z' }
+        ],
         cost_billing_mode: 'GGR',
         provider_cost_rate: 0.04,
         negative_ggr_policy: 'carry_forward',
@@ -255,7 +241,7 @@ export const mockProviders: Provider[] = [
             currency: 'USD'
         },
         contractConfig: {
-            settlement_currency: 'USD',
+            accounting_currency: 'USDT',
             rules: {
                 slot_free_spin: { enabled: false, provider_share: 0 },
                 live_tip: { enabled: false, provider_share: 0 },
@@ -270,8 +256,12 @@ export const mockProviders: Provider[] = [
         status: 'active',
         type: 'Live',
         gameCount: 85,
-        provider_settlement_currency: 'USDT',
-        provider_wallet_currency: 'USDT',
+        platform_accounting_currency: 'USDT',
+        provider_wallet_currency: 'TWD',
+        currency_connections: [
+            { connection_id: 'PC-EVO-TWD', provider_currency_id: 'EVO-CUR-TWD-01', provider_merchant_id: 'EVO-MCH-TWD', currency: 'TWD', wallet_mode: 'seamless', api_url: 'https://api.evolution.com/twd', api_key_mask: 'evo_twd_****12A8', credential_mask: 'cert_****TWD', amount_precision: 2, status: 'connected', is_default: true },
+            { connection_id: 'PC-EVO-PHP', provider_currency_id: 'EVO-CUR-PHP-01', provider_merchant_id: 'EVO-MCH-PHP', currency: 'PHP', wallet_mode: 'seamless', api_url: 'https://api.evolution.com/php', api_key_mask: 'evo_php_****35B7', credential_mask: 'cert_****PHP', amount_precision: 2, status: 'testing' }
+        ],
         cost_billing_mode: 'GGR',
         provider_cost_rate: 0.06,
         negative_ggr_policy: 'carry_forward',
@@ -290,7 +280,7 @@ export const mockProviders: Provider[] = [
             currency: 'EUR'
         },
         contractConfig: {
-            settlement_currency: 'EUR',
+            accounting_currency: 'USDT',
             rules: {
                 slot_free_spin: { enabled: false, provider_share: 0 },
                 live_tip: { enabled: false, provider_share: 0 },
@@ -305,8 +295,11 @@ export const mockProviders: Provider[] = [
         status: 'active',
         type: 'Slot',
         gameCount: 256,
-        provider_settlement_currency: 'USDT',
-        provider_wallet_currency: 'USDT',
+        platform_accounting_currency: 'USDT',
+        provider_wallet_currency: 'VND',
+        currency_connections: [
+            { connection_id: 'PC-PP-VND', provider_currency_id: 'PP-CUR-VND-01', provider_merchant_id: 'PP-MCH-VND', currency: 'VND', wallet_mode: 'transfer', api_url: 'https://api.pragmaticplay.com/vnd', api_key_mask: 'pp_vnd_****92D1', credential_mask: 'cert_****VND', amount_precision: 0, status: 'connected', is_default: true }
+        ],
         cost_billing_mode: 'GGR',
         provider_cost_rate: 0.05,
         negative_ggr_policy: 'zero_out',
@@ -325,7 +318,7 @@ export const mockProviders: Provider[] = [
             currency: 'USD'
         },
         contractConfig: {
-            settlement_currency: 'USD',
+            accounting_currency: 'USDT',
             rules: {
                 slot_free_spin: { enabled: false, provider_share: 0 },
                 live_tip: { enabled: false, provider_share: 0 },
@@ -340,8 +333,12 @@ export const mockProviders: Provider[] = [
         status: 'maintenance',
         type: 'Slot',
         gameCount: 67,
-        provider_settlement_currency: 'USDT',
-        provider_wallet_currency: 'USDT',
+        platform_accounting_currency: 'USDT',
+        provider_wallet_currency: 'PHP',
+        currency_connections: [
+            { connection_id: 'PC-JILI-PHP', provider_currency_id: 'JILI-CUR-PHP-01', provider_merchant_id: 'JILI-MCH-PHP', currency: 'PHP', wallet_mode: 'seamless', api_url: 'https://api.jili.com/php', api_key_mask: 'jili_php_****77B2', credential_mask: 'cert_****PHP', amount_precision: 2, status: 'connected', is_default: true },
+            { connection_id: 'PC-JILI-IDR', provider_currency_id: 'JILI-CUR-IDR-01', provider_merchant_id: 'JILI-MCH-IDR', currency: 'IDR', wallet_mode: 'transfer', api_url: 'https://api.jili.com/idr', api_key_mask: 'jili_idr_****64E8', credential_mask: 'cert_****IDR', amount_precision: 0, status: 'testing' }
+        ],
         cost_billing_mode: 'GGR',
         provider_cost_rate: 0.052,
         negative_ggr_policy: 'zero_out',
@@ -360,7 +357,7 @@ export const mockProviders: Provider[] = [
             currency: 'USD'
         },
         contractConfig: {
-            settlement_currency: 'USD',
+            accounting_currency: 'USDT',
             rules: {
                 slot_free_spin: { enabled: false, provider_share: 0 },
                 live_tip: { enabled: false, provider_share: 0 },
@@ -375,8 +372,11 @@ export const mockProviders: Provider[] = [
         status: 'active',
         type: 'Slot',
         gameCount: 142,
-        provider_settlement_currency: 'USDT',
-        provider_wallet_currency: 'USDT',
+        platform_accounting_currency: 'USDT',
+        provider_wallet_currency: 'IDR',
+        currency_connections: [
+            { connection_id: 'PC-HAB-IDR', provider_currency_id: 'HAB-CUR-IDR-01', provider_merchant_id: 'HAB-MCH-IDR', currency: 'IDR', wallet_mode: 'transfer', api_url: 'https://api.habanero.com/idr', api_key_mask: 'hab_idr_****19F3', credential_mask: 'cert_****IDR', amount_precision: 0, status: 'testing', is_default: true }
+        ],
         cost_billing_mode: 'GGR',
         provider_cost_rate: 0.048,
         negative_ggr_policy: 'carry_forward',
@@ -395,7 +395,7 @@ export const mockProviders: Provider[] = [
             currency: 'USD'
         },
         contractConfig: {
-            settlement_currency: 'USD',
+            accounting_currency: 'USDT',
             rules: {
                 slot_free_spin: { enabled: false, provider_share: 0 },
                 live_tip: { enabled: false, provider_share: 0 },
@@ -481,6 +481,24 @@ export const handlers = [
             success: false,
             message: '帳號或密碼錯誤'
         }, { status: 401 })
+    }),
+
+    // ================== MASTER REPORT CENTER ==================
+    http.post('/api/v2/report/financial', async ({ request }) => {
+        await delay(450)
+        const body = await request.json().catch(() => ({})) as { groupBy?: 'date' | 'agent' | 'provider' | 'merchant'; startTime?: string; endTime?: string }
+        const list = buildFinancialReport({
+            groupBy: body.groupBy || 'date',
+            startTime: body.startTime,
+            endTime: body.endTime
+        })
+
+        return HttpResponse.json({
+            code: 0,
+            msg: 'success',
+            message: 'success',
+            data: { list }
+        })
     }),
 
     // ... existing handlers ...
@@ -618,8 +636,9 @@ export const handlers = [
             status: 'active' as const,
             type: body.type || 'Slot',
             gameCount: 0,
-            provider_settlement_currency: 'USDT' as const,
-            provider_wallet_currency: 'USDT' as const,
+            platform_accounting_currency: 'USDT' as const,
+            provider_wallet_currency: body.provider_wallet_currency || body.currency_connections?.[0]?.currency || 'TWD',
+            currency_connections: body.currency_connections || [],
             cost_billing_mode: 'GGR' as const,
             provider_cost_rate: body.provider_cost_rate ?? 0,
             negative_ggr_policy: body.negative_ggr_policy ?? 'carry_forward',
@@ -640,7 +659,7 @@ export const handlers = [
             ],
             apiConfig: body.apiConfig || {},
             contractConfig: body.contractConfig || {
-                settlement_currency: 'USD',
+                accounting_currency: 'USDT',
                 rules: {
                     slot_free_spin: { enabled: false, provider_share: 0 },
                     live_tip: { enabled: false, provider_share: 0 },
@@ -698,7 +717,7 @@ export const handlers = [
     ...agentHandlers,
     ...fundsHandlers,
 
-    http.get('/api/v2/agent/list', async ({ request }) => {
+    http.get('/api/v2/admin/merchants', async ({ request }) => {
         await delay(500) // Simulate network latency
         const url = new URL(request.url)
         const search = url.searchParams.get('search')?.toLowerCase()
@@ -727,7 +746,7 @@ export const handlers = [
     }),
 
     // Get Merchant Detail
-    http.get('/api/v2/agent/:id', async ({ params }) => {
+    http.get('/api/v2/admin/merchants/:id', async ({ params }) => {
         await delay(500)
         const id = Number(params.id)
         const merchant = createRandomMerchant(id) as MerchantDetail
@@ -756,7 +775,7 @@ export const handlers = [
     }),
 
     // Update Merchant
-    http.post('/api/v2/agent/update', async () => {
+    http.put('/api/v2/admin/merchants/:id', async () => {
         await delay(800)
         return HttpResponse.json({
             code: 0,
@@ -781,7 +800,7 @@ export const handlers = [
     }),
 
     // Create Merchant
-    http.post('/api/v2/agent/management/agents', async ({ request }) => {
+    http.post('/api/v2/admin/merchants', async ({ request }) => {
         await delay(1000)
         const body = await request.json() as any
 
@@ -943,6 +962,74 @@ export const handlers = [
         })
     }),
 
+    // Portal credentials are split by entry point. Backend must derive the target
+    // identity from the authenticated token instead of accepting an agent/merchant id.
+    http.get('/api/v2/agent/credentials', async () => {
+        await delay(250)
+        return HttpResponse.json({
+            code: 0,
+            message: 'success',
+            data: {
+                merchant_code: 'AGT-SEA-001',
+                secret_key: 'agt_report_sk_****8F21',
+                whitelist: ['203.0.113.18', '198.51.100.24']
+            }
+        })
+    }),
+    http.post('/api/v2/agent/whitelist', async () => {
+        await delay(300)
+        return HttpResponse.json({ code: 0, message: 'success', data: { updated: true } })
+    }),
+    http.get('/api/v2/merchant/credentials', async () => {
+        await delay(250)
+        return HttpResponse.json({
+            code: 0,
+            message: 'success',
+            data: {
+                merchant_code: 'OP-1007',
+                secret_key: 'mch_wallet_sk_****91C3',
+                whitelist: ['203.0.113.42']
+            }
+        })
+    }),
+    http.post('/api/v2/merchant/whitelist', async () => {
+        await delay(300)
+        return HttpResponse.json({ code: 0, message: 'success', data: { updated: true } })
+    }),
+
+    // Agent dashboard is aggregated only from AGT-SEA-001 and its descendants.
+    http.get('/api/v2/agent/dashboard/stats', async () => {
+        await delay(350)
+        return HttpResponse.json({
+            code: 0,
+            message: 'success',
+            data: {
+                wallet: { balance: 101400, credit_limit: 188400, currency: 'USDT', exchange_rate: 1 },
+                today_kpi: {
+                    total_bet: 4231062.31,
+                    net_win: 154433.28,
+                    active_players: 1284,
+                    tx_count: 18420,
+                    comparison: { bet_pct: 1.7, win_pct: 4.5, player_pct: 2.1 }
+                },
+                trend_7d: [
+                    { date: '08/01', bet: 3721000, net_win: 131800 },
+                    { date: '08/02', bet: 3894000, net_win: 142100 },
+                    { date: '08/03', bet: 4012000, net_win: 147900 },
+                    { date: '08/04', bet: 3968000, net_win: 139400 },
+                    { date: '08/05', bet: 4155000, net_win: 151200 },
+                    { date: '08/06', bet: 4231062.31, net_win: 154433.28 }
+                ],
+                alerts: [],
+                top_games: [
+                    { name: 'Mahjong Ways', bet: 812400, win: 776100 },
+                    { name: 'Super Ace', bet: 638200, win: 612900 }
+                ]
+            }
+        })
+    }),
+
+    // Merchant dashboard is scoped to OP-1007 by the authenticated token.
     // Dashboard Statistics (War Room)
     http.get('/api/v2/report/dashboard', async () => {
         await delay(500)
@@ -1034,57 +1121,6 @@ export const handlers = [
                 list,
                 total: 100
             }
-        })
-    }),
-
-    // Hierarchical Agent List
-    http.get('/api/v2/agents', async ({ request }) => {
-        await delay(500)
-        const url = new URL(request.url)
-        const parentIdParam = url.searchParams.get('parent_id')
-        const parentId = parentIdParam ? Number(parentIdParam) : null
-
-        let level = 1
-        if (parentId) {
-            const levelParam = url.searchParams.get('level')
-            level = levelParam ? Number(levelParam) + 1 : 2
-        }
-
-        const count = faker.number.int({ min: 5, max: 15 })
-        const list = Array.from({ length: count }).map(() =>
-            createRandomAgent(
-                faker.number.int({ min: 1000, max: 99999 }),
-                parentId,
-                level
-            )
-        )
-
-        return HttpResponse.json({
-            code: 0,
-            msg: 'success',
-            data: {
-                list,
-                total: count
-            }
-        })
-    }),
-
-    // Create Agent
-    http.post('/api/v2/agent/create', async () => {
-        await delay(1000)
-        return HttpResponse.json({
-            code: 0,
-            msg: 'Agent Created Successfully',
-            data: { id: faker.number.int({ min: 10000, max: 99999 }) }
-        })
-    }),
-
-    // Update Agent
-    http.post('/api/v2/agent/update', async () => {
-        await delay(800)
-        return HttpResponse.json({
-            code: 0,
-            msg: 'Agent Updated Successfully'
         })
     }),
 

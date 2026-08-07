@@ -79,7 +79,6 @@ const permissionOptions: TreeOption[] = [
     children: [
       { key: 'provider:write', label: '供應商管理' },
       { key: 'game:write', label: '遊戲管理' },
-      { key: 'group:write', label: '遊戲分組' },
       { key: 'campaign:write', label: '獎池與活動' }
     ]
   },
@@ -158,7 +157,7 @@ const rows = ref<RoleRow[]>([
     status: 'enabled',
     member_count: 5,
     permission_count: 16,
-    permissions: ['dashboard:read', 'merchant:read', 'merchant:write', 'agent:read', 'agent:write', 'provider:write', 'game:write', 'group:write', 'campaign:write', 'player:read', 'bet:read', 'ledger:read', 'repair:write', 'wallet-router:read', 'risk:write', 'monitoring:read'],
+    permissions: ['dashboard:read', 'merchant:read', 'merchant:write', 'agent:read', 'agent:write', 'provider:write', 'game:write', 'campaign:write', 'player:read', 'bet:read', 'ledger:read', 'repair:write', 'wallet-router:read', 'risk:write', 'monitoring:read'],
     scope: '營運資料',
     updated_at: '2026-07-05T14:32:00+08:00'
   },

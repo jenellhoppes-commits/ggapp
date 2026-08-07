@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker'
+import { buildFinancialReport } from './financialReport'
 
 export function setupManualMock() {
     const originalFetch = window.fetch
@@ -37,28 +38,6 @@ export function setupManualMock() {
                 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
             }
             return new Response(JSON.stringify({ code: 401, msg: 'Invalid credentials' }), { status: 200 })
-        }
-
-        // --- Agent: List ---
-        if (url.includes('/api/v2/agents') && method === 'GET') {
-            await delay(500)
-            const list = Array.from({ length: 15 }).map(() => ({
-                id: faker.number.int({ min: 10000, max: 99999 }),
-                account: faker.internet.username(),
-                site_code: faker.string.alphanumeric(4).toUpperCase(),
-                level: 1,
-                parent_id: null,
-                balance: parseFloat(faker.finance.amount()),
-                percent: faker.number.int({ min: 10, max: 90 }),
-                state: faker.helpers.arrayElement(['active', 'disabled']),
-                created_at: faker.date.recent().toISOString(),
-                children_count: faker.number.int({ min: 0, max: 20 })
-            }))
-            return new Response(JSON.stringify({
-                code: 0,
-                msg: 'success',
-                data: { list, total: 50 }
-            }), { status: 200 })
         }
 
         // --- Bet Logs (Phase 8.8) ---
@@ -162,44 +141,20 @@ export function setupManualMock() {
             }), { status: 200 })
         }
 
-        // --- Financial Report ---
+        // --- Master Report Center ---
         if (url.includes('/api/v2/report/financial') && method === 'POST') {
             await delay(800)
 
-            // Parse body to get groupBy
-            let groupBy = 'date'
+            let requestBody: { groupBy?: 'date' | 'agent' | 'provider' | 'merchant'; startTime?: string; endTime?: string } = {}
             if (init?.body) {
-                try {
-                    const body = JSON.parse(init.body as string)
-                    if (body.groupBy) groupBy = body.groupBy
+              try {
+                    requestBody = JSON.parse(init.body as string)
                 } catch (e) { }
             }
-
-            const count = groupBy === 'date' ? 30 : 15
-            const list = Array.from({ length: count }).map((_, index) => {
-                let key = ''
-                if (groupBy === 'date') {
-                    const d = new Date()
-                    d.setDate(d.getDate() - (count - index - 1))
-                    key = d.toISOString().split('T')[0] || ''
-                } else {
-                    key = faker.company.name()
-                }
-
-                const bet = parseFloat(faker.finance.amount({ min: 10000, max: 500000, dec: 2 }))
-                // Random RTP between 80% and 120% (some loss scenarios for house)
-                const rtp = faker.number.float({ min: 80, max: 120 })
-                const win = bet * (rtp / 100)
-                const ggr = bet - win
-
-                return {
-                    key: key,
-                    total_bet: bet,
-                    total_win: parseFloat(win.toFixed(2)),
-                    ggr: parseFloat(ggr.toFixed(2)),
-                    rtp: parseFloat(rtp.toFixed(2)),
-                    round_count: faker.number.int({ min: 500, max: 5000 })
-                }
+            const list = buildFinancialReport({
+                groupBy: requestBody.groupBy || 'date',
+                startTime: requestBody.startTime,
+                endTime: requestBody.endTime
             })
 
             return new Response(JSON.stringify({

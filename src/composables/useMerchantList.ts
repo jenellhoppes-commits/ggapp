@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { Merchant } from '../types/merchant'
-import { legacyService } from '../services/legacy'
+import { adminMerchantService } from '../services/admin/merchants'
 import { DEFAULT_TABLE_PAGINATION } from '../utils/tableSort'
 
 export function useMerchantList() {
@@ -16,11 +16,11 @@ export function useMerchantList() {
         pageCount: 1
     })
 
-    async function fetchList(params: { level?: number, parent_id?: number, search?: string } = { level: 1 }) {
+    async function fetchList(params: { agent_id?: string, parent_id?: number, search?: string } = {}) {
         loading.value = true
         error.value = null
         try {
-            const data = await legacyService.listMerchants(params)
+            const data = await adminMerchantService.list(params)
             list.value = data.list
             pagination.value.itemCount = data.total
             // If backend doesn't return pageCount, calculate it

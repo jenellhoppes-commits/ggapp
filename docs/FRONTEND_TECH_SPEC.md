@@ -136,3 +136,4 @@
     * 監聽 `document.visibilitychange` 事件。
     * 當 `document.hidden === true` (使用者切換分頁) 時，**暫停輪詢**。
     * 當 `document.hidden === false` (使用者切回) 時，**立即觸發一次更新** 並恢復輪詢。
+> **舊版文件提示：** Provider 幣別管理與交易畫面規格，請以 `PROVIDER_MULTI_CURRENCY_AND_TRANSACTION_SPEC.md` 與 `GGAP_final_system_spec_tech.html` 為準。本文件僅保留作舊架構參考。

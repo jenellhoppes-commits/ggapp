@@ -8,38 +8,69 @@ export interface GameDetail {
 }
 
 export interface BetLog {
-    // Core identifiers
-    round_id: string; // e.g., "R-882190..."
-    id: string; // Platform internal ID
-    created_at: string; // ISO timestamp
+    // One record represents one member bet. round_id is a relation, never the row key.
+    bet_id: string;
+    round_id: string;
+    transaction_id: string;
+    provider_tx_id: string;
+    idempotency_key: string;
+    created_at: string;
 
-    // Merchant information
-    merchant_display_id: string; // e.g., "OP-1001"
-    merchant_name: string; // e.g., "Golden Dragon"
+    agent_id: string;
+    agent_path: string;
+    merchant_id: string;
+    merchant_name: string;
+    player_id: string;
+    merchant_player_id: string;
 
-    // Game information
-    provider_name: string; // e.g., "PG Soft"
+    provider_id: string;
+    provider_name: string;
+    provider_game_id: string;
     game_name: string;
+    provider_currency_connection_id: string;
+    provider_currency_id: string;
+    provider_currency: string;
+    wallet_mode: 'seamless' | 'transfer';
 
-    // Player identifiers (dual-layer)
-    agg_player_id: string; // Platform player ID, e.g., "PL-9988"
-    merchant_member_id: string; // Merchant's member ID, e.g., "mem_user_01"
+    provider_bet_amount: number;
+    provider_payout_amount: number | null;
+    provider_refund_amount: number;
+    provider_ggr: number | null;
+    payout_scope: 'bet' | 'round' | 'unallocated';
+    round_settlement_id: string | null;
+    settlement_currency: 'USDT';
+    settlement_bet_amount: number | null;
+    settlement_payout_amount: number | null;
+    settlement_ggr: number | null;
+    settlement_status: 'pending_daily' | 'processing' | 'locked' | 'failed' | 'reopened';
+    settlement_batch_id: string | null;
+    exchange_rate_id: string | null;
+    exchange_rate: number | null;
 
-    // Financial data
-    bet_amount: number;
-    payout_amount: number;
-    net_win: number; // Computed: payout_amount - bet_amount
-    currency: string;
+    provider_bet_group_id: string;
+    provider_bet_group_code: string;
+    provider_bet_group_name: string;
+    provider_bet_group_version: string;
+    limit_min_bet: number;
+    limit_max_bet: number;
+    limit_bet_step: number;
+    limit_check_result: 'passed' | 'blocked' | 'manual_review';
 
-    // Status
-    status: 'settled' | 'unsettled' | 'cancelled';
+    status: 'pending' | 'settled' | 'cancelled' | 'refunded' | 'abnormal';
 
     // Detail payload
     game_detail?: GameDetail;
 
-    // Legacy fields (for backward compatibility)
+    // Legacy aliases remain optional while older API consumers migrate.
+    id?: string;
+    merchant_display_id?: string;
+    agg_player_id?: string;
+    merchant_member_id?: string;
+    bet_amount?: number;
+    payout_amount?: number;
+    net_win?: number;
+    currency?: string;
     player_account?: string;
-    player_id?: string;
     win_amount?: number;
     profit?: number;
     payout?: number;
@@ -63,11 +94,47 @@ export interface BetLogSearchResponse {
     };
 }
 
+export type FinancialReportGroupBy = 'date' | 'agent' | 'provider' | 'merchant'
+
 export interface FinancialReportItem {
-    key: string; // Date (YYYY-MM-DD) or Agent Name
+    key: string; // Date, agent, provider, or merchant display name
+    settlement_currency: 'USDT';
     total_bet: number;
     total_win: number;
-    ggr: number; // bet - win
-    rtp: number; // (win / bet) * 100
+    settlement_ggr: number;
+    agent_game_charge: number;
+    fx_service_fee: number;
+    agent_receivable: number; // Final receivable, including FX fee and agent adjustment.
+    provider_payable: number;
+    provider_cost: number; // Backward-compatible alias of provider_payable.
+    platform_adjustment: number;
+    adjustment_amount: number;
+    activity_cost: number;
+    compensation_cost: number;
+    platform_margin: number;
+    margin_rate: number;
     round_count: number;
+    settlement_status: 'pending_daily' | 'processing' | 'locked' | 'failed' | 'reopened';
+    settlement_batch_id: string;
+
+    // Legacy fields kept for older mock/report consumers.
+    ggr?: number;
+    rtp?: number;
+}
+
+export interface RoundSettlement {
+    round_settlement_id: string;
+    round_id: string;
+    provider_id: string;
+    provider_currency_connection_id: string;
+    provider_currency: string;
+    provider_round_win_amount: number;
+    payout_scope: 'round';
+    allocation_status: 'not_required' | 'provider_allocated' | 'unallocated';
+    related_bet_ids: string[];
+    settlement_currency: 'USDT';
+    settlement_win_amount: number | null;
+    settlement_status: 'pending_daily' | 'processing' | 'locked' | 'failed' | 'reopened';
+    provider_raw_payload: string;
+    created_at: string;
 }

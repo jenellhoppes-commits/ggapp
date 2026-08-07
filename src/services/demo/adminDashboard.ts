@@ -11,7 +11,7 @@ export const adminDashboardDemo: AdminDashboardData = {
   finance_kpis: [
     { label: '代理應收', value: 279300, note: '正式收款對象為 L1 代理', tone: 'success', money: true },
     { label: '供應商應付', value: 162800, note: '供應商成本帳，與代理帳務分離', tone: 'warning', money: true },
-    { label: '平台毛利', value: 81100, note: '代理應收 - 供應商成本 + 匯率服務費', tone: 'success', money: true },
+    { label: '平台毛利', value: 81100, note: '代理最終應收 - 供應商應付 + 平台調整 - 其他成本', tone: 'success', money: true },
     { label: '匯率服務費', value: 3860, note: 'MVP 預設 0.5%', tone: 'info', money: true }
   ],
   trend_7d: [

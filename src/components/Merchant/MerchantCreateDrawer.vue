@@ -66,6 +66,7 @@ interface MerchantCreateForm {
   default_display_currency: MerchantCurrency
   settlement_currency: 'USDT'
   service_fee_rate: number
+  default_merchant_markup_rate: number
   authorized_providers: string[]
   game_package: string
   agent_value: string
@@ -104,6 +105,7 @@ const defaultForm = (): MerchantCreateForm => ({
   default_display_currency: 'TWD',
   settlement_currency: 'USDT',
   service_fee_rate: 0.005,
+  default_merchant_markup_rate: 0.01,
   authorized_providers: ['pg'],
   game_package: 'Default Global Pack',
   agent_value: '',
@@ -114,9 +116,10 @@ const formValue = reactive<MerchantCreateForm>(defaultForm())
 
 const steps = ['基本資料', '代理歸屬', 'API 設定', '錢包與幣別', '遊戲權限', '商戶報價', '確認送出']
 
-const providerOptions = providerRateOptions.map(provider => ({
+const allProviderOptions = providerRateOptions.map(provider => ({
   label: provider.provider_name,
-  value: provider.key
+  value: provider.key,
+  provider_id: provider.provider_id
 }))
 
 const gamePackageOptions = [
@@ -124,14 +127,6 @@ const gamePackageOptions = [
   { label: 'SEA Market Pack', value: 'SEA Market Pack' },
   { label: 'Live Casino Pack', value: 'Live Casino Pack' },
   { label: 'VIP Slot Pack', value: 'VIP Slot Pack' }
-]
-
-const displayCurrencyOptions = [
-  { label: 'TWD', value: 'TWD' },
-  { label: 'PHP', value: 'PHP' },
-  { label: 'THB', value: 'THB' },
-  { label: 'VND', value: 'VND' },
-  { label: 'IDR', value: 'IDR' }
 ]
 
 const statusOptions = [
@@ -161,7 +156,32 @@ const signMethodOptions = [
 ]
 
 const selectedAgent = computed(() => agentOptions.value.find(agent => agent.value === formValue.agent_value) || agentOptions.value[0])
+const allowedProviderIds = computed(() => new Set((selectedAgent.value?.provider_currency_access || []).map(access => access.provider_id)))
+const providerOptions = computed(() => allProviderOptions.filter(provider => allowedProviderIds.value.has(provider.provider_id)))
+const selectedProviderIds = computed(() => new Set(providerRateOptions
+  .filter(provider => formValue.authorized_providers.includes(provider.key))
+  .map(provider => provider.provider_id)))
+const displayCurrencyOptions = computed(() => Array.from(new Set((selectedAgent.value?.provider_currency_access || [])
+  .filter(access => selectedProviderIds.value.has(access.provider_id))
+  .map(access => access.transaction_currency)))
+  .map(value => ({ label: value, value })))
 const serviceFeePercent = computed(() => `${(formValue.service_fee_rate * 100).toFixed(2)}%`)
+const merchantMarkupPercent = computed(() => `${(formValue.default_merchant_markup_rate * 100).toFixed(2)}%`)
+
+watch(() => formValue.agent_value, () => {
+  formValue.service_fee_rate = selectedAgent.value?.service_fee_rate ?? 0.005
+  const availableProviderKeys = new Set(providerOptions.value.map(provider => provider.value))
+  formValue.authorized_providers = formValue.authorized_providers.filter(provider => availableProviderKeys.has(provider))
+  if (!formValue.authorized_providers.length && providerOptions.value[0]) formValue.authorized_providers = [providerOptions.value[0].value]
+})
+watch([() => formValue.agent_value, () => [...formValue.authorized_providers]], () => {
+  const availableCurrencies = new Set(displayCurrencyOptions.value.map(option => option.value))
+  formValue.display_currencies = formValue.display_currencies.filter(currency => availableCurrencies.has(currency))
+  if (!formValue.display_currencies.length && displayCurrencyOptions.value[0]) formValue.display_currencies = [displayCurrencyOptions.value[0].value]
+  if (!formValue.display_currencies.includes(formValue.default_display_currency)) {
+    formValue.default_display_currency = formValue.display_currencies[0] || 'TWD'
+  }
+})
 const formatRate = (value: number) => `${(value * 100).toFixed(2)}%`
 const fallbackProvider = providerRateOptions[0]!
 
@@ -169,7 +189,7 @@ const quotePreview = computed(() => formValue.authorized_providers.map((provider
   const provider = providerRateOptions.find(item => item.key === providerKey) || fallbackProvider
   const agentRate = selectedAgent.value?.rates[providerKey] ?? (provider.provider_cost_rate + 0.03)
   const overrideMarkup = formValue.merchant_quote_markups[providerKey]
-  const quoteMarkup = typeof overrideMarkup === 'number' ? overrideMarkup : formValue.service_fee_rate
+  const quoteMarkup = typeof overrideMarkup === 'number' ? overrideMarkup : formValue.default_merchant_markup_rate
   const quoteRate = agentRate + quoteMarkup
 
   return {
@@ -179,7 +199,7 @@ const quotePreview = computed(() => formValue.authorized_providers.map((provider
     provider_cost_rate_snapshot: provider.provider_cost_rate,
     agent_upstream_rate: agentRate,
     quote_markup_rate: quoteMarkup,
-    quote_markup_source: typeof overrideMarkup === 'number' ? 'provider_override' as const : 'service_fee_default' as const,
+    quote_markup_source: typeof overrideMarkup === 'number' ? 'provider_override' as const : 'merchant_default' as const,
     merchant_quote_rate: quoteRate,
     merchant_margin_rate: quoteRate - agentRate,
     rate_source_agent_id: selectedAgent.value?.code || '',
@@ -236,6 +256,8 @@ const buildPayload = (): MerchantCreatePayload => {
     agent_level: agent.level,
     settlement_agent_id: agent.settlement,
     wallet_mode: formValue.wallet_mode,
+    transaction_currencies: formValue.display_currencies,
+    default_transaction_currency: formValue.default_display_currency,
     display_currencies: formValue.display_currencies,
     default_display_currency: formValue.default_display_currency,
     settlement_currency: 'USDT',
@@ -252,12 +274,17 @@ const buildPayload = (): MerchantCreatePayload => {
     authorized_providers: formValue.authorized_providers,
     game_package: formValue.game_package,
     service_fee_rate: formValue.service_fee_rate,
+    default_merchant_markup_rate: formValue.default_merchant_markup_rate,
     merchant_provider_rates: quotePreview.value
   }
 }
 
 const handleCreate = async () => {
   await formRef.value?.validate()
+  if (!formValue.authorized_providers.length || !formValue.display_currencies.length) {
+    message.warning('所屬代理目前沒有可供商戶使用的 Provider 幣別線')
+    return
+  }
   loading.value = true
   try {
     const merchant = await createMerchant(buildPayload())
@@ -276,7 +303,7 @@ const handleCreate = async () => {
     <n-drawer-content :title="mode === 'admin' ? '新增商戶' : '代理新增商戶'" closable>
       <n-alert :type="mode === 'admin' ? 'info' : 'warning'" :show-icon="false" class="mb-4">
         <template v-if="mode === 'admin'">
-          商戶必須綁定代理；未指定時預設歸屬平台直營代理。正式結算幣別固定 USDT，商戶顯示幣別可多選。
+          商戶必須綁定代理；未指定時預設歸屬平台直營代理。交易依 Provider 幣別線使用原幣，正式日結幣別固定 USDT。
         </template>
         <template v-else>
           代理只能建立自己代理樹底下的商戶；GGAP 不直接向商戶收款，商戶應繳金額屬代理帳務明細。
@@ -326,8 +353,8 @@ const handleCreate = async () => {
           <n-form-item label="允許負餘額"><n-switch v-model:value="formValue.allow_negative_balance" /></n-form-item>
           <n-form-item label="冪等控制"><n-switch v-model:value="formValue.idempotency_enabled" /></n-form-item>
           <n-form-item label="信用額度"><n-input-number v-model:value="formValue.credit_limit" :min="0" /></n-form-item>
-          <n-form-item label="可用顯示幣別"><n-select v-model:value="formValue.display_currencies" multiple :options="displayCurrencyOptions" /></n-form-item>
-          <n-form-item label="預設顯示幣別"><n-select v-model:value="formValue.default_display_currency" :options="displayCurrencyOptions" /></n-form-item>
+          <n-form-item label="可用交易幣別"><n-select v-model:value="formValue.display_currencies" multiple :options="displayCurrencyOptions" /></n-form-item>
+          <n-form-item label="預設交易／錢包幣別"><n-select v-model:value="formValue.default_display_currency" :options="displayCurrencyOptions" /></n-form-item>
           <n-form-item label="正式結算幣別"><n-tag type="success" :bordered="false">USDT</n-tag></n-form-item>
         </template>
 
@@ -337,15 +364,16 @@ const handleCreate = async () => {
         </template>
 
         <template v-else-if="currentStep === 6">
-          <n-form-item label="統一服務費率"><n-input-number v-model:value="formValue.service_fee_rate" :min="0" :max="0.2" :step="0.001" /></n-form-item>
+          <n-form-item label="匯率服務費（繼承）"><n-input :value="serviceFeePercent" readonly /></n-form-item>
+          <n-form-item label="預設商戶加價"><n-input-number v-model:value="formValue.default_merchant_markup_rate" :min="0" :max="0.2" :step="0.001" /></n-form-item>
           <n-alert type="warning" :show-icon="false" class="mb-4">
-            代理費率會先帶入商戶報價；若單一供應商未指定加成，預設使用統一結算服務費率 {{ serviceFeePercent }}。
+            未指定供應商加價時套用預設商戶加價 {{ merchantMarkupPercent }}；匯率服務費 {{ serviceFeePercent }} 由 GGAP 另行計算。
           </n-alert>
           <div class="space-y-3">
             <div v-for="rate in quotePreview" :key="rate.provider_id" class="rounded border border-white/10 bg-[#202026] p-4">
               <div class="mb-2 flex items-center justify-between">
                 <strong>{{ rate.provider_name }}</strong>
-                <n-tag :bordered="false">{{ rate.quote_markup_source === 'provider_override' ? '供應商指定' : '服務費預設' }}</n-tag>
+                <n-tag :bordered="false">{{ rate.quote_markup_source === 'provider_override' ? '供應商指定' : '商戶預設' }}</n-tag>
               </div>
               <div class="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
                 <span>供應商成本 {{ formatRate(rate.provider_cost_rate_snapshot) }}</span>
@@ -363,7 +391,7 @@ const handleCreate = async () => {
             <n-descriptions-item label="Site Code">{{ formValue.site_code }}</n-descriptions-item>
             <n-descriptions-item label="所屬代理">{{ selectedAgent?.name }}</n-descriptions-item>
             <n-descriptions-item label="錢包模式">{{ formValue.wallet_mode }}</n-descriptions-item>
-            <n-descriptions-item label="顯示幣別">{{ formValue.display_currencies.join(', ') }}</n-descriptions-item>
+            <n-descriptions-item label="交易幣別">{{ formValue.display_currencies.join(', ') }}</n-descriptions-item>
             <n-descriptions-item label="正式結算幣別">USDT</n-descriptions-item>
             <n-descriptions-item label="商戶報價" :span="2">{{ quotePreview.length }} 組供應商費率將同步建立</n-descriptions-item>
           </n-descriptions>

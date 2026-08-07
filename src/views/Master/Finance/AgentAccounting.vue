@@ -27,10 +27,11 @@ import type { DataTableColumns } from 'naive-ui'
 import { ReceiptLongOutlined, SearchOutlined, VisibilityOutlined } from '@vicons/material'
 import MoneyText from '../../../components/Common/MoneyText.vue'
 import { DEFAULT_TABLE_PAGINATION, withTableSorters } from '../../../utils/tableSort'
+import { calculateAgentReceivable } from '../../../domain/finance'
 
 type SettlementStatus = 'draft' | 'ready' | 'difference' | 'locked'
 type InvoiceStatus = 'none' | 'pending' | 'confirmed' | 'voided'
-type ReceiptStatus = 'unpaid' | 'partial' | 'received'
+type ReceiptStatus = 'unpaid' | 'partial' | 'received' | 'overpaid'
 
 interface AgentSettlementDetail {
   merchant_id: string
@@ -43,6 +44,9 @@ interface AgentSettlementDetail {
   agent_ggr_rate: number
   agent_receivable: number
   service_fee_amount: number
+  service_fee_rate?: number
+  service_fee_source?: 'system_default' | 'contract_override'
+  service_fee_version?: string
   status: 'included' | 'excluded'
 }
 
@@ -58,6 +62,10 @@ interface SubAgentSettlement {
   upstream_rate: number
   downstream_rate: number
   payable_to_parent: number
+  service_fee_amount: number
+  service_fee_rate?: number
+  service_fee_source?: 'system_default' | 'contract_override'
+  service_fee_version?: string
   adjustment_amount: number
   margin_amount: number
 }
@@ -75,6 +83,9 @@ interface MerchantPayableSettlement {
   merchant_quote_rate: number
   payable_to_agent: number
   service_fee_amount: number
+  service_fee_rate?: number
+  service_fee_source?: 'system_default' | 'contract_override'
+  service_fee_version?: string
   adjustment_amount: number
   agent_margin_amount: number
 }
@@ -108,9 +119,12 @@ interface AgentAccountingRow {
   adjustment_amount: number
   final_receivable: number
   received_amount: number
+  overpayment_amount?: number
   difference_amount: number
   settlement_status: SettlementStatus
   invoice_no?: string
+  invoice_amount_usdt?: number
+  invoice_created_at?: string
   invoice_status: InvoiceStatus
   receipt_status: ReceiptStatus
   locked_at?: string
@@ -124,6 +138,7 @@ interface AgentAccountingRow {
 
 const message = useMessage()
 const dialog = useDialog()
+const RECEIPT_TOLERANCE_USDT = 0.00000001
 
 const rows = ref<AgentAccountingRow[]>([
   {
@@ -157,7 +172,7 @@ const rows = ref<AgentAccountingRow[]>([
     ],
     receipts: [],
     logs: [
-      { action: '產生代理日結來源', operated_at: '2026-07-07T01:00:00.000Z', operator: 'System', trace_id: 'trace-agent-direct-settle' },
+      { action: '產生代理日結來源', operated_at: '2026-07-07T00:10:00+08:00', operator: 'System', trace_id: 'trace-agent-direct-settle' },
       { action: '建立代理應收帳單', operated_at: '2026-07-07T01:20:00.000Z', operator: 'Finance', trace_id: 'trace-agent-direct-invoice' }
     ]
   },
@@ -187,8 +202,9 @@ const rows = ref<AgentAccountingRow[]>([
       { merchant_id: 'OP-1009', merchant_name: 'Golden Dragon Gaming', provider_id: 'PP', provider_name: 'Pragmatic Play', display_currency: 'VND', display_ggr: 8847500000, settlement_ggr: 346700, agent_ggr_rate: 0.078, agent_receivable: 27042.6, service_fee_amount: 1386.8, status: 'included' }
     ],
     sub_agent_settlements: [
-      { parent_agent_id: 'AGT-SEA-001', parent_agent_name: 'SEA Growth Agent', child_agent_id: 'AGT-SEA-SUB01', child_agent_name: 'SEA Sub Agent 01', child_level: 2, provider_id: 'PG', provider_name: 'PG Soft', settlement_ggr: 337500, upstream_rate: 0.075, downstream_rate: 0.088, payable_to_parent: 29700, adjustment_amount: 0, margin_amount: 4387.5 },
-      { parent_agent_id: 'AGT-SEA-SUB01', parent_agent_name: 'SEA Sub Agent 01', child_agent_id: 'AGT-SEA-SUB01-L3', child_agent_name: 'SEA Local Desk L3', child_level: 3, provider_id: 'PP', provider_name: 'Pragmatic Play', settlement_ggr: 346700, upstream_rate: 0.088, downstream_rate: 0.1, payable_to_parent: 34670, adjustment_amount: 0, margin_amount: 4160.4 }
+      { parent_agent_id: 'AGT-SEA-001', parent_agent_name: 'SEA Growth Agent', child_agent_id: 'AGT-SEA-SUB01', child_agent_name: 'SEA Sub Agent 01', child_level: 2, provider_id: 'PG', provider_name: 'PG Soft', settlement_ggr: 337500, upstream_rate: 0.075, downstream_rate: 0.088, payable_to_parent: 29700, service_fee_amount: 1350, adjustment_amount: 0, margin_amount: 4387.5 },
+      { parent_agent_id: 'AGT-SEA-001', parent_agent_name: 'SEA Growth Agent', child_agent_id: 'AGT-SEA-SUB01', child_agent_name: 'SEA Sub Agent 01', child_level: 2, provider_id: 'PP', provider_name: 'Pragmatic Play', settlement_ggr: 346700, upstream_rate: 0.078, downstream_rate: 0.092, payable_to_parent: 31896.4, service_fee_amount: 1386.8, adjustment_amount: 0, margin_amount: 4853.8 },
+      { parent_agent_id: 'AGT-SEA-SUB01', parent_agent_name: 'SEA Sub Agent 01', child_agent_id: 'AGT-SEA-SUB01-L3', child_agent_name: 'SEA Local Desk L3', child_level: 3, provider_id: 'PP', provider_name: 'Pragmatic Play', settlement_ggr: 346700, upstream_rate: 0.092, downstream_rate: 0.1, payable_to_parent: 34670, service_fee_amount: 1386.8, adjustment_amount: 0, margin_amount: 2773.6 }
     ],
     merchant_settlements: [
       { merchant_id: 'OP-1008', merchant_name: 'NovaPlay Entertainment', agent_id: 'AGT-SEA-SUB01', agent_name: 'SEA Sub Agent 01', agent_level: 2, provider_id: 'PG', provider_name: 'PG Soft', display_currency: 'THB', settlement_ggr: 337500, merchant_quote_rate: 0.1, payable_to_agent: 33750, service_fee_amount: 1350, adjustment_amount: 0, agent_margin_amount: 4050 },
@@ -237,6 +253,37 @@ const rows = ref<AgentAccountingRow[]>([
   }
 ])
 
+// The detail snapshots are authoritative. Header totals are derived so the
+// game charge, FX service fee and final receivable cannot drift apart.
+rows.value.forEach((row) => {
+  row.agent_receivable = Number(row.details.reduce((sum, item) => sum + item.agent_receivable, 0).toFixed(4))
+  row.exchange_service_fee = Number(row.details.reduce((sum, item) => sum + item.service_fee_amount, 0).toFixed(4))
+  const result = calculateAgentReceivable(row.settlement_ggr, 0, 0, row.adjustment_amount)
+  row.final_receivable = Number((row.agent_receivable + row.exchange_service_fee + result.finalAgentReceivable).toFixed(4))
+  if (row.invoice_status !== 'none') {
+    row.invoice_amount_usdt = row.invoice_amount_usdt ?? row.final_receivable
+    row.invoice_created_at = row.invoice_created_at || row.updated_at
+  }
+  const receiptTarget = row.invoice_amount_usdt ?? row.final_receivable
+  row.overpayment_amount = Number(Math.max(row.received_amount - receiptTarget, 0).toFixed(4))
+  row.receipt_status = row.overpayment_amount > 0
+    ? 'overpaid'
+    : row.received_amount + RECEIPT_TOLERANCE_USDT >= receiptTarget
+      ? 'received'
+      : row.received_amount > 0
+        ? 'partial'
+        : 'unpaid'
+
+  const applyFeeAudit = (item: { settlement_ggr: number; service_fee_amount: number; service_fee_rate?: number; service_fee_source?: 'system_default' | 'contract_override'; service_fee_version?: string }) => {
+    item.service_fee_rate = item.settlement_ggr > 0 ? Number((item.service_fee_amount / item.settlement_ggr).toFixed(6)) : 0
+    item.service_fee_source = item.service_fee_rate === 0.005 ? 'system_default' : 'contract_override'
+    item.service_fee_version = `${row.rate_plan_version}-FX`
+  }
+  row.details.forEach(applyFeeAudit)
+  row.sub_agent_settlements.forEach(applyFeeAudit)
+  row.merchant_settlements.forEach(applyFeeAudit)
+})
+
 const showDetail = ref(false)
 const currentRow = ref<AgentAccountingRow | null>(rows.value[0] ?? null)
 const detailTab = ref('summary')
@@ -255,7 +302,8 @@ const statusOptions = [
 const receiptOptions = [
   { label: '未收款', value: 'unpaid' },
   { label: '部分收款', value: 'partial' },
-  { label: '已收款', value: 'received' }
+  { label: '已收款', value: 'received' },
+  { label: '溢收待處理', value: 'overpaid' }
 ]
 const statusMeta: Record<SettlementStatus, { label: string; type: 'success' | 'warning' | 'error' | 'info' }> = {
   draft: { label: '草稿', type: 'info' },
@@ -269,16 +317,17 @@ const invoiceMeta: Record<InvoiceStatus, { label: string; type: 'success' | 'war
   confirmed: { label: '已確認', type: 'success' },
   voided: { label: '已作廢', type: 'error' }
 }
-const receiptMeta: Record<ReceiptStatus, { label: string; type: 'success' | 'warning' | 'default' }> = {
+const receiptMeta: Record<ReceiptStatus, { label: string; type: 'success' | 'warning' | 'default' | 'error' }> = {
   unpaid: { label: '未收款', type: 'default' },
   partial: { label: '部分收款', type: 'warning' },
-  received: { label: '已收款', type: 'success' }
+  received: { label: '已收款', type: 'success' },
+  overpaid: { label: '溢收待處理', type: 'error' }
 }
 
 const formatRate = (value: number) => `${(value * 100).toFixed(2)}%`
 const formatDateTime = (value?: string) => value ? new Date(value).toLocaleString() : '-'
 const nowTrace = (prefix: string) => `${prefix}-${Date.now()}`
-const subAgentPayableTotal = (row: AgentAccountingRow) => row.sub_agent_settlements.reduce((sum, item) => sum + item.payable_to_parent + item.adjustment_amount, 0)
+const subAgentPayableTotal = (row: AgentAccountingRow) => row.sub_agent_settlements.reduce((sum, item) => sum + item.payable_to_parent + item.service_fee_amount + item.adjustment_amount, 0)
 const merchantPayableTotal = (row: AgentAccountingRow) => row.merchant_settlements.reduce((sum, item) => sum + item.payable_to_agent + item.service_fee_amount + item.adjustment_amount, 0)
 const agentTreeMarginTotal = (row: AgentAccountingRow) =>
   row.sub_agent_settlements.reduce((sum, item) => sum + item.margin_amount, 0)
@@ -326,7 +375,7 @@ const generateAgentSettlement = () => {
 const openDetail = (row: AgentAccountingRow) => {
   currentRow.value = row
   detailTab.value = 'summary'
-  receiptAmount.value = Math.max(row.final_receivable - row.received_amount, 0)
+  receiptAmount.value = Math.max((row.invoice_amount_usdt ?? row.final_receivable) - row.received_amount, 0)
   showDetail.value = true
 }
 
@@ -336,6 +385,8 @@ const createInvoice = (row: AgentAccountingRow) => {
     return
   }
   row.invoice_no = row.invoice_no || `AINV-${row.period.replace('-', '')}-${row.agent_code.replace('AGT-', '')}`
+  row.invoice_amount_usdt = row.invoice_amount_usdt ?? row.final_receivable
+  row.invoice_created_at = row.invoice_created_at || new Date().toISOString()
   row.invoice_status = 'pending'
   row.logs.unshift({
     action: '建立代理應收帳單',
@@ -378,7 +429,8 @@ const lockSettlement = (row: AgentAccountingRow) => {
 }
 
 const registerReceipt = (row: AgentAccountingRow) => {
-  const remaining = Math.max(row.final_receivable - row.received_amount, 0)
+  const receiptTarget = row.invoice_amount_usdt ?? row.final_receivable
+  const remaining = Math.max(receiptTarget - row.received_amount, 0)
   if (row.invoice_status !== 'confirmed') {
     message.warning('請先確認帳單')
     return
@@ -389,7 +441,9 @@ const registerReceipt = (row: AgentAccountingRow) => {
   }
   const amount = Math.min(receiptAmount.value, remaining)
   row.received_amount = Number((row.received_amount + amount).toFixed(4))
-  row.receipt_status = row.received_amount >= row.final_receivable ? 'received' : 'partial'
+  if (Math.abs(receiptTarget - row.received_amount) <= RECEIPT_TOLERANCE_USDT) row.received_amount = receiptTarget
+  row.overpayment_amount = Number(Math.max(row.received_amount - receiptTarget, 0).toFixed(4))
+  row.receipt_status = row.overpayment_amount > 0 ? 'overpaid' : row.received_amount + RECEIPT_TOLERANCE_USDT >= receiptTarget ? 'received' : 'partial'
   row.receipts.unshift({
     receipt_no: `RCV-${row.period.replace('-', '')}-${row.agent_code.replace('AGT-', '')}-${row.receipts.length + 1}`,
     received_at: new Date().toISOString(),
@@ -403,7 +457,7 @@ const registerReceipt = (row: AgentAccountingRow) => {
     operator: 'Finance',
     trace_id: nowTrace('trace-agent-receipt')
   })
-  receiptAmount.value = Math.max(row.final_receivable - row.received_amount, 0)
+  receiptAmount.value = Math.max(receiptTarget - row.received_amount, 0)
   message.success('收款紀錄已建立')
 }
 
@@ -415,7 +469,8 @@ const resolveDifference = (row: AgentAccountingRow) => {
     negativeText: '取消',
     onPositiveClick: () => {
       row.adjustment_amount = Number((row.adjustment_amount + row.difference_amount).toFixed(4))
-      row.final_receivable = Number((row.agent_receivable + row.exchange_service_fee + row.adjustment_amount).toFixed(4))
+      const result = calculateAgentReceivable(row.settlement_ggr, 0, 0, row.adjustment_amount)
+      row.final_receivable = Number((row.agent_receivable + row.exchange_service_fee + result.finalAgentReceivable).toFixed(4))
       row.difference_amount = 0
       row.settlement_status = 'ready'
       row.logs.unshift({
@@ -449,11 +504,11 @@ const columns = computed<DataTableColumns<AgentAccountingRow>>(() => [
   { title: '帳期', key: 'period', width: 110 },
   { title: '結算幣別', key: 'settlement_currency', width: 110, align: 'center', render: row => h(NTag, { type: 'success', size: 'small', bordered: false }, { default: () => row.settlement_currency }) },
   { title: '結算 GGR', key: 'settlement_ggr', width: 145, align: 'right', render: row => h(MoneyText, { value: row.settlement_ggr, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
-  { title: 'GGAP 應收', key: 'agent_receivable', width: 145, align: 'right', render: row => h(MoneyText, { value: row.agent_receivable, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
+  { title: '代理遊戲費', key: 'agent_receivable', width: 145, align: 'right', render: row => h(MoneyText, { value: row.agent_receivable, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
   { title: '匯率服務費', key: 'exchange_service_fee', width: 125, align: 'right', render: row => h(MoneyText, { value: row.exchange_service_fee, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
   { title: '最終應收', key: 'final_receivable', width: 145, align: 'right', render: row => h(MoneyText, { value: row.final_receivable, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
-  { title: '下級代理結算', key: 'sub_agent_payable', width: 160, align: 'right', render: row => h(MoneyText, { value: subAgentPayableTotal(row), currency: 'USDT', compact: true, color: 'text-slate-100' }) },
-  { title: '商戶結算', key: 'merchant_payable', width: 165, align: 'right', render: row => h(MoneyText, { value: merchantPayableTotal(row), currency: 'USDT', compact: true, color: 'text-slate-100' }) },
+  { title: '代理樹流轉總額', key: 'sub_agent_payable', width: 175, align: 'right', render: row => h(MoneyText, { value: subAgentPayableTotal(row), currency: 'USDT', compact: true, color: 'text-slate-100' }) },
+  { title: '商戶樹應收參考', key: 'merchant_payable', width: 175, align: 'right', render: row => h(MoneyText, { value: merchantPayableTotal(row), currency: 'USDT', compact: true, color: 'text-slate-100' }) },
   { title: '代理層毛利', key: 'agent_tree_margin', width: 160, align: 'right', render: row => h(MoneyText, { value: agentTreeMarginTotal(row), currency: 'USDT', compact: true, showSign: true }) },
   { title: '結算狀態', key: 'settlement_status', width: 115, align: 'center', render: row => h(NTag, { type: statusMeta[row.settlement_status].type, bordered: false, size: 'small' }, { default: () => statusMeta[row.settlement_status].label }) },
   { title: '帳單', key: 'invoice_status', width: 115, align: 'center', render: row => h(NTag, { type: invoiceMeta[row.invoice_status].type, bordered: false, size: 'small' }, { default: () => invoiceMeta[row.invoice_status].label }) },
@@ -480,11 +535,13 @@ const columns = computed<DataTableColumns<AgentAccountingRow>>(() => [
 const detailColumns: DataTableColumns<AgentSettlementDetail> = [
   { title: '商戶', key: 'merchant_name', width: 210, render: row => h('div', { class: 'flex flex-col gap-1' }, [h('span', { class: 'font-semibold' }, row.merchant_name), h('span', { class: 'font-mono text-xs text-gray-500' }, row.merchant_id)]) },
   { title: 'Provider', key: 'provider_name', width: 150 },
-  { title: '顯示幣別', key: 'display_currency', width: 100 },
-  { title: '顯示 GGR', key: 'display_ggr', align: 'right', render: row => h(MoneyText, { value: row.display_ggr, currency: row.display_currency, compact: true, color: 'text-slate-100' }) },
+  { title: '交易幣別', key: 'display_currency', width: 100 },
+  { title: '原幣 GGR', key: 'display_ggr', align: 'right', render: row => h(MoneyText, { value: row.display_ggr, currency: row.display_currency, compact: true, color: 'text-slate-100' }) },
   { title: '結算 GGR', key: 'settlement_ggr', align: 'right', render: row => h(MoneyText, { value: row.settlement_ggr, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
   { title: '代理費率', key: 'agent_ggr_rate', align: 'right', render: row => formatRate(row.agent_ggr_rate) },
-  { title: 'GGAP 應收', key: 'agent_receivable', align: 'right', render: row => h(MoneyText, { value: row.agent_receivable, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
+  { title: '代理遊戲費', key: 'agent_receivable', align: 'right', render: row => h(MoneyText, { value: row.agent_receivable, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
+  { title: '服務費率', key: 'service_fee_rate', align: 'right', render: row => formatRate(row.service_fee_rate || 0) },
+  { title: '費率來源', key: 'service_fee_source', width: 130, render: row => row.service_fee_source === 'contract_override' ? '合約覆寫' : '系統預設' },
   { title: '服務費', key: 'service_fee_amount', align: 'right', render: row => h(MoneyText, { value: row.service_fee_amount, currency: 'USDT', compact: true, color: 'text-slate-100' }) }
 ]
 
@@ -496,6 +553,7 @@ const subAgentColumns: DataTableColumns<SubAgentSettlement> = [
   { title: '上層費率', key: 'upstream_rate', align: 'right', render: row => formatRate(row.upstream_rate) },
   { title: '下級費率', key: 'downstream_rate', align: 'right', render: row => formatRate(row.downstream_rate) },
   { title: '應付上層', key: 'payable_to_parent', align: 'right', render: row => h(MoneyText, { value: row.payable_to_parent, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
+  { title: '平台服務費穿透', key: 'service_fee_amount', align: 'right', render: row => h(MoneyText, { value: row.service_fee_amount, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
   { title: '調整', key: 'adjustment_amount', align: 'right', render: row => h(MoneyText, { value: row.adjustment_amount, currency: 'USDT', compact: true, showSign: true }) },
   { title: '層級毛利', key: 'margin_amount', align: 'right', render: row => h(MoneyText, { value: row.margin_amount, currency: 'USDT', compact: true, showSign: true }) }
 ]
@@ -504,7 +562,7 @@ const merchantSettlementColumns: DataTableColumns<MerchantPayableSettlement> = [
   { title: '商戶', key: 'merchant_name', width: 230, render: row => h('div', { class: 'flex flex-col gap-1' }, [h('span', { class: 'font-semibold' }, row.merchant_name), h('span', { class: 'font-mono text-xs text-gray-500' }, row.merchant_id)]) },
   { title: '所屬代理', key: 'agent_name', width: 230, render: row => h('div', { class: 'flex flex-col gap-1' }, [h('span', { class: 'font-semibold' }, row.agent_name), h('span', { class: 'font-mono text-xs text-gray-500' }, `${row.agent_id} / L${row.agent_level}`)]) },
   { title: 'Provider', key: 'provider_name', width: 150 },
-  { title: '顯示幣別', key: 'display_currency', width: 100 },
+  { title: '交易幣別', key: 'display_currency', width: 100 },
   { title: '結算 GGR', key: 'settlement_ggr', align: 'right', render: row => h(MoneyText, { value: row.settlement_ggr, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
   { title: '商戶報價費率', key: 'merchant_quote_rate', align: 'right', render: row => formatRate(row.merchant_quote_rate) },
   { title: '應付代理', key: 'payable_to_agent', align: 'right', render: row => h(MoneyText, { value: row.payable_to_agent, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
@@ -631,12 +689,12 @@ const receiptColumns: DataTableColumns<AgentReceipt> = [
               </n-statistic>
             </div>
             <div class="rounded border border-white/10 bg-[#202026] p-4">
-              <n-statistic label="下級代理結算">
+              <n-statistic label="代理樹流轉總額">
                 <MoneyText :value="subAgentPayableTotal(currentRow)" currency="USDT" compact color="text-slate-100" />
               </n-statistic>
             </div>
             <div class="rounded border border-white/10 bg-[#202026] p-4">
-              <n-statistic label="商戶結算">
+              <n-statistic label="商戶樹應收參考">
                 <MoneyText :value="merchantPayableTotal(currentRow)" currency="USDT" compact color="text-slate-100" />
               </n-statistic>
             </div>
@@ -646,8 +704,8 @@ const receiptColumns: DataTableColumns<AgentReceipt> = [
               </n-statistic>
             </div>
             <div class="rounded border border-white/10 bg-[#202026] p-4">
-              <n-statistic label="未收款">
-                <MoneyText :value="Math.max(currentRow.final_receivable - currentRow.received_amount, 0)" currency="USDT" compact color="text-slate-100" />
+              <n-statistic :label="currentRow.overpayment_amount ? '溢收待處理' : '未收款'">
+                <MoneyText :value="currentRow.overpayment_amount || Math.max(currentRow.final_receivable - currentRow.received_amount, 0)" currency="USDT" compact :color="currentRow.overpayment_amount ? 'text-red-300' : 'text-slate-100'" />
               </n-statistic>
             </div>
           </div>
@@ -674,7 +732,7 @@ const receiptColumns: DataTableColumns<AgentReceipt> = [
 
             <n-tab-pane name="sub-agents" tab="下級代理結算">
               <n-alert type="info" :show-icon="false" class="mb-4">
-                下級代理結算用來計算代理樹內部應付與層級毛利，不會建立 GGAP 對 L2 / L3 的正式應收帳。
+                下級代理結算逐層列示 L1 → L2、L2 → L3 的流轉；表內服務費為同一筆平台費用穿透，不得把不同層級再次加總為 GGAP 收入。
               </n-alert>
               <n-data-table :columns="withTableSorters(subAgentColumns)" :data="currentRow.sub_agent_settlements" :pagination="DEFAULT_TABLE_PAGINATION" :scroll-x="1420" />
             </n-tab-pane>
@@ -691,6 +749,7 @@ const receiptColumns: DataTableColumns<AgentReceipt> = [
                 <n-descriptions-item label="帳單類型">AGENT_RECEIVABLE</n-descriptions-item>
                 <n-descriptions-item label="帳單對象">AGENT / {{ currentRow.agent_id }}</n-descriptions-item>
                 <n-descriptions-item label="帳單號">{{ currentRow.invoice_no || '-' }}</n-descriptions-item>
+                <n-descriptions-item label="帳單建立時間">{{ currentRow.invoice_created_at ? formatDateTime(currentRow.invoice_created_at) : '-' }}</n-descriptions-item>
                 <n-descriptions-item label="帳單狀態">
                   <n-tag :type="invoiceMeta[currentRow.invoice_status].type" :bordered="false">{{ invoiceMeta[currentRow.invoice_status].label }}</n-tag>
                 </n-descriptions-item>
@@ -703,8 +762,8 @@ const receiptColumns: DataTableColumns<AgentReceipt> = [
                 <n-descriptions-item label="調整金額">
                   <MoneyText :value="currentRow.adjustment_amount" currency="USDT" show-sign />
                 </n-descriptions-item>
-                <n-descriptions-item label="最終應收">
-                  <MoneyText :value="currentRow.final_receivable" currency="USDT" color="text-slate-100" />
+                <n-descriptions-item label="帳單應收快照">
+                  <MoneyText :value="currentRow.invoice_amount_usdt ?? currentRow.final_receivable" currency="USDT" color="text-slate-100" />
                 </n-descriptions-item>
               </n-descriptions>
             </n-tab-pane>

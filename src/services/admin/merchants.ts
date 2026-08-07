@@ -1,23 +1,31 @@
 import { apiClient } from '../apiClient'
+import type { QueryParams } from '../apiClient'
+import type { Merchant, MerchantDetail } from '../../types/merchant'
 
-export interface MerchantProviderSubscription {
-  providerId: number
-  code?: string
-  name?: string
-  globalStatus?: 'active' | 'maintenance' | 'disabled'
-  status: 'active' | 'disabled'
-  revenueShare: number
-  excludedGames?: string[]
+export interface AdminMerchantListParams extends QueryParams {
+  agent_id?: string
+  parent_id?: number
+  search?: string
 }
 
 export const adminMerchantService = {
-  async listProviderSubscriptions(merchantId: number) {
-    const response = await apiClient.get<MerchantProviderSubscription[]>(`/api/v2/merchant/${merchantId}/providers`)
+  async list(params: AdminMerchantListParams = {}) {
+    const response = await apiClient.get<{ list: Merchant[]; total: number }>('/api/v2/admin/merchants', params)
     return response.data
   },
 
-  async saveProviderSubscriptions(merchantId: number, subscriptions: MerchantProviderSubscription[]) {
-    const response = await apiClient.post(`/api/v2/merchant/${merchantId}/providers`, subscriptions)
+  async detail(id: number | string) {
+    const response = await apiClient.get<MerchantDetail>(`/api/v2/admin/merchants/${id}`)
+    return response.data
+  },
+
+  async create(payload: Record<string, unknown>) {
+    const response = await apiClient.post<MerchantDetail>('/api/v2/admin/merchants', payload)
+    return response.data
+  },
+
+  async update(id: number | string, payload: Partial<MerchantDetail>) {
+    const response = await apiClient.put<MerchantDetail>(`/api/v2/admin/merchants/${id}`, payload)
     return response.data
   }
 }

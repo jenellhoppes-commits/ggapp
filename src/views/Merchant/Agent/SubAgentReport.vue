@@ -16,9 +16,8 @@ interface Row {
 }
 
 const rows: Row[] = [
-  { agent_id: 'AGT-SEA-L2', agent_name: 'SEA L2 Agency', level: 'L2', merchant_count: 18, total_bet: 98200, settlement_ggr: 6210, receivable: 484.4, status: 'normal' },
-  { agent_id: 'AGT-VN-L3', agent_name: 'VN L3 Agency', level: 'L3', merchant_count: 7, total_bet: 38400, settlement_ggr: 1830, receivable: 153.7, status: 'normal' },
-  { agent_id: 'AGT-PH-L2', agent_name: 'PH Channel', level: 'L2', merchant_count: 5, total_bet: 22600, settlement_ggr: -260, receivable: 0, status: 'attention' }
+  { agent_id: 'AGT-SEA-SUB01', agent_name: 'SEA Sub Agent 01', level: 'L2', merchant_count: 5, total_bet: 98200, settlement_ggr: 6210, receivable: 546.48, status: 'normal' },
+  { agent_id: 'AGT-SEA-SUB01-L3', agent_name: 'SEA Local Desk L3', level: 'L3', merchant_count: 3, total_bet: 38400, settlement_ggr: 1830, receivable: 201.3, status: 'normal' }
 ]
 
 const columns: DataTableColumns<Row> = [

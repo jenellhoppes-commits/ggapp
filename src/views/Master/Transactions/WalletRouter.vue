@@ -534,7 +534,7 @@ const routeColumns: DataTableColumns<RouteRecord> = [
   },
   { title: '代理', key: 'agent_name', width: 160 },
   { title: '會員', key: 'merchant_player_id', width: 140, render: row => h('span', { class: 'font-mono' }, row.merchant_player_id) },
-  { title: '顯示幣別', key: 'display_currency', width: 110 },
+  { title: '交易幣別', key: 'display_currency', width: 110 },
   {
     title: '錢包模式',
     key: 'wallet_mode',
@@ -577,7 +577,7 @@ const transferColumns: DataTableColumns<TransferRecord> = [
   { title: '商戶', key: 'merchant_name', width: 210 },
   { title: '會員', key: 'merchant_player_id', width: 140, render: row => h('span', { class: 'font-mono' }, row.merchant_player_id) },
   { title: '動作', key: 'action', width: 130 },
-  { title: '顯示金額', key: 'display_amount', width: 140, align: 'right', render: row => h(MoneyText, { value: row.display_amount, currency: row.display_currency, compact: true, showSign: true }) },
+  { title: '原幣金額', key: 'display_amount', width: 140, align: 'right', render: row => h(MoneyText, { value: row.display_amount, currency: row.display_currency, compact: true, showSign: true }) },
   { title: 'USDT 金額', key: 'settlement_amount', width: 140, align: 'right', render: row => h(MoneyText, { value: row.settlement_amount, currency: row.settlement_currency, compact: true, showSign: true }) },
   { title: '轉點前', key: 'before_balance', width: 120, align: 'right', render: row => h(MoneyText, { value: row.before_balance, currency: row.display_currency, compact: true, color: 'text-slate-100' }) },
   { title: '轉點後', key: 'after_balance', width: 120, align: 'right', render: row => h(MoneyText, { value: row.after_balance, currency: row.display_currency, compact: true, color: 'text-slate-100' }) },
@@ -604,7 +604,7 @@ const ledgerColumns: DataTableColumns<LedgerWallet> = [
   { title: '會員錢包', key: 'player_wallet_id', width: 230, render: row => h('span', { class: 'font-mono text-xs' }, row.player_wallet_id) },
   { title: '商戶', key: 'merchant_name', width: 210 },
   { title: '會員', key: 'merchant_player_id', width: 140 },
-  { title: '顯示幣別', key: 'display_currency', width: 110 },
+  { title: '交易幣別', key: 'display_currency', width: 110 },
   { title: '可用餘額', key: 'available_balance', width: 140, align: 'right', render: row => h(MoneyText, { value: row.available_balance, currency: row.display_currency, compact: true, color: 'text-slate-100' }) },
   { title: '鎖定餘額', key: 'locked_balance', width: 140, align: 'right', render: row => h(MoneyText, { value: row.locked_balance, currency: row.display_currency, compact: true, color: 'text-slate-100' }) },
   { title: '狀態', key: 'ledger_status', width: 110, render: row => h(NTag, { type: statusOf(row.ledger_status).type, bordered: false }, { default: () => statusOf(row.ledger_status).label }) },
@@ -694,7 +694,7 @@ const callbackColumns: DataTableColumns<CallbackRecord> = [
     </div>
 
     <n-alert type="info" :show-icon="false">
-      Provider 側只認 GGAP 單一 USDT 錢包；商戶側可使用 Seamless 或 Transfer Wallet。Transfer Wallet 由 GGAP 內部 Ledger 記錄，不轉給供應商。
+      Provider 側依會員交易幣別路由至對應的供應商幣別線；每條幣別線可獨立使用單一錢包或轉帳錢包。商戶側仍可使用 Seamless 或 Transfer Wallet，兩側錢包模式分開設定。
     </n-alert>
 
     <div class="flex flex-wrap items-center gap-3 rounded border border-white/10 bg-[#202026] p-4">
@@ -704,7 +704,7 @@ const callbackColumns: DataTableColumns<CallbackRecord> = [
       <n-select v-model:value="merchantFilter" clearable filterable placeholder="商戶" :options="allMerchants" style="width: 180px;" />
       <n-select v-model:value="walletFilter" clearable placeholder="錢包模式" :options="walletOptions" style="width: 140px;" />
       <n-select v-model:value="statusFilter" clearable placeholder="狀態" :options="statusOptions" style="width: 140px;" />
-      <n-select v-model:value="currencyFilter" clearable placeholder="顯示幣別" :options="allCurrencies" style="width: 130px;" />
+      <n-select v-model:value="currencyFilter" clearable placeholder="交易幣別" :options="allCurrencies" style="width: 130px;" />
       <n-button secondary @click="resetFilters">重置</n-button>
     </div>
 
@@ -762,7 +762,7 @@ const callbackColumns: DataTableColumns<CallbackRecord> = [
             <n-descriptions-item label="動作">{{ currentTransfer.action }}</n-descriptions-item>
             <n-descriptions-item label="商戶">{{ currentTransfer.merchant_name }} / {{ currentTransfer.merchant_id }}</n-descriptions-item>
             <n-descriptions-item label="會員">{{ currentTransfer.merchant_player_id }}</n-descriptions-item>
-            <n-descriptions-item label="顯示金額"><MoneyText :value="currentTransfer.display_amount" :currency="currentTransfer.display_currency" show-sign /></n-descriptions-item>
+            <n-descriptions-item label="原幣金額"><MoneyText :value="currentTransfer.display_amount" :currency="currentTransfer.display_currency" show-sign /></n-descriptions-item>
             <n-descriptions-item label="USDT 金額"><MoneyText :value="currentTransfer.settlement_amount" currency="USDT" show-sign /></n-descriptions-item>
             <n-descriptions-item label="轉點前"><MoneyText :value="currentTransfer.before_balance" :currency="currentTransfer.display_currency" color="text-slate-100" /></n-descriptions-item>
             <n-descriptions-item label="轉點後"><MoneyText :value="currentTransfer.after_balance" :currency="currentTransfer.display_currency" color="text-slate-100" /></n-descriptions-item>

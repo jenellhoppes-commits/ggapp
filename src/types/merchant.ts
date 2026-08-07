@@ -1,7 +1,9 @@
+import type { MerchantBetLimitAssignment } from './gameLimit'
+
 export type MerchantStatus = 'active' | 'disabled' | 'frozen' | 'archived'
 export type MerchantWalletMode = 'seamless' | 'transfer'
 export type MerchantCurrency = 'USDT' | 'USD' | 'TWD' | 'CNY' | 'PHP' | 'THB' | 'VND' | 'IDR'
-export type MerchantCallbackAmountMode = 'settlement_currency' | 'display_currency'
+export type MerchantCallbackAmountMode = 'transaction_currency' | 'settlement_currency'
 
 export interface MerchantAuditLog {
     audit_no: string;
@@ -29,11 +31,12 @@ export interface MerchantQuoteRate {
     provider_cost_rate_snapshot: number;
     agent_upstream_rate: number;
     quote_markup_rate?: number;
-    quote_markup_source?: 'provider_override' | 'service_fee_default';
+    quote_markup_source?: 'provider_override' | 'merchant_default';
     merchant_quote_rate: number;
     merchant_margin_rate: number;
     rate_source_agent_id: string;
     rate_source_agent_level: 1 | 2 | 3;
+    rate_version?: string;
     effective_at: string;
     status: 'active' | 'draft' | 'expired';
 }
@@ -55,11 +58,14 @@ export interface Merchant {
     currency_type: MerchantCurrency;
     supported_currencies?: string[];
     multi_currency_enabled?: boolean;
+    transaction_currencies?: MerchantCurrency[];
     display_currencies?: MerchantCurrency[];
+    default_transaction_currency?: MerchantCurrency;
     default_display_currency?: MerchantCurrency;
     settlement_currency?: 'USDT';
     callback_amount_mode?: MerchantCallbackAmountMode;
     service_fee_rate?: number;
+    default_merchant_markup_rate?: number;
     service_fee_amount?: number;
     base_usdt_amount?: number;
     final_settlement_usdt?: number;
@@ -67,7 +73,6 @@ export interface Merchant {
     fx_rate_update_time?: string;
     exchange_fee_rate?: number;
     base_rate?: number;
-    final_rate?: number;
     exchange_rate_id?: string;
     rate_locked_at?: string;
     percent: number;
@@ -123,6 +128,7 @@ export interface Merchant {
     agent_commission_mode?: 'GGR' | 'NGR' | 'valid_bet';
     agent_commission_rate?: number;
     merchant_quote_rates?: MerchantQuoteRate[];
+    bet_limit_assignments?: MerchantBetLimitAssignment[];
     agent_effective_at?: string;
     today_bet?: number;
     today_payout?: number;

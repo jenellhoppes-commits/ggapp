@@ -121,7 +121,7 @@ const envOptions = [
 ]
 
 const apiEndpoints: ApiEndpoint[] = [
-  { method: 'POST', path: '/api/v1/game/launch', name: 'Launch Game', description: '建立遊戲啟動連結，帶入 display_currency 與 wallet_mode。', auth: 'API Key + HMAC', owner: '商戶' },
+  { method: 'POST', path: '/api/v1/game/launch', name: 'Launch Game', description: '建立遊戲啟動連結，帶入 transaction_currency 與 wallet_mode。', auth: 'API Key + HMAC', owner: '商戶' },
   { method: 'POST', path: '/api/v1/wallet/balance', name: 'Seamless Balance', description: 'Seamless Wallet 餘額查詢 Callback。', auth: 'Callback Signature', owner: '商戶' },
   { method: 'POST', path: '/api/v1/wallet/bet', name: 'Seamless Bet', description: 'Seamless Wallet 下注扣款 Callback。', auth: 'Callback Signature', owner: '商戶' },
   { method: 'POST', path: '/api/v1/wallet/win', name: 'Seamless Win / Payout', description: 'Seamless Wallet 派彩加款 Callback。', auth: 'Callback Signature', owner: '商戶' },
@@ -149,7 +149,7 @@ X-GGAP-SIGNATURE: hmac_sha256(secret, timestamp + body)
 {
   "merchant_id": "OP-1001",
   "merchant_player_id": "mem_8842",
-  "display_currency": "TWD",
+  "transaction_currency": "TWD",
   "wallet_mode": "seamless",
   "provider_id": "PROV-PG",
   "game_id": "PG-001",
@@ -166,11 +166,9 @@ X-GGAP-SIGNATURE: hmac_sha256(callback_secret, timestamp + body)
   "idempotency_key": "idem-op1001-pg-8842",
   "merchant_id": "OP-1001",
   "merchant_player_id": "mem_8842",
-  "display_currency": "TWD",
-  "display_amount": 3200,
-  "settlement_currency": "USDT",
-  "settlement_amount": 100.38,
-  "exchange_rate_id": "FX-20260707-TWD",
+  "transaction_currency": "TWD",
+  "transaction_amount": "3200.00",
+  "bet_id": "BET-20260707-000884",
   "round_id": "R-PG-8842-78231"
 }`
 
@@ -178,8 +176,8 @@ const transferExample = `POST /api/v1/transfer/deposit
 {
   "merchant_id": "OP-1008",
   "merchant_player_id": "nova_7711",
-  "display_currency": "THB",
-  "display_amount": 3200,
+  "transaction_currency": "THB",
+  "transaction_amount": "3200.00",
   "idempotency_key": "transfer-in-20260707-0001"
 }`
 
@@ -320,7 +318,7 @@ const webhookColumns: DataTableColumns<WebhookLog> = [
     </div>
 
     <n-alert type="info" :show-icon="false">
-      Provider 側只串 GGAP 單一 USDT 錢包；商戶可用 Seamless Callback 或 Transfer Wallet Ledger。Production Secret 只顯示一次，輪替需保留過渡期。
+      Provider 側依幣別線維護獨立 API Key、憑證、URL 與錢包模式；商戶可用 Seamless Callback 或 Transfer Wallet Ledger。Production Secret 只顯示一次，輪替需保留過渡期。
     </n-alert>
 
     <n-tabs type="line" animated>
@@ -354,7 +352,7 @@ const webhookColumns: DataTableColumns<WebhookLog> = [
           <section class="space-y-3">
             <div>
               <h2 class="text-lg font-semibold">Endpoint 清單</h2>
-              <p class="mt-1 text-sm text-gray-500">Provider 串接統一 USDT；display_currency 只作前台顯示、營運與報表參考。</p>
+              <p class="mt-1 text-sm text-gray-500">Merchant Callback 與 Provider 即時交易使用同一原幣；USDT 金額只在每日 00:10 日結後產生。</p>
             </div>
             <n-data-table :columns="withTableSorters(endpointColumns)" :data="apiEndpoints" :pagination="DEFAULT_TABLE_PAGINATION" :scroll-x="1280" />
           </section>

@@ -84,54 +84,61 @@ export const agentHandlers = [
         })
     }),
 
-    // Sub Agent List
-    http.get('/api/v2/agent/sub-agents', async () => {
+    // Canonical three-level agent tree
+    http.get('/api/v2/agent/tree', async () => {
         await delay(500)
-        const list = Array.from({ length: 8 }, () => ({
-            id: faker.number.int({ min: 100, max: 999 }),
-            account: faker.internet.username(),
-            level: 2,
-            balance: faker.number.float({ min: 100, max: 5000, fractionDigits: 2 }),
-            status: faker.helpers.arrayElement(['active', 'disabled']),
-            created_at: faker.date.past().toISOString(),
-            commission_rate: faker.number.int({ min: 20, max: 50 }),
-            player_count: faker.number.int({ min: 0, max: 500 }),
-            monthly_performance: faker.number.float({ min: 0, max: 100000, fractionDigits: 2 }),
-            promotion_code: faker.string.alphanumeric(8).toUpperCase(),
-            percent: 30
-        }))
+        const now = new Date().toISOString()
+        const list = [{
+            id: 'AGT-SEA-SUB01',
+            agent_code: 'AGT-SEA-SUB01',
+            agent_name: 'SEA Sub Agent 01',
+            agent_level: 2,
+            parent_agent_code: 'AGT-SEA-001',
+            root_agent_code: 'AGT-SEA-001',
+            settlement_agent_code: 'AGT-SEA-001',
+            agent_path: ['AGT-SEA-001', 'AGT-SEA-SUB01'],
+            status: 'active',
+            settlement_currency: 'USDT',
+            fx_service_fee_rate: 0.5,
+            negative_ggr_policy: 'carry_forward',
+            provider_rates: [],
+            bet_limit_access: [],
+            child_agent_count: 1,
+            merchant_count: 6,
+            created_at: now,
+            updated_at: now,
+            audit_logs: []
+        }]
         return HttpResponse.json({
             code: 0,
             msg: 'success',
-            data: { list, total: 8 }
+            data: { list, total: list.length }
         })
     }),
 
-    // Create Agent
-    http.post('/api/v2/merchant/agents', async () => {
+    http.post('/api/v2/agent/sub-agents', async () => {
         await delay(600)
         return HttpResponse.json({ code: 0, msg: 'Agent created successfully' })
     }),
 
-    // Update Agent
-    http.put('/api/v2/merchant/agents/:id', async () => {
+    http.put('/api/v2/agent/sub-agents/:id', async () => {
         await delay(500)
         return HttpResponse.json({ code: 0, msg: 'Agent updated successfully' })
     }),
 
-    // Transfer
-    http.post('/api/v2/merchant/agents/:id/transfer', async ({ request }) => {
+    http.post('/api/v2/agent/sub-agents/:id/rate-versions', async () => {
+        await delay(500)
+        return HttpResponse.json({ code: 0, msg: 'Rate version created successfully' })
+    }),
+
+    http.put('/api/v2/agent/sub-agents/:id/bet-group-access', async () => {
+        await delay(500)
+        return HttpResponse.json({ code: 0, msg: 'Bet group access updated successfully' })
+    }),
+
+    http.post('/api/v2/agent/sub-agents/:id/transfer', async () => {
         await delay(600)
-        const body = await request.json() as any
-
-        // Simple logic simulation
-        if (body.type === 'deposit') {
-            merchantStats.balance -= body.amount
-        } else {
-            merchantStats.balance += body.amount
-        }
-
-        return HttpResponse.json({ code: 0, msg: 'Transfer successful' })
+        return HttpResponse.json({ code: 0, msg: 'Agent transfer scheduled successfully' })
     }),
 
     // My Games List

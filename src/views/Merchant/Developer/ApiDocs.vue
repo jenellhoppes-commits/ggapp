@@ -13,7 +13,7 @@ interface ApiDocRow {
 }
 
 const rows: ApiDocRow[] = [
-  { name: 'Launch Game', method: 'POST', path: '/api/v2/game/launch', description: '建立遊戲入口，帶入 display_currency，並鎖定匯率快照。', scope: '商戶' },
+  { name: 'Launch Game', method: 'POST', path: '/api/v2/game/launch', description: '建立遊戲入口，帶入 transaction_currency，並鎖定 Provider 幣別線與下注限額方案版本。', scope: '商戶' },
   { name: 'Get Balance', method: 'POST', path: '/api/v2/wallet/balance', description: 'Seamless Wallet 查詢會員餘額。', scope: '商戶' },
   { name: 'Bet Callback', method: 'POST', path: '/callback/bet', description: '投注扣款 Callback，需支援冪等。', scope: '商戶' },
   { name: 'Win Callback', method: 'POST', path: '/callback/win', description: '派彩入款 Callback，保留 display 與 settlement 金額。', scope: '商戶' },

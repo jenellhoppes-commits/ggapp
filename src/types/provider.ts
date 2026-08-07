@@ -1,3 +1,28 @@
+export type ProviderWalletMode = 'seamless' | 'transfer';
+export type ProviderCurrencyStatus = 'connected' | 'testing' | 'disabled';
+
+export interface ProviderCurrencyConnection {
+    connection_id: string;
+    provider_currency_id: string;
+    provider_merchant_id: string;
+    currency: string;
+    accounting_currency?: 'USDT';
+    invoice_currency?: string;
+    payment_currency?: string;
+    wallet_mode: ProviderWalletMode;
+    api_url: string;
+    api_key?: string;
+    api_key_mask?: string;
+    credential?: string;
+    credential_mask?: string;
+    certificate_name?: string;
+    callback_url?: string;
+    amount_precision: number;
+    status: ProviderCurrencyStatus;
+    is_default?: boolean;
+    last_tested_at?: string;
+}
+
 export interface Provider {
     id: number;
     code: string;
@@ -13,8 +38,9 @@ export interface Provider {
     };
     type?: string;
     gameCount?: number;
-    provider_settlement_currency?: 'USDT';
-    provider_wallet_currency?: 'USDT';
+    platform_accounting_currency?: 'USDT';
+    provider_wallet_currency?: string;
+    currency_connections?: ProviderCurrencyConnection[];
     cost_billing_mode?: 'GGR';
     provider_cost_rate?: number;
     negative_ggr_policy?: 'carry_forward' | 'zero_out';
@@ -36,7 +62,7 @@ export interface Provider {
         expiryDate: number | string;
     };
     contractConfig?: {
-        settlement_currency: string;
+        accounting_currency: 'USDT';
         rules: {
             slot_free_spin: { enabled: boolean; provider_share: number };
             live_tip: { enabled: boolean; provider_share: number };

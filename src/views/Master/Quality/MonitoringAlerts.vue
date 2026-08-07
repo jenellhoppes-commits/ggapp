@@ -140,7 +140,7 @@ const alerts = ref<AlertRow[]>([
     owner: 'Finance Manager',
     impact: {
       providers: [],
-      merchants: ['VND 顯示幣別商戶'],
+      merchants: ['VND 交易幣別商戶'],
       agents: ['SEA Growth Agent'],
       transactions: 0,
       amount_usdt: 0

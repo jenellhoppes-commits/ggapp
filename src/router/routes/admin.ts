@@ -24,8 +24,6 @@ export const adminRoutes: RouteRecordRaw = {
         { path: 'business/contracts', redirect: '/admin/business/agents' },
         { path: 'game-center/providers', name: 'provider-list', component: () => import('../../views/Master/GameCenter/ProviderList.vue'), meta: { title: '供應商管理', center: '內容管理' } },
         { path: 'game-center/list', name: 'game-center', component: () => import('../../views/Master/GameCenter/GameList.vue'), meta: { title: '遊戲管理', center: '內容管理' } },
-        { path: 'content/game-groups', name: 'GameGroups', component: () => import('../../views/Master/GameCenter/GameGroups.vue'), meta: { title: '遊戲分組', center: '內容管理' } },
-        { path: 'content/game-limits', name: 'GameLimitManagement', component: () => import('../../views/Master/GameCenter/GameLimitManagement.vue'), meta: { title: '遊戲限額管理', center: '內容管理' } },
         { path: 'content/campaigns', name: 'Campaigns', component: () => import('../../views/Master/GameCenter/Campaigns.vue'), meta: { title: '獎池與活動', center: '內容管理' } },
         { path: 'transactions/players', name: 'PlayerManagement', component: () => import('../../views/Master/Transactions/PlayerManagement.vue'), meta: { title: '會員管理', center: '交易中心' } },
         { path: 'transactions/wallet-router', name: 'WalletRouter', component: () => import('../../views/Master/Transactions/WalletRouter.vue'), meta: { title: '錢包路由 / 轉帳錢包', center: '交易中心' } },

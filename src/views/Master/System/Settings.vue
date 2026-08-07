@@ -35,7 +35,7 @@ const settings = ref({
   audit_retention_days: 365,
   api_rate_limit_per_minute: 600,
   fx_fetch_time: '00:00',
-  daily_settlement_time: '01:00',
+  daily_settlement_time: '00:10',
   timezone: 'Asia/Taipei',
   default_language: 'zh-TW'
 })

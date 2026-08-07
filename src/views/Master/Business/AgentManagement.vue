@@ -29,7 +29,7 @@ import { EditOutlined, SearchOutlined, VisibilityOutlined } from '@vicons/materi
 import MoneyText from '../../../components/Common/MoneyText.vue'
 import { DEFAULT_TABLE_PAGINATION, withTableSorters } from '../../../utils/tableSort'
 import { formatDisplayAmount } from '../../../utils/format'
-import { makeAgentLimitAccess } from '../../../mocks/gameLimits'
+import { getAgentBetLimitAccess } from '../../../mocks/gameLimits'
 import type { AgentBetLimitAccess } from '../../../types/gameLimit'
 import { gameLimitStatusLabel } from '../../../types/gameLimit'
 
@@ -187,14 +187,14 @@ const agents = ref<Agent[]>([
     negative_ggr_policy: 'carry_forward',
     rate_version: 'AGT-DIRECT-2026.07',
     is_platform_direct: true,
-    fx_rate_update_time: '00:00 BJT',
-    daily_settlement_time: '01:00 BJT',
+    fx_rate_update_time: '00:00 Asia/Taipei',
+    daily_settlement_time: '00:10 Asia/Taipei',
     daily_status: 'locked',
     created_at: '2025-09-19T01:07:22.000Z',
     updated_at: now,
     remarks: '平台預設直營代理，未指定代理的商戶會歸屬於此代理。',
     rates: makeRates(1, '供應商成本', { PG: 0.07, JILI: 0.085, EVO: 0.1, PP: 0.082 }),
-    bet_limit_access: makeAgentLimitAccess('TWD'),
+    bet_limit_access: getAgentBetLimitAccess('AGT-DIRECT'),
     merchants: [
       { merchant_id: 'OP-1001', merchant_name: 'Lucky Star Digital', provider_code: 'PG', display_currency: 'VND', settlement_ggr_usdt: 2045.12, agent_upstream_rate: 0.07, merchant_quote_rate: 0.09, status: 'active' }
     ],
@@ -233,14 +233,14 @@ const agents = ref<Agent[]>([
     negative_ggr_policy: 'carry_forward',
     rate_version: 'AGT-SEA-2026.07',
     is_platform_direct: false,
-    fx_rate_update_time: '00:00 BJT',
-    daily_settlement_time: '01:00 BJT',
+    fx_rate_update_time: '00:00 Asia/Taipei',
+    daily_settlement_time: '00:10 Asia/Taipei',
     daily_status: 'locked',
     created_at: '2025-11-03T05:12:00.000Z',
     updated_at: now,
     remarks: 'SEA 市場 L1 外部代理，GGAP 正式收款對象。',
     rates: makeRates(1, '供應商成本', { PG: 0.075, JILI: 0.09, EVO: 0.095, PP: 0.078 }),
-    bet_limit_access: makeAgentLimitAccess('PHP'),
+    bet_limit_access: getAgentBetLimitAccess('AGT-SEA-001'),
     merchants: [
       { merchant_id: 'OP-1002', merchant_name: 'Blue Whale Interactive', provider_code: 'PG', display_currency: 'PHP', settlement_ggr_usdt: 6210.2, agent_upstream_rate: 0.075, merchant_quote_rate: 0.095, status: 'active' }
     ],
@@ -279,14 +279,14 @@ const agents = ref<Agent[]>([
     negative_ggr_policy: 'carry_forward',
     rate_version: 'AGT-SEA-SUB01-2026.07',
     is_platform_direct: false,
-    fx_rate_update_time: '00:00 BJT',
-    daily_settlement_time: '01:00 BJT',
+    fx_rate_update_time: '00:00 Asia/Taipei',
+    daily_settlement_time: '00:10 Asia/Taipei',
     daily_status: 'locked',
     created_at: '2026-02-10T02:20:00.000Z',
     updated_at: now,
     remarks: 'L2 代理只作層級毛利與下層報表，不產生 GGAP 應收帳單。',
     rates: makeRates(2, 'AGT-SEA-001', { PG_upstream: 0.075, JILI_upstream: 0.09, EVO_upstream: 0.095, PP_upstream: 0.078, PG: 0.088, JILI: 0.102, EVO: 0.108, PP: 0.092 }),
-    bet_limit_access: makeAgentLimitAccess('THB'),
+    bet_limit_access: getAgentBetLimitAccess('AGT-SEA-SUB01'),
     merchants: [
       { merchant_id: 'OP-1008', merchant_name: 'NovaPlay Entertainment', provider_code: 'PG', display_currency: 'THB', settlement_ggr_usdt: 337500, agent_upstream_rate: 0.088, merchant_quote_rate: 0.1, status: 'active' }
     ],
@@ -324,14 +324,14 @@ const agents = ref<Agent[]>([
     negative_ggr_policy: 'zero_out',
     rate_version: 'AGT-SEA-L3-2026.07',
     is_platform_direct: false,
-    fx_rate_update_time: '00:00 BJT',
-    daily_settlement_time: '01:00 BJT',
+    fx_rate_update_time: '00:00 Asia/Taipei',
+    daily_settlement_time: '00:10 Asia/Taipei',
     daily_status: 'pending',
     created_at: '2026-04-18T04:20:00.000Z',
     updated_at: now,
     remarks: 'L3 代理不可再新增子代理，可綁定商戶。',
     rates: makeRates(3, 'AGT-SEA-SUB01', { PG_upstream: 0.088, JILI_upstream: 0.102, EVO_upstream: 0.108, PP_upstream: 0.092, PG: 0.096, JILI: 0.11, EVO: 0.116, PP: 0.1 }),
-    bet_limit_access: makeAgentLimitAccess('THB', false),
+    bet_limit_access: getAgentBetLimitAccess('AGT-SEA-SUB01-L3', false),
     merchants: [
       { merchant_id: 'OP-1009', merchant_name: 'Golden Dragon Gaming', provider_code: 'PP', display_currency: 'THB', settlement_ggr_usdt: 346700, agent_upstream_rate: 0.1, merchant_quote_rate: 0.112, status: 'active' }
     ],
@@ -345,6 +345,7 @@ const showDetail = ref(false)
 const showForm = ref(false)
 const editingAgent = ref<Agent | null>(null)
 const currentAgent = ref<Agent | null>(agents.value[0] ?? null)
+const rateDrafts = ref<AgentRate[]>(agents.value[0]?.rates.map(rate => ({ ...rate })) ?? [])
 const searchText = ref('')
 const statusFilter = ref<AgentStatus | null>(null)
 const levelFilter = ref<1 | 2 | 3 | null>(null)
@@ -401,7 +402,7 @@ const parentAgentOptions = computed(() => {
   const expectedParentLevel = formValue.agent_level - 1
   if (expectedParentLevel < 1) return []
   return agents.value
-    .filter(agent => agent.agent_level === expectedParentLevel && agent.can_create_child)
+    .filter(agent => agent.agent_level === expectedParentLevel && agent.can_create_child && agent.status === 'active')
     .map(agent => ({ label: `${agent.agent_name} / ${agent.agent_code}`, value: agent.agent_code }))
 })
 
@@ -438,6 +439,7 @@ const resetFilters = () => {
 
 const openDetail = (agent: Agent) => {
   currentAgent.value = agent
+  rateDrafts.value = agent.rates.map(rate => ({ ...rate }))
   showDetail.value = true
 }
 
@@ -489,10 +491,19 @@ const submitForm = () => {
     message.error('請選擇上層代理')
     return
   }
+  if (!editingAgent.value && agents.value.some(agent => agent.agent_code === formValue.agent_code.trim())) {
+    message.error('代理代碼已存在，請使用唯一代碼')
+    return
+  }
 
   const parent = agents.value.find(agent => agent.agent_code === formValue.parent_agent_code)
   const rootCode = formValue.agent_level === 1 ? formValue.agent_code : parent?.root_agent_code || formValue.agent_code
   const path = parent ? `${parent.agent_path} / ${formValue.agent_code}` : formValue.agent_code
+  const inheritedBetLimitAccess = (parent
+    ? parent.bet_limit_access.filter(access => access.assignable_to_child)
+    : getAgentBetLimitAccess('AGT-DIRECT'))
+    .filter(access => formValue.display_currencies.includes(access.transaction_currency))
+    .map(access => ({ ...access, assignable_to_child: formValue.agent_level < 3, assigned_merchant_count: 0 }))
 
   if (editingAgent.value) {
     Object.assign(editingAgent.value, {
@@ -524,13 +535,13 @@ const submitForm = () => {
       ggap_margin_usdt: 0,
       hierarchy_margin_usdt: 0,
       rate_version: `${formValue.agent_code}-2026.07`,
-      fx_rate_update_time: '00:00 BJT',
-      daily_settlement_time: '01:00 BJT',
+      fx_rate_update_time: '00:00 Asia/Taipei',
+      daily_settlement_time: '00:10 Asia/Taipei',
       daily_status: 'pending',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       rates: makeRates(formValue.agent_level, parent?.agent_code || '供應商成本', {}),
-      bet_limit_access: makeAgentLimitAccess(formValue.display_currencies[0] || 'TWD', formValue.agent_level < 3),
+      bet_limit_access: inheritedBetLimitAccess,
       merchants: [],
       audit_logs: [
         {
@@ -542,12 +553,37 @@ const submitForm = () => {
       ]
     }
     agents.value.unshift(created)
+    if (parent) parent.child_agent_count += 1
     currentAgent.value = created
+    rateDrafts.value = created.rates.map(rate => ({ ...rate }))
     showDetail.value = true
     message.success('代理已建立，費率已帶入代理詳情')
   }
 
   showForm.value = false
+}
+
+const saveRateVersion = () => {
+  if (!currentAgent.value) return
+  const invalid = rateDrafts.value.find(rate => rate.agent_quote_rate < rate.upstream_rate)
+  if (invalid) {
+    message.error(`${invalid.provider_name} 的下層報價不得低於上游費率`)
+    return
+  }
+
+  const effectiveAt = new Date().toISOString()
+  const versionDate = effectiveAt.slice(0, 10).replace(/-/g, '')
+  currentAgent.value.rates = rateDrafts.value.map(rate => ({ ...rate, effective_at: effectiveAt, status: 'active' }))
+  currentAgent.value.rate_version = `${currentAgent.value.agent_code}-${versionDate}-${Date.now().toString().slice(-4)}`
+  currentAgent.value.updated_at = effectiveAt
+  currentAgent.value.audit_logs.unshift({
+    action: `建立代理費率版本 ${currentAgent.value.rate_version}`,
+    operated_at: effectiveAt,
+    operator: 'Admin',
+    trace_id: `trace-agent-rate-${Date.now()}`
+  })
+  rateDrafts.value = currentAgent.value.rates.map(rate => ({ ...rate }))
+  message.success('代理費率新版本已建立；歷史注單、Session 與帳單快照不會重算')
 }
 
 const viewMerchants = (agent: Agent) => {
@@ -699,7 +735,7 @@ const merchantColumns = computed<DataTableColumns<AgentMerchant>>(() => [
   { title: '商戶代碼', key: 'merchant_id' },
   { title: '商戶名稱', key: 'merchant_name' },
   { title: '供應商', key: 'provider_code' },
-  { title: '顯示幣別', key: 'display_currency' },
+  { title: '交易幣別', key: 'display_currency' },
   { title: '代理成本', key: 'agent_upstream_rate', align: 'right', render: row => formatRate(row.agent_upstream_rate) },
   { title: '商戶報價', key: 'merchant_quote_rate', align: 'right', render: row => formatRate(row.merchant_quote_rate) },
   {
@@ -718,7 +754,7 @@ const merchantColumns = computed<DataTableColumns<AgentMerchant>>(() => [
 const limitAccessColumns: DataTableColumns<AgentBetLimitAccess> = [
   { title: 'Provider', key: 'provider_name', width: 140 },
   { title: '遊戲類型', key: 'game_type', width: 100 },
-  { title: '單槍群組', key: 'limit_group_name', width: 200, render: row => h('div', {}, [h('div', row.limit_group_name), h('div', { class: 'font-mono text-xs text-gray-500' }, row.limit_group_code)]) },
+  { title: '下注限額方案', key: 'provider_bet_group_name', width: 200, render: row => h('div', {}, [h('div', row.provider_bet_group_name), h('div', { class: 'font-mono text-xs text-gray-500' }, row.provider_bet_group_code)]) },
   { title: '最小投注', key: 'min_bet_display', align: 'right', render: row => formatDisplayAmount(row.min_bet_display, row.display_currency) },
   { title: '最大投注', key: 'max_bet_display', align: 'right', render: row => formatDisplayAmount(row.max_bet_display, row.display_currency) },
   { title: '可下放', key: 'assignable_to_child', width: 95, render: row => h(NTag, { type: row.assignable_to_child ? 'success' : 'warning', size: 'small', bordered: false }, { default: () => row.assignable_to_child ? '是' : '否' }) },
@@ -845,7 +881,11 @@ const limitAccessColumns: DataTableColumns<AgentBetLimitAccess> = [
               <n-alert type="info" :show-icon="false" class="mb-3">
                 可依每個供應商修改下層報價費率。L1 的上游是供應商成本，L2 / L3 的上游是上層代理給下層的報價。
               </n-alert>
-              <n-data-table :columns="withTableSorters(rateColumns)" :data="currentAgent.rates" :pagination="DEFAULT_TABLE_PAGINATION" :scroll-x="980" />
+              <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <n-tag type="info" :bordered="false">目前版本 {{ currentAgent.rate_version }}</n-tag>
+                <n-button type="primary" secondary @click="saveRateVersion">儲存新費率版本</n-button>
+              </div>
+              <n-data-table :columns="withTableSorters(rateColumns)" :data="rateDrafts" :pagination="DEFAULT_TABLE_PAGINATION" :scroll-x="980" />
             </n-tab-pane>
 
             <n-tab-pane name="merchants" tab="關聯商戶">
@@ -855,9 +895,9 @@ const limitAccessColumns: DataTableColumns<AgentBetLimitAccess> = [
               <n-data-table :columns="withTableSorters(merchantColumns)" :data="currentAgent.merchants" :pagination="DEFAULT_TABLE_PAGINATION" :scroll-x="1180" />
             </n-tab-pane>
 
-            <n-tab-pane name="bet-limits" tab="單槍群組">
+            <n-tab-pane name="bet-limits" tab="下注限額授權">
               <n-alert type="info" :show-icon="false" class="mb-3">
-                代理只能把平台已開放的單槍群組再分配給下級代理或商戶；L3 不可再下放給子代理，但仍可套用到商戶。
+                代理只能把平台已勾選開放的 Provider 幣別線下注限額方案再分配給下級代理或商戶；方案區間不可修改，L3 不可再下放給子代理，但仍可指派給商戶。
               </n-alert>
               <n-data-table :columns="withTableSorters(limitAccessColumns)" :data="currentAgent.bet_limit_access" :pagination="DEFAULT_TABLE_PAGINATION" :scroll-x="1120" />
             </n-tab-pane>
@@ -913,13 +953,13 @@ const limitAccessColumns: DataTableColumns<AgentBetLimitAccess> = [
               <n-select
                 v-model:value="formValue.parent_agent_code"
                 clearable
-                :disabled="formValue.agent_level === 1 || !!editingAgent?.is_platform_direct"
+                :disabled="formValue.agent_level === 1 || !!editingAgent"
                 :options="parentAgentOptions"
                 :placeholder="formValue.agent_level === 1 ? 'L1 直接對 GGAP' : '請選擇上層代理'"
               />
             </n-form-item>
             <n-form-item label="代理代碼">
-              <n-input v-model:value="formValue.agent_code" :disabled="!!editingAgent?.is_platform_direct" placeholder="例：AGT-SEA-002" />
+              <n-input v-model:value="formValue.agent_code" :disabled="!!editingAgent" placeholder="例：AGT-SEA-002" />
             </n-form-item>
             <n-form-item label="代理名稱">
               <n-input v-model:value="formValue.agent_name" placeholder="例：SEA Partner Agent" />
@@ -933,13 +973,13 @@ const limitAccessColumns: DataTableColumns<AgentBetLimitAccess> = [
             <n-form-item label="聯絡人"><n-input v-model:value="formValue.contact_name" /></n-form-item>
             <n-form-item label="Email"><n-input v-model:value="formValue.contact_email" /></n-form-item>
             <n-form-item label="Telegram"><n-input v-model:value="formValue.telegram" /></n-form-item>
-            <n-form-item label="顯示幣別">
+            <n-form-item label="交易幣別">
               <n-select v-model:value="formValue.display_currencies" multiple :options="currencyOptions" />
             </n-form-item>
-            <n-form-item label="統一結算服務費率">
+            <n-form-item label="匯率服務費率（GGAP）">
               <n-input-number v-model:value="formValue.service_fee_rate" :min="0" :max="0.2" :step="0.001" />
             </n-form-item>
-            <n-form-item label="負 GGR 政策">
+            <n-form-item label="代理負 GGR 政策">
               <n-select v-model:value="formValue.negative_ggr_policy" :options="negativeGgrOptions" />
             </n-form-item>
             <n-form-item label="備註" class="md:col-span-2">
@@ -948,7 +988,7 @@ const limitAccessColumns: DataTableColumns<AgentBetLimitAccess> = [
           </div>
         </n-form>
         <n-alert type="info" :show-icon="false">
-          建立代理時會同步設定層級與上層代理；費率可在代理詳情內維護。L3 不可再新增子代理，商戶可綁定任一層代理。
+          代理代碼、層級與上層代理建立後鎖定；如需轉移必須使用獨立轉移流程並檢查未結帳務。費率與下注限額授權可在代理詳情內建立新版本。
         </n-alert>
         <template #footer>
           <div class="flex justify-end gap-2">

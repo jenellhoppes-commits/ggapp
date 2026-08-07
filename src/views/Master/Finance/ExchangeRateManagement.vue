@@ -8,11 +8,7 @@ import {
   NDescriptionsItem,
   NDrawer,
   NDrawerContent,
-  NForm,
-  NFormItem,
   NInput,
-  NInputNumber,
-  NModal,
   NSelect,
   NSpace,
   NStatistic,
@@ -54,7 +50,6 @@ interface ExchangeRateRow {
   base_rate: number
   previous_base_rate: number
   service_fee_rate: number
-  final_rate: number
   source: string
   fetched_at: string
   confirmed_at?: string
@@ -73,16 +68,10 @@ const message = useMessage()
 const searchText = ref('')
 const statusFilter = ref<RateStatus | null>(null)
 const showDetail = ref(false)
-const showFeeModal = ref(false)
 const activeTab = ref('basic')
 const currentRow = ref<ExchangeRateRow | null>(null)
-const feeForm = ref({
-  service_fee_rate: 0.005,
-  reason: 'MVP 統一結算服務費率'
-})
 
 const nowIso = () => new Date().toISOString()
-const calcFinalRate = (baseRate: number, feeRate: number) => Number((baseRate * (1 + feeRate)).toFixed(6))
 const buildLog = (action: string, note: string): OperationLog => ({
   action,
   operator: 'Finance',
@@ -100,23 +89,22 @@ const rows = ref<ExchangeRateRow[]>([
     base_rate: 31.72,
     previous_base_rate: 31.66,
     service_fee_rate: 0.005,
-    final_rate: 31.8786,
     source: 'Third Party FX API',
     fetched_at: '2026-07-06T00:00:04+08:00',
     confirmed_at: '2026-07-06T00:18:00+08:00',
     confirmed_by: 'System',
-    locked_at: '2026-07-07T01:00:00+08:00',
+    locked_at: '2026-07-07T00:05:00+08:00',
     locked_by: 'Settlement Engine',
     status: 'locked',
     transaction_count: 12840,
     version: 1,
     snapshots: [
-      { snapshot_id: 'FXS-TWD-0001', merchant_id: 'OP-1001', display_currency: 'TWD', display_amount: 3200, settlement_amount: 100.38, locked_at: '2026-07-07T01:00:00+08:00' },
-      { snapshot_id: 'FXS-TWD-0002', merchant_id: 'OP-1008', display_currency: 'TWD', display_amount: 5400, settlement_amount: 169.39, locked_at: '2026-07-07T01:00:00+08:00' }
+      { snapshot_id: 'FXS-TWD-0001', merchant_id: 'OP-1001', display_currency: 'TWD', display_amount: 3200, settlement_amount: 100.8827, locked_at: '2026-07-07T00:05:00+08:00' },
+      { snapshot_id: 'FXS-TWD-0002', merchant_id: 'OP-1008', display_currency: 'TWD', display_amount: 5400, settlement_amount: 170.2396, locked_at: '2026-07-07T00:05:00+08:00' }
     ],
     logs: [
       { action: '取得公告匯率', operator: 'System', operated_at: '2026-07-06T00:00:04+08:00', trace_id: 'trace-fx-twd-fetch', note: 'base_rate = 31.72' },
-      { action: '日結鎖定匯率', operator: 'Settlement Engine', operated_at: '2026-07-07T01:00:00+08:00', trace_id: 'trace-fx-twd-lock', note: '鎖定交易快照' }
+      { action: '日結鎖定匯率', operator: 'Settlement Engine', operated_at: '2026-07-07T00:05:00+08:00', trace_id: 'trace-fx-twd-lock', note: '鎖定交易快照' }
     ]
   },
   {
@@ -127,20 +115,19 @@ const rows = ref<ExchangeRateRow[]>([
     base_rate: 58.64,
     previous_base_rate: 58.52,
     service_fee_rate: 0.005,
-    final_rate: 58.9332,
     source: 'Third Party FX API',
     fetched_at: '2026-07-06T00:00:05+08:00',
-    locked_at: '2026-07-07T01:00:00+08:00',
+    locked_at: '2026-07-07T00:05:00+08:00',
     locked_by: 'Settlement Engine',
     status: 'locked',
     transaction_count: 9320,
     version: 1,
     snapshots: [
-      { snapshot_id: 'FXS-PHP-0001', merchant_id: 'OP-1006', display_currency: 'PHP', display_amount: 1800, settlement_amount: 30.54, locked_at: '2026-07-07T01:00:00+08:00' }
+      { snapshot_id: 'FXS-PHP-0001', merchant_id: 'OP-1006', display_currency: 'PHP', display_amount: 1800, settlement_amount: 30.6958, locked_at: '2026-07-07T00:05:00+08:00' }
     ],
     logs: [
       { action: '取得公告匯率', operator: 'System', operated_at: '2026-07-06T00:00:05+08:00', trace_id: 'trace-fx-php-fetch', note: 'base_rate = 58.64' },
-      { action: '日結鎖定匯率', operator: 'Settlement Engine', operated_at: '2026-07-07T01:00:00+08:00', trace_id: 'trace-fx-php-lock', note: '鎖定交易快照' }
+      { action: '日結鎖定匯率', operator: 'Settlement Engine', operated_at: '2026-07-07T00:05:00+08:00', trace_id: 'trace-fx-php-lock', note: '鎖定交易快照' }
     ]
   },
   {
@@ -151,7 +138,6 @@ const rows = ref<ExchangeRateRow[]>([
     base_rate: 36.41,
     previous_base_rate: 36.32,
     service_fee_rate: 0.005,
-    final_rate: 36.5921,
     source: 'Third Party FX API',
     fetched_at: '2026-07-07T00:00:03+08:00',
     status: 'published',
@@ -172,7 +158,6 @@ const rows = ref<ExchangeRateRow[]>([
     base_rate: 26320,
     previous_base_rate: 25100,
     service_fee_rate: 0.005,
-    final_rate: 26451.6,
     source: 'Third Party FX API',
     fetched_at: '2026-07-07T00:00:08+08:00',
     status: 'warning',
@@ -192,7 +177,6 @@ const rows = ref<ExchangeRateRow[]>([
     base_rate: 16320,
     previous_base_rate: 16295,
     service_fee_rate: 0.005,
-    final_rate: 16401.6,
     source: 'Third Party FX API',
     fetched_at: '2026-07-07T00:00:11+08:00',
     status: 'failed',
@@ -244,10 +228,7 @@ const summary = computed(() => ({
   total: filteredRows.value.length,
   locked: filteredRows.value.filter(row => row.status === 'locked').length,
   warning: filteredRows.value.filter(row => row.status === 'warning').length,
-  failed: filteredRows.value.filter(row => row.status === 'failed').length,
-  avgFee: filteredRows.value.length
-    ? filteredRows.value.reduce((sum, row) => sum + row.service_fee_rate, 0) / filteredRows.value.length
-    : 0
+  failed: filteredRows.value.filter(row => row.status === 'failed').length
 }))
 
 const resetFilters = () => {
@@ -275,7 +256,6 @@ const retryFailedRate = (row: ExchangeRateRow) => {
   if (row.status !== 'failed') return
   row.previous_base_rate = row.base_rate
   row.base_rate = Number((row.base_rate * 1.0008).toFixed(6))
-  row.final_rate = calcFinalRate(row.base_rate, row.service_fee_rate)
   row.fetched_at = nowIso()
   row.version += 1
   row.status = 'published'
@@ -296,7 +276,7 @@ const lockRate = (row: ExchangeRateRow) => {
   row.status = 'locked'
   row.locked_at = nowIso()
   row.locked_by = 'Finance'
-  row.logs.unshift(buildLog('鎖定匯率', 'final_rate 與交易快照已鎖定'))
+  row.logs.unshift(buildLog('鎖定匯率', 'base_rate 與交易快照已鎖定；服務費獨立計算'))
   message.success(`${row.rate_id} 已鎖定`)
 }
 
@@ -306,7 +286,6 @@ const refreshRates = () => {
     if (row.status === 'failed') return
     row.previous_base_rate = row.base_rate
     row.base_rate = Number((row.base_rate * (1 + (index + 1) * 0.0004)).toFixed(6))
-    row.final_rate = calcFinalRate(row.base_rate, row.service_fee_rate)
     row.fetched_at = nowIso()
     row.version += 1
     row.status = Math.abs(variationPercent(row)) > 0.03 ? 'warning' : 'published'
@@ -316,22 +295,6 @@ const refreshRates = () => {
   message.success(`已更新 ${unlockedRows.length} 筆未鎖定匯率`)
 }
 
-const applyServiceFee = () => {
-  const nextFee = Number(feeForm.value.service_fee_rate || 0)
-  if (nextFee < 0 || nextFee > 0.05) {
-    message.warning('服務費率需介於 0% 到 5%')
-    return
-  }
-  const affected = rows.value.filter(row => row.status !== 'locked')
-  affected.forEach((row) => {
-    row.service_fee_rate = nextFee
-    row.final_rate = calcFinalRate(row.base_rate, nextFee)
-    row.logs.unshift(buildLog('調整結算服務費率', `${feeForm.value.reason}，新費率 ${formatPercent(nextFee)}`))
-  })
-  showFeeModal.value = false
-  message.success(`已更新 ${affected.length} 筆未鎖定匯率`)
-}
-
 const exportRates = () => {
   message.success(`已匯出 ${filteredRows.value.length} 筆匯率資料`)
 }
@@ -339,8 +302,8 @@ const exportRates = () => {
 const snapshotColumns: DataTableColumns<RateSnapshot> = [
   { title: '快照 ID', key: 'snapshot_id', width: 150 },
   { title: '商戶', key: 'merchant_id', width: 110 },
-  { title: '顯示幣別', key: 'display_currency', width: 100 },
-  { title: '顯示金額', key: 'display_amount', align: 'right', render: row => row.display_amount.toLocaleString() },
+  { title: '交易原幣', key: 'display_currency', width: 100 },
+  { title: '原幣金額', key: 'display_amount', align: 'right', render: row => row.display_amount.toLocaleString() },
   { title: 'USDT 金額', key: 'settlement_amount', align: 'right', render: row => h(MoneyText, { value: row.settlement_amount, currency: 'USDT', color: 'text-slate-100' }) },
   { title: '鎖定時間', key: 'locked_at', width: 180, render: row => formatDateTime(row.locked_at) }
 ]
@@ -354,12 +317,11 @@ const columns: DataTableColumns<ExchangeRateRow> = [
     render: row => h('button', { class: 'font-mono text-cyan-500 hover:text-cyan-400', onClick: () => openDetail(row) }, row.rate_id)
   },
   { title: '日期', key: 'rate_date', width: 120 },
-  { title: '顯示幣別', key: 'display_currency', width: 110, render: row => h(NTag, { bordered: false }, { default: () => row.display_currency }) },
+  { title: '交易原幣', key: 'display_currency', width: 110, render: row => h(NTag, { bordered: false }, { default: () => row.display_currency }) },
   { title: '結算幣別', key: 'settlement_currency', width: 110, render: row => h(NTag, { type: 'success', bordered: false }, { default: () => row.settlement_currency }) },
   { title: 'base_rate', key: 'base_rate', width: 130, align: 'right', render: row => formatRate(row.base_rate, row.display_currency) },
   { title: '波動', key: 'variation', width: 110, align: 'right', render: row => h('span', { class: Math.abs(variationPercent(row)) > 0.03 ? 'text-amber-400' : 'text-slate-300' }, formatPercent(variationPercent(row))) },
-  { title: '服務費率', key: 'service_fee_rate', width: 120, align: 'right', render: row => formatPercent(row.service_fee_rate) },
-  { title: 'final_rate', key: 'final_rate', width: 130, align: 'right', render: row => formatRate(row.final_rate, row.display_currency) },
+  { title: '服務費快照', key: 'service_fee_rate', width: 130, align: 'right', render: row => formatPercent(row.service_fee_rate) },
   { title: '交易數', key: 'transaction_count', width: 110, align: 'right', render: row => row.transaction_count.toLocaleString() },
   { title: '版本', key: 'version', width: 80, align: 'center', render: row => `v${row.version}` },
   { title: '狀態', key: 'status', width: 110, render: row => h(NTag, { type: statusMeta[row.status].type, bordered: false, size: 'small' }, { default: () => statusMeta[row.status].label }) },
@@ -387,17 +349,16 @@ const columns: DataTableColumns<ExchangeRateRow> = [
       <div>
         <h1 class="text-2xl font-bold">匯率管理</h1>
         <p class="mt-1 text-sm text-gray-500">
-          每日 00:00 取得公告匯率，01:00 日結鎖定交易快照；歷史交易不因匯率更新重算。
+          Asia/Taipei 00:00 關帳、00:05 鎖定交易日公告匯率、00:10 執行前一日帳期日結；歷史交易不因後續匯率更新重算。
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <n-button secondary @click="exportRates">匯出</n-button>
-        <n-button secondary @click="showFeeModal = true">調整服務費率</n-button>
         <n-button type="primary" @click="refreshRates">重抓公告匯率</n-button>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
       <div class="rounded border border-white/10 bg-[#202026] p-4">
         <n-statistic label="匯率總數" :value="summary.total" />
       </div>
@@ -410,13 +371,10 @@ const columns: DataTableColumns<ExchangeRateRow> = [
       <div class="rounded border border-white/10 bg-[#202026] p-4">
         <n-statistic label="抓取失敗" :value="summary.failed" />
       </div>
-      <div class="rounded border border-white/10 bg-[#202026] p-4">
-        <n-statistic label="平均服務費率">{{ formatPercent(summary.avgFee) }}</n-statistic>
-      </div>
     </div>
 
     <n-alert type="info" :show-icon="false">
-      final_rate = base_rate x (1 + service_fee_rate)。display_currency 只作顯示與營運參考，正式結算統一使用 settlement_currency = USDT。
+      USDT 換算只使用 base_rate；服務費另列於代理帳務，不得藏入匯率或重複計收。交易原幣保留於逐筆流水，正式平台帳務使用 settlement_currency = USDT。
     </n-alert>
 
     <div class="rounded border border-white/10 bg-[#202026] p-4">
@@ -451,12 +409,11 @@ const columns: DataTableColumns<ExchangeRateRow> = [
               <n-descriptions bordered :column="2" label-placement="left">
                 <n-descriptions-item label="日期">{{ currentRow.rate_date }}</n-descriptions-item>
                 <n-descriptions-item label="來源">{{ currentRow.source }}</n-descriptions-item>
-                <n-descriptions-item label="顯示幣別">{{ currentRow.display_currency }}</n-descriptions-item>
+                <n-descriptions-item label="交易原幣">{{ currentRow.display_currency }}</n-descriptions-item>
                 <n-descriptions-item label="結算幣別">{{ currentRow.settlement_currency }}</n-descriptions-item>
                 <n-descriptions-item label="base_rate">{{ formatRate(currentRow.base_rate, currentRow.display_currency) }}</n-descriptions-item>
                 <n-descriptions-item label="previous_base_rate">{{ formatRate(currentRow.previous_base_rate, currentRow.display_currency) }}</n-descriptions-item>
-                <n-descriptions-item label="service_fee_rate">{{ formatPercent(currentRow.service_fee_rate) }}</n-descriptions-item>
-                <n-descriptions-item label="final_rate">{{ formatRate(currentRow.final_rate, currentRow.display_currency) }}</n-descriptions-item>
+                <n-descriptions-item label="服務費率快照">{{ formatPercent(currentRow.service_fee_rate) }}</n-descriptions-item>
                 <n-descriptions-item label="波動">{{ formatPercent(variationPercent(currentRow)) }}</n-descriptions-item>
                 <n-descriptions-item label="版本">v{{ currentRow.version }}</n-descriptions-item>
                 <n-descriptions-item label="抓取時間">{{ formatDateTime(currentRow.fetched_at) }}</n-descriptions-item>
@@ -467,7 +424,7 @@ const columns: DataTableColumns<ExchangeRateRow> = [
                 <n-descriptions-item label="交易數">{{ currentRow.transaction_count.toLocaleString() }}</n-descriptions-item>
                 <n-descriptions-item label="告警" :span="2">{{ currentRow.alert || '-' }}</n-descriptions-item>
                 <n-descriptions-item label="不可重算規則" :span="2">
-                  匯率鎖定後，交易流水保存 exchange_rate_id、exchange_rate、service_fee_rate 與 rate_locked_at，歷史交易不因匯率更新重算。
+                  匯率鎖定後，交易流水保存 exchange_rate_id、exchange_rate、service_fee_rate 與 rate_locked_at。service_fee_rate 僅為系統預設或代理合約在交易時套用的稽核快照，不可在匯率管理內修改。
                 </n-descriptions-item>
               </n-descriptions>
             </n-tab-pane>
@@ -505,24 +462,5 @@ const columns: DataTableColumns<ExchangeRateRow> = [
       </n-drawer-content>
     </n-drawer>
 
-    <n-modal v-model:show="showFeeModal" preset="card" title="調整結算服務費率" style="width: min(520px, 92vw);">
-      <n-alert type="warning" :show-icon="false" class="mb-4">
-        只會更新未鎖定匯率；已鎖定的交易快照與日結金額不可重算。
-      </n-alert>
-      <n-form label-placement="left" label-width="120">
-        <n-form-item label="服務費率">
-          <n-input-number v-model:value="feeForm.service_fee_rate" class="w-full" :min="0" :max="0.05" :step="0.001" />
-        </n-form-item>
-        <n-form-item label="原因">
-          <n-input v-model:value="feeForm.reason" type="textarea" />
-        </n-form-item>
-      </n-form>
-      <template #footer>
-        <n-space justify="end">
-          <n-button secondary @click="showFeeModal = false">取消</n-button>
-          <n-button type="primary" @click="applyServiceFee">套用</n-button>
-        </n-space>
-      </template>
-    </n-modal>
   </div>
 </template>

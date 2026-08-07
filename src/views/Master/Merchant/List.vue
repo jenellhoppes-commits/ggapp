@@ -94,7 +94,7 @@ const agentOptions = computed(() => {
 })
 
 const debouncedFetch = useDebounceFn((search: string) => {
-  fetchList({ level: 1, search })
+  fetchList({ search })
 }, 400)
 
 watch(searchText, (value) => {
@@ -106,7 +106,7 @@ const syncCreateDrawerFromRoute = () => {
 }
 
 onMounted(() => {
-  fetchList({ level: 1 })
+  fetchList()
   syncCreateDrawerFromRoute()
 })
 
@@ -147,7 +147,7 @@ const resetFilters = () => {
   currencyFilter.value = null
   agentFilter.value = null
   createdRange.value = null
-  fetchList({ level: 1 })
+  fetchList()
 }
 
 const setCurrentMerchant = (row: Merchant) => {
@@ -194,11 +194,22 @@ const confirmAction = (action: string, row: Merchant) => {
   const label = actionLabels[action] || action
 
   if (action === 'test-callback') {
+    row.audit_logs = [{ audit_no: `AUD-${Date.now()}`, operated_at: new Date().toISOString(), operator: 'Admin', action: '測試 Callback URL', target: row.display_id, ip_address: '127.0.0.1', trace_id: `trace-callback-${Date.now()}`, result: 'success' }, ...(row.audit_logs || [])]
     message.success(`${row.display_id} Callback 測試成功，已產生 mock trace id`)
     return
   }
 
-  if (['rate', 'agent', 'account', 'audit', 'export'].includes(action)) {
+  if (['rate', 'agent'].includes(action)) {
+    handleConfig(row)
+    return
+  }
+
+  if (action === 'audit') {
+    handleView(row)
+    return
+  }
+
+  if (['account', 'export'].includes(action)) {
     message.info(`${label}為演示入口：商戶報價以代理費率為基礎，僅呈現在代理帳務明細，不產生 GGAP 對商戶應收。`)
     return
   }
@@ -313,7 +324,7 @@ const columns = computed<DataTableColumns<Merchant>>(() => [
     }, { default: () => getWalletMode(row) === 'seamless' ? 'Seamless' : 'Transfer' })
   },
   {
-    title: '可用顯示幣別',
+    title: '可用交易幣別',
     key: 'display_currencies',
     width: 170,
     render: (row) => h(NSpace, { size: 4 }, {
@@ -438,7 +449,7 @@ const columns = computed<DataTableColumns<Merchant>>(() => [
       <div>
         <h1 class="text-2xl font-bold">商戶管理</h1>
         <p class="mt-1 text-sm text-gray-500">
-          管理商戶資料、API 串接、錢包設定、顯示幣別、遊戲權限與所屬代理。
+          管理商戶資料、API 串接、錢包設定、交易幣別、遊戲權限與所屬代理。
         </p>
       </div>
       <div class="flex gap-2">
@@ -455,7 +466,7 @@ const columns = computed<DataTableColumns<Merchant>>(() => [
       </n-input>
       <n-select v-model:value="statusFilter" clearable placeholder="狀態" :options="statusOptions" style="width: 120px;" />
       <n-select v-model:value="walletFilter" clearable placeholder="錢包模式" :options="walletOptions" style="width: 140px;" />
-      <n-select v-model:value="currencyFilter" clearable placeholder="顯示幣別" :options="currencyOptions" style="width: 120px;" />
+      <n-select v-model:value="currencyFilter" clearable placeholder="交易幣別" :options="currencyOptions" style="width: 120px;" />
       <n-select v-model:value="agentFilter" clearable filterable placeholder="上層代理" :options="agentOptions" style="width: 180px;" />
       <div class="flex items-center gap-2">
         <n-date-picker v-model:value="createdRange" type="daterange" clearable style="width: 240px;" />

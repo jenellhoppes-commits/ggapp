@@ -27,10 +27,6 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { ReplayOutlined, SearchOutlined, SettingsOutlined, VisibilityOutlined } from '@vicons/material'
 import { DEFAULT_TABLE_PAGINATION, withTableSorters } from '../../../utils/tableSort'
-import { formatDisplayAmount } from '../../../utils/format'
-import { getGameLimitGroups } from '../../../mocks/gameLimits'
-import type { GameBetLimitGroup } from '../../../types/gameLimit'
-import { gameLimitLevelLabel, gameLimitStatusLabel } from '../../../types/gameLimit'
 
 type GameStatus = 'active' | 'maintenance' | 'disabled'
 type GameType = 'Slot' | 'Live' | 'Fishing' | 'Sports'
@@ -66,11 +62,7 @@ interface GameRow {
   supported_devices: DeviceType[]
   supported_display_currencies: string[]
   settlement_currency: 'USDT'
-  group_codes: string[]
-  group_names: string[]
   merchant_enabled_count: number
-  bet_limit: string
-  bet_limit_groups: GameBetLimitGroup[]
   last_synced_at: string
   maintenance_reason: string
   maintenance_schedule_type: MaintenanceScheduleType
@@ -102,7 +94,6 @@ const keyword = ref('')
 const providerFilter = ref<string | null>(null)
 const typeFilter = ref<GameType | null>(null)
 const statusFilter = ref<GameStatus | null>(null)
-const groupFilter = ref<string | null>(null)
 
 const rows = ref<GameRow[]>([
   {
@@ -119,11 +110,7 @@ const rows = ref<GameRow[]>([
     supported_devices: ['Desktop', 'Mobile', 'H5'],
     supported_display_currencies: ['TWD', 'PHP', 'THB', 'VND', 'IDR'],
     settlement_currency: 'USDT',
-    group_codes: ['GRP-HOT-SLOT', 'GRP-PG-SLOT'],
-    group_names: ['熱門電子', 'PG 精選'],
     merchant_enabled_count: 18,
-    bet_limit: '0.2 - 100 USDT',
-    bet_limit_groups: getGameLimitGroups('PG-001'),
     last_synced_at: '2026-07-07T08:30:00.000Z',
     maintenance_reason: '-',
     maintenance_schedule_type: 'weekly',
@@ -138,7 +125,7 @@ const rows = ref<GameRow[]>([
     ],
     logs: [
       { action: 'Provider 同步遊戲', operator: 'System', operated_at: '2026-07-07T08:30:00.000Z', trace_id: 'trace-game-pg001-sync' },
-      { action: '加入熱門電子分組', operator: 'Content', operated_at: '2026-07-07T09:00:00.000Z', trace_id: 'trace-game-pg001-group' }
+      { action: '設定熱門排序', operator: 'Content', operated_at: '2026-07-07T09:00:00.000Z', trace_id: 'trace-game-pg001-sort' }
     ]
   },
   {
@@ -155,11 +142,7 @@ const rows = ref<GameRow[]>([
     supported_devices: ['Desktop', 'Mobile', 'H5'],
     supported_display_currencies: ['TWD', 'PHP', 'THB'],
     settlement_currency: 'USDT',
-    group_codes: ['GRP-HOT-SLOT', 'GRP-PG-SLOT'],
-    group_names: ['熱門電子', 'PG 精選'],
     merchant_enabled_count: 15,
-    bet_limit: '0.2 - 80 USDT',
-    bet_limit_groups: getGameLimitGroups('PG-002'),
     last_synced_at: '2026-07-07T08:30:00.000Z',
     maintenance_reason: '-',
     maintenance_schedule_type: 'weekly',
@@ -189,11 +172,7 @@ const rows = ref<GameRow[]>([
     supported_devices: ['Desktop', 'Mobile'],
     supported_display_currencies: ['TWD', 'PHP', 'THB', 'VND'],
     settlement_currency: 'USDT',
-    group_codes: ['GRP-LIVE-CASINO'],
-    group_names: ['真人娛樂'],
     merchant_enabled_count: 11,
-    bet_limit: '1 - 500 USDT',
-    bet_limit_groups: getGameLimitGroups('EVO-001'),
     last_synced_at: '2026-07-07T07:40:00.000Z',
     maintenance_reason: '-',
     maintenance_schedule_type: 'monthly',
@@ -223,11 +202,7 @@ const rows = ref<GameRow[]>([
     supported_devices: ['Desktop', 'Mobile', 'H5'],
     supported_display_currencies: ['PHP', 'THB', 'VND', 'IDR'],
     settlement_currency: 'USDT',
-    group_codes: ['GRP-HOT-SLOT', 'GRP-CAMPAIGN-JULY'],
-    group_names: ['熱門電子', '七月活動'],
     merchant_enabled_count: 20,
-    bet_limit: '0.2 - 120 USDT',
-    bet_limit_groups: getGameLimitGroups('PP-001'),
     last_synced_at: '2026-07-07T06:58:00.000Z',
     maintenance_reason: '-',
     maintenance_schedule_type: 'monthly',
@@ -240,7 +215,7 @@ const rows = ref<GameRow[]>([
       { merchant_id: 'OP-1009', merchant_name: 'Golden Dragon Gaming', agent_name: 'L3 Growth Team', status: 'enabled', custom_sort: 4 }
     ],
     logs: [
-      { action: '加入活動分組', operator: 'Content', operated_at: '2026-07-07T09:15:00.000Z', trace_id: 'trace-game-pp001-campaign' }
+      { action: '設定活動曝光', operator: 'Content', operated_at: '2026-07-07T09:15:00.000Z', trace_id: 'trace-game-pp001-campaign' }
     ]
   },
   {
@@ -257,11 +232,7 @@ const rows = ref<GameRow[]>([
     supported_devices: ['Mobile', 'H5'],
     supported_display_currencies: ['PHP', 'VND', 'IDR'],
     settlement_currency: 'USDT',
-    group_codes: ['GRP-JILI'],
-    group_names: ['JILI 測試分組'],
     merchant_enabled_count: 7,
-    bet_limit: '0.1 - 60 USDT',
-    bet_limit_groups: getGameLimitGroups('JILI-001'),
     last_synced_at: '2026-07-07T10:12:00.000Z',
     maintenance_reason: 'Provider API 測試中',
     maintenance_schedule_type: 'none',
@@ -313,12 +284,6 @@ const weekdayLabel: Record<number, string> = {
   5: '週五',
   6: '週六'
 }
-const groupOptions = computed(() => {
-  const groups = new Map<string, string>()
-  rows.value.forEach(row => row.group_codes.forEach((code, index) => groups.set(code, row.group_names[index] || code)))
-  return Array.from(groups.entries()).map(([value, label]) => ({ label, value }))
-})
-
 const filteredRows = computed(() => {
   const text = keyword.value.trim().toLowerCase()
   return rows.value.filter(row => {
@@ -327,8 +292,7 @@ const filteredRows = computed(() => {
     const matchesProvider = !providerFilter.value || row.provider_name === providerFilter.value
     const matchesType = !typeFilter.value || row.game_type === typeFilter.value
     const matchesStatus = !statusFilter.value || row.status === statusFilter.value
-    const matchesGroup = !groupFilter.value || row.group_codes.includes(groupFilter.value)
-    return matchesText && matchesProvider && matchesType && matchesStatus && matchesGroup
+    return matchesText && matchesProvider && matchesType && matchesStatus
   })
 })
 
@@ -336,8 +300,7 @@ const summary = computed(() => ({
   total: rows.value.length,
   active: rows.value.filter(row => row.status === 'active').length,
   maintenance: rows.value.filter(row => row.status === 'maintenance').length,
-  providers: new Set(rows.value.map(row => row.provider_id)).size,
-  groups: new Set(rows.value.flatMap(row => row.group_codes)).size
+  providers: new Set(rows.value.map(row => row.provider_id)).size
 }))
 
 const formatDateTime = (value?: string) => value ? new Date(value).toLocaleString('zh-TW') : '-'
@@ -356,7 +319,6 @@ const resetFilters = () => {
   providerFilter.value = null
   typeFilter.value = null
   statusFilter.value = null
-  groupFilter.value = null
 }
 
 const openDetail = (row: GameRow) => {
@@ -439,17 +401,6 @@ const columns: DataTableColumns<GameRow> = [
       row.next_maintenance_at ? h('div', { class: 'mt-1 text-slate-500' }, `下次 ${formatDateTime(row.next_maintenance_at)}`) : null
     ])
   },
-  { title: '遊戲分組', key: 'group_names', width: 220, render: row => h('div', { class: 'flex flex-wrap gap-1' }, row.group_names.map(name => h(NTag, { size: 'small', bordered: false }, { default: () => name }))) },
-  {
-    title: '單槍群組',
-    key: 'bet_limit_groups',
-    width: 210,
-    render: row => h('div', { class: 'flex flex-wrap gap-1' }, row.bet_limit_groups.slice(0, 2).map(group => h(NTag, {
-      size: 'small',
-      bordered: false,
-      type: group.is_default ? 'success' : 'info'
-    }, { default: () => group.limit_group_name })))
-  },
   { title: '商戶啟用', key: 'merchant_enabled_count', width: 110, align: 'right', render: row => `${row.merchant_enabled_count} 家` },
   { title: '裝置', key: 'supported_devices', width: 160, render: row => row.supported_devices.join(' / ') },
   { title: '結算幣別', key: 'settlement_currency', width: 110, render: row => h(NTag, { type: 'success', size: 'small', bordered: false }, { default: () => row.settlement_currency }) },
@@ -457,14 +408,13 @@ const columns: DataTableColumns<GameRow> = [
   {
     title: '操作',
     key: 'actions',
-    width: 270,
+    width: 220,
     fixed: 'right',
     render: row => h(NSpace, { size: 'small' }, {
       default: () => [
         h(NButton, { size: 'small', secondary: true, onClick: () => openDetail(row) }, { icon: () => h(NIcon, { component: VisibilityOutlined }), default: () => '查看' }),
         h(NButton, { size: 'small', secondary: true, onClick: () => toggleMaintenance(row) }, { icon: () => h(NIcon, { component: SettingsOutlined }), default: () => row.status === 'maintenance' ? '解除' : '維護' }),
-        h(NButton, { size: 'small', secondary: true, onClick: () => openScheduleEditor(row) }, { default: () => '排程' }),
-        h(NButton, { size: 'small', secondary: true, onClick: () => actionMessage('加入分組', row) }, { default: () => '分組' })
+        h(NButton, { size: 'small', secondary: true, onClick: () => openScheduleEditor(row) }, { default: () => '排程' })
       ]
     })
   }
@@ -477,17 +427,6 @@ const authColumns: DataTableColumns<MerchantAuthorization> = [
   { title: '排序', key: 'custom_sort', align: 'right' }
 ]
 
-const limitColumns: DataTableColumns<GameBetLimitGroup> = [
-  { title: '限額群組', key: 'limit_group_name', width: 180, render: row => h('div', {}, [h('div', row.limit_group_name), h('div', { class: 'font-mono text-xs text-slate-500' }, row.limit_group_code)]) },
-  { title: '層級', key: 'group_level', width: 100, render: row => h(NTag, { type: row.is_default ? 'success' : 'info', size: 'small', bordered: false }, { default: () => row.is_default ? '預設' : gameLimitLevelLabel[row.group_level] }) },
-  { title: '顯示幣別', key: 'display_currency', width: 110 },
-  { title: '最小投注', key: 'min_bet_display', align: 'right', render: row => formatDisplayAmount(row.min_bet_display, row.display_currency) },
-  { title: '最大投注', key: 'max_bet_display', align: 'right', render: row => formatDisplayAmount(row.max_bet_display, row.display_currency) },
-  { title: '跳動單位', key: 'bet_step_display', align: 'right', render: row => formatDisplayAmount(row.bet_step_display, row.display_currency) },
-  { title: 'Provider 上限代碼', key: 'provider_limit_code', width: 150 },
-  { title: '套用商戶', key: 'merchant_count', align: 'right', render: row => `${row.merchant_count} 家` },
-  { title: '狀態', key: 'status', width: 90, render: row => h(NTag, { type: row.status === 'active' ? 'success' : 'warning', size: 'small', bordered: false }, { default: () => gameLimitStatusLabel[row.status] }) }
-]
 </script>
 
 <template>
@@ -496,7 +435,7 @@ const limitColumns: DataTableColumns<GameBetLimitGroup> = [
       <div>
         <h1 class="text-2xl font-bold">遊戲管理</h1>
         <p class="mt-1 text-sm text-slate-500">
-          管理供應商遊戲、類型、RTP、裝置、分組、商戶授權與每週 / 每月固定維護。
+          管理供應商遊戲、類型、RTP、裝置、商戶授權與每週 / 每月固定維護；下注限額方案統一由供應商幣別管理維護。
         </p>
       </div>
       <n-button type="primary" @click="actionMessage('重新同步供應商遊戲')">
@@ -505,12 +444,11 @@ const limitColumns: DataTableColumns<GameBetLimitGroup> = [
       </n-button>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
       <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="遊戲總數" :value="summary.total" /></div>
       <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="啟用遊戲" :value="summary.active" /></div>
       <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="維護中" :value="summary.maintenance" /></div>
       <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="供應商數" :value="summary.providers" /></div>
-      <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="分組數" :value="summary.groups" /></div>
     </div>
 
     <n-alert type="info" :show-icon="false">
@@ -524,7 +462,6 @@ const limitColumns: DataTableColumns<GameBetLimitGroup> = [
       <n-select v-model:value="providerFilter" clearable :options="providerOptions" placeholder="供應商" style="width: 150px;" />
       <n-select v-model:value="typeFilter" clearable :options="typeOptions" placeholder="類型" style="width: 120px;" />
       <n-select v-model:value="statusFilter" clearable :options="statusOptions" placeholder="狀態" style="width: 120px;" />
-      <n-select v-model:value="groupFilter" clearable :options="groupOptions" placeholder="分組" style="width: 150px;" />
       <n-button secondary @click="resetFilters">重置</n-button>
     </div>
 
@@ -533,7 +470,7 @@ const limitColumns: DataTableColumns<GameBetLimitGroup> = [
       :data="filteredRows"
       :pagination="DEFAULT_TABLE_PAGINATION"
       :bordered="false"
-      :scroll-x="1770"
+      :scroll-x="1340"
     />
 
     <n-drawer v-model:show="showDetail" width="1040">
@@ -550,7 +487,7 @@ const limitColumns: DataTableColumns<GameBetLimitGroup> = [
           <div class="mb-5 grid grid-cols-1 gap-3 md:grid-cols-4">
             <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="RTP">{{ currentRow.rtp.toFixed(2) }}%</n-statistic></div>
             <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="啟用商戶">{{ currentRow.merchant_enabled_count }}</n-statistic></div>
-            <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="分組">{{ currentRow.group_names.length }}</n-statistic></div>
+            <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="維護排程">{{ maintenanceScheduleLabel(currentRow) }}</n-statistic></div>
             <div class="rounded border border-white/10 bg-[#202026] p-4"><n-statistic label="結算幣別">{{ currentRow.settlement_currency }}</n-statistic></div>
           </div>
 
@@ -564,7 +501,7 @@ const limitColumns: DataTableColumns<GameBetLimitGroup> = [
                 <n-descriptions-item label="遊戲類型">{{ currentRow.game_type }}</n-descriptions-item>
                 <n-descriptions-item label="波動率">{{ currentRow.volatility }}</n-descriptions-item>
                 <n-descriptions-item label="支援裝置">{{ currentRow.supported_devices.join(' / ') }}</n-descriptions-item>
-                <n-descriptions-item label="投注區間">{{ currentRow.bet_limit }}</n-descriptions-item>
+                <n-descriptions-item label="下注限額方案">請至供應商管理的幣別線勾選 Provider 提供的方案</n-descriptions-item>
               </n-descriptions>
             </n-tab-pane>
 
@@ -574,24 +511,8 @@ const limitColumns: DataTableColumns<GameBetLimitGroup> = [
                 <n-descriptions-item label="供應商 ID">{{ currentRow.provider_id }}</n-descriptions-item>
                 <n-descriptions-item label="正式結算幣別">{{ currentRow.settlement_currency }}</n-descriptions-item>
                 <n-descriptions-item label="最後同步">{{ formatDateTime(currentRow.last_synced_at) }}</n-descriptions-item>
-                <n-descriptions-item label="顯示幣別" :span="2">{{ currentRow.supported_display_currencies.join(' / ') }}</n-descriptions-item>
+                <n-descriptions-item label="交易幣別" :span="2">{{ currentRow.supported_display_currencies.join(' / ') }}</n-descriptions-item>
               </n-descriptions>
-            </n-tab-pane>
-
-            <n-tab-pane name="groups" tab="遊戲分組">
-              <div class="flex flex-wrap gap-2">
-                <n-tag v-for="group in currentRow.group_names" :key="group" type="success" :bordered="false">{{ group }}</n-tag>
-              </div>
-              <n-alert type="info" :show-icon="false" class="mt-3">
-                遊戲分組只影響展示與商戶遊戲包，不改變 Provider API 或交易處理。
-              </n-alert>
-            </n-tab-pane>
-
-            <n-tab-pane name="limits" tab="單槍群組">
-              <n-alert type="info" :show-icon="false" class="mb-3">
-                Provider 預設會開放最高投注區間，平台再依遊戲、商戶與特殊會員套用單次下注區間；正式交易會保存 Session 限額快照。
-              </n-alert>
-              <n-data-table :columns="withTableSorters(limitColumns)" :data="currentRow.bet_limit_groups" :pagination="DEFAULT_TABLE_PAGINATION" :scroll-x="1120" />
             </n-tab-pane>
 
             <n-tab-pane name="auth" tab="商戶授權">

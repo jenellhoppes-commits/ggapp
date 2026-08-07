@@ -218,7 +218,7 @@ const actionOptions = [
 ]
 const currencyBasisOptions = [
   { label: 'USDT 結算幣別', value: 'settlement_currency' },
-  { label: '顯示幣別', value: 'display_currency' },
+  { label: '交易幣別', value: 'display_currency' },
   { label: '雙幣別', value: 'both' }
 ]
 

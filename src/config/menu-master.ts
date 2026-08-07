@@ -56,8 +56,6 @@ export const masterMenuOptions = (_t: (key: string) => string): MenuOption[] => 
         children: [
             { label: renderLink('/admin/game-center/providers', '供應商管理'), key: 'provider-list', icon: renderIcon(CasinoOutlined) },
             { label: renderLink('/admin/game-center/list', '遊戲管理'), key: 'game-center', icon: renderIcon(CasinoOutlined) },
-            { label: renderLink('/admin/content/game-groups', '遊戲分組'), key: 'GameGroups', icon: renderIcon(CasinoOutlined) },
-            { label: renderLink('/admin/content/game-limits', '遊戲限額管理'), key: 'GameLimitManagement', icon: renderIcon(CasinoOutlined) },
             { label: renderLink('/admin/content/campaigns', '獎池與活動'), key: 'Campaigns', icon: renderIcon(CasinoOutlined) }
         ]
     },

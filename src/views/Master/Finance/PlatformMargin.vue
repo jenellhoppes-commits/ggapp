@@ -24,6 +24,7 @@ import type { DataTableColumns } from 'naive-ui'
 import { AssessmentOutlined, SearchOutlined, VisibilityOutlined } from '@vicons/material'
 import MoneyText from '../../../components/Common/MoneyText.vue'
 import { DEFAULT_TABLE_PAGINATION, withTableSorters } from '../../../utils/tableSort'
+import { calculatePlatformMargin } from '../../../domain/finance'
 
 type MarginStatus = 'preview' | 'ready' | 'locked'
 
@@ -44,7 +45,9 @@ interface MarginDetail {
   agent_receivable: number
   provider_cost: number
   fx_service_fee: number
-  adjustment_amount: number
+  agent_adjustment: number
+  platform_adjustment: number
+  activity_cost: number
   platform_margin: number
 }
 
@@ -66,7 +69,9 @@ interface PlatformMarginRow {
   agent_receivable: number
   provider_cost: number
   fx_service_fee: number
-  adjustment_amount: number
+  agent_adjustment: number
+  platform_adjustment: number
+  activity_cost: number
   platform_margin: number
   margin_rate: number
   status: MarginStatus
@@ -90,7 +95,9 @@ const rows = ref<PlatformMarginRow[]>([
     agent_receivable: 42087.5,
     provider_cost: 24050,
     fx_service_fee: 3006.25,
-    adjustment_amount: 0,
+    agent_adjustment: 0,
+    platform_adjustment: 0,
+    activity_cost: 0,
     platform_margin: 21043.75,
     margin_rate: 0.035,
     status: 'ready',
@@ -101,7 +108,7 @@ const rows = ref<PlatformMarginRow[]>([
       { source_type: 'FX_SERVICE_FEE', target_type: 'PLATFORM', target_id: 'GGAP', amount: 3006.25, ref_no: 'FX-202607-PG', description: '匯率服務費' }
     ],
     details: [
-      { merchant_id: 'OP-1001', merchant_name: 'Blue Whale Interactive', display_currency: 'TWD', settlement_ggr: 601250, agent_receivable: 42087.5, provider_cost: 24050, fx_service_fee: 3006.25, adjustment_amount: 0, platform_margin: 21043.75 }
+      { merchant_id: 'OP-1001', merchant_name: 'Blue Whale Interactive', display_currency: 'TWD', settlement_ggr: 601250, agent_receivable: 42087.5, provider_cost: 24050, fx_service_fee: 3006.25, agent_adjustment: 0, platform_adjustment: 0, activity_cost: 0, platform_margin: 21043.75 }
     ],
     logs: [
       { action: '產生平台毛利快照', operated_at: '2026-07-07T02:00:00.000Z', operator: 'System', trace_id: 'trace-margin-direct-pg' }
@@ -118,7 +125,9 @@ const rows = ref<PlatformMarginRow[]>([
     agent_receivable: 28147.75,
     provider_cost: 17219.8,
     fx_service_fee: 1655.75,
-    adjustment_amount: -120,
+    agent_adjustment: 0,
+    platform_adjustment: -120,
+    activity_cost: 0,
     platform_margin: 12463.7,
     margin_rate: 0.0376,
     status: 'preview',
@@ -130,7 +139,7 @@ const rows = ref<PlatformMarginRow[]>([
       { source_type: 'ADJUSTMENT', target_type: 'PLATFORM', target_id: 'GGAP', amount: -120, ref_no: 'ADJ-202607-JILI', description: '差異調整' }
     ],
     details: [
-      { merchant_id: 'OP-1002', merchant_name: 'Royal Ace Group', display_currency: 'PHP', settlement_ggr: 331150, agent_receivable: 28147.75, provider_cost: 17219.8, fx_service_fee: 1655.75, adjustment_amount: -120, platform_margin: 12463.7 }
+      { merchant_id: 'OP-1002', merchant_name: 'Royal Ace Group', display_currency: 'PHP', settlement_ggr: 331150, agent_receivable: 28147.75, provider_cost: 17219.8, fx_service_fee: 1655.75, agent_adjustment: 0, platform_adjustment: -120, activity_cost: 0, platform_margin: 12463.7 }
     ],
     logs: [
       { action: '建立毛利預覽', operated_at: '2026-07-07T02:04:00.000Z', operator: 'System', trace_id: 'trace-margin-direct-jili' }
@@ -147,7 +156,9 @@ const rows = ref<PlatformMarginRow[]>([
     agent_receivable: 27042.6,
     provider_cost: 17335,
     fx_service_fee: 1386.8,
-    adjustment_amount: 1200,
+    agent_adjustment: 1200,
+    platform_adjustment: 0,
+    activity_cost: 0,
     platform_margin: 12294.4,
     margin_rate: 0.0355,
     status: 'locked',
@@ -156,10 +167,10 @@ const rows = ref<PlatformMarginRow[]>([
       { source_type: 'AGENT_RECEIVABLE', target_type: 'AGENT', target_id: 'AGT-SEA-001', amount: 27042.6, ref_no: 'AINV-202607-SEA', description: '代理應收帳單來源' },
       { source_type: 'PROVIDER_PAYABLE', target_type: 'PROVIDER', target_id: 'PROV-PP', amount: -17335, ref_no: 'PINV-202607-PP', description: '供應商應付成本' },
       { source_type: 'FX_SERVICE_FEE', target_type: 'PLATFORM', target_id: 'GGAP', amount: 1386.8, ref_no: 'FX-202607-PP', description: '匯率服務費' },
-      { source_type: 'ADJUSTMENT', target_type: 'PLATFORM', target_id: 'GGAP', amount: 1200, ref_no: 'ADJ-202607-SEA', description: '代理帳務調整' }
+      { source_type: 'ADJUSTMENT', target_type: 'AGENT', target_id: 'AGT-SEA-001', amount: 1200, ref_no: 'ADJ-202607-SEA', description: '代理應收調整' }
     ],
     details: [
-      { merchant_id: 'OP-1009', merchant_name: 'Golden Dragon Gaming', display_currency: 'VND', settlement_ggr: 346700, agent_receivable: 27042.6, provider_cost: 17335, fx_service_fee: 1386.8, adjustment_amount: 1200, platform_margin: 12294.4 }
+      { merchant_id: 'OP-1009', merchant_name: 'Golden Dragon Gaming', display_currency: 'VND', settlement_ggr: 346700, agent_receivable: 27042.6, provider_cost: 17335, fx_service_fee: 1386.8, agent_adjustment: 1200, platform_adjustment: 0, activity_cost: 0, platform_margin: 12294.4 }
     ],
     logs: [
       { action: '鎖定平台毛利快照', operated_at: '2026-07-07T04:05:00.000Z', operator: 'Finance', trace_id: 'trace-margin-sea-pp-lock' }
@@ -176,7 +187,9 @@ const rows = ref<PlatformMarginRow[]>([
     agent_receivable: 25312.5,
     provider_cost: 13500,
     fx_service_fee: 1350,
-    adjustment_amount: 0,
+    agent_adjustment: 0,
+    platform_adjustment: 0,
+    activity_cost: 0,
     platform_margin: 13162.5,
     margin_rate: 0.039,
     status: 'ready',
@@ -187,13 +200,24 @@ const rows = ref<PlatformMarginRow[]>([
       { source_type: 'FX_SERVICE_FEE', target_type: 'PLATFORM', target_id: 'GGAP', amount: 1350, ref_no: 'FX-202607-PG', description: '匯率服務費' }
     ],
     details: [
-      { merchant_id: 'OP-1008', merchant_name: 'NovaPlay Entertainment', display_currency: 'THB', settlement_ggr: 337500, agent_receivable: 25312.5, provider_cost: 13500, fx_service_fee: 1350, adjustment_amount: 0, platform_margin: 13162.5 }
+      { merchant_id: 'OP-1008', merchant_name: 'NovaPlay Entertainment', display_currency: 'THB', settlement_ggr: 337500, agent_receivable: 25312.5, provider_cost: 13500, fx_service_fee: 1350, agent_adjustment: 0, platform_adjustment: 0, activity_cost: 0, platform_margin: 13162.5 }
     ],
     logs: [
       { action: '完成毛利試算', operated_at: '2026-07-07T02:18:00.000Z', operator: 'System', trace_id: 'trace-margin-sea-pg' }
     ]
   }
 ])
+
+const finalAgentReceivable = (row: PlatformMarginRow) => row.agent_receivable + row.fx_service_fee + row.agent_adjustment
+
+rows.value.forEach((row) => {
+  row.platform_margin = calculatePlatformMargin(
+    finalAgentReceivable(row),
+    row.provider_cost,
+    row.platform_adjustment,
+    row.activity_cost
+  )
+})
 
 const showDetail = ref(false)
 const currentRow = ref<PlatformMarginRow | null>(rows.value[0] ?? null)
@@ -216,7 +240,7 @@ const statusMeta: Record<MarginStatus, { label: string; type: 'success' | 'warni
 
 const sourceMeta: Record<MarginSource['source_type'], { label: string; type: 'success' | 'warning' | 'info' | 'default' }> = {
   AGENT_RECEIVABLE: { label: '代理應收', type: 'success' },
-  PROVIDER_PAYABLE: { label: '供應商成本', type: 'warning' },
+  PROVIDER_PAYABLE: { label: '供應商應付', type: 'warning' },
   FX_SERVICE_FEE: { label: '匯率服務費', type: 'info' },
   ADJUSTMENT: { label: '調整', type: 'default' }
 }
@@ -240,10 +264,11 @@ const filteredRows = computed(() => {
 const summary = computed(() => {
   const base = filteredRows.value
   return {
-    agentReceivable: base.reduce((sum, row) => sum + row.agent_receivable, 0),
+    agentReceivable: base.reduce((sum, row) => sum + finalAgentReceivable(row), 0),
     providerCost: base.reduce((sum, row) => sum + row.provider_cost, 0),
     fxServiceFee: base.reduce((sum, row) => sum + row.fx_service_fee, 0),
-    adjustment: base.reduce((sum, row) => sum + row.adjustment_amount, 0),
+    adjustment: base.reduce((sum, row) => sum + row.agent_adjustment + row.platform_adjustment, 0),
+    activityCost: base.reduce((sum, row) => sum + row.activity_cost, 0),
     platformMargin: base.reduce((sum, row) => sum + row.platform_margin, 0)
   }
 })
@@ -302,10 +327,12 @@ const columns = computed<DataTableColumns<PlatformMarginRow>>(() => [
   },
   { title: '帳期', key: 'period', width: 110 },
   { title: '幣別', key: 'settlement_currency', width: 95, align: 'center', render: row => h(NTag, { type: 'success', size: 'small', bordered: false }, { default: () => row.settlement_currency }) },
-  { title: '代理應收', key: 'agent_receivable', width: 145, align: 'right', render: row => h(MoneyText, { value: row.agent_receivable, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
-  { title: '供應商成本', key: 'provider_cost', width: 145, align: 'right', render: row => h(MoneyText, { value: row.provider_cost, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
+  { title: '代理最終應收', key: 'agent_receivable', width: 155, align: 'right', render: row => h(MoneyText, { value: finalAgentReceivable(row), currency: 'USDT', compact: true, color: 'text-slate-100' }) },
+  { title: '供應商應付', key: 'provider_cost', width: 145, align: 'right', render: row => h(MoneyText, { value: row.provider_cost, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
   { title: '匯率服務費', key: 'fx_service_fee', width: 135, align: 'right', render: row => h(MoneyText, { value: row.fx_service_fee, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
-  { title: '調整', key: 'adjustment_amount', width: 115, align: 'right', render: row => h(MoneyText, { value: row.adjustment_amount, currency: 'USDT', compact: true, showSign: true }) },
+  { title: '代理調整', key: 'agent_adjustment', width: 115, align: 'right', render: row => h(MoneyText, { value: row.agent_adjustment, currency: 'USDT', compact: true, showSign: true }) },
+  { title: '平台調整', key: 'platform_adjustment', width: 115, align: 'right', render: row => h(MoneyText, { value: row.platform_adjustment, currency: 'USDT', compact: true, showSign: true }) },
+  { title: '活動成本', key: 'activity_cost', width: 125, align: 'right', render: row => h(MoneyText, { value: row.activity_cost, currency: 'USDT', compact: true, color: 'text-amber-300' }) },
   { title: '平台毛利', key: 'platform_margin', width: 145, align: 'right', render: row => h(MoneyText, { value: row.platform_margin, currency: 'USDT', compact: true, showSign: true }) },
   { title: '毛利率', key: 'margin_rate', width: 110, align: 'right', render: row => formatRate(row.margin_rate) },
   { title: '狀態', key: 'status', width: 105, align: 'center', render: row => h(NTag, { type: statusMeta[row.status].type, size: 'small', bordered: false }, { default: () => statusMeta[row.status].label }) },
@@ -336,12 +363,13 @@ const sourceColumns: DataTableColumns<MarginSource> = [
 
 const detailColumns: DataTableColumns<MarginDetail> = [
   { title: '商戶', key: 'merchant_name', width: 210, render: row => h('div', { class: 'flex flex-col gap-1' }, [h('span', { class: 'font-semibold' }, row.merchant_name), h('span', { class: 'font-mono text-xs text-gray-500' }, row.merchant_id)]) },
-  { title: '顯示幣別', key: 'display_currency', width: 100 },
+  { title: '交易幣別', key: 'display_currency', width: 100 },
   { title: '結算 GGR', key: 'settlement_ggr', align: 'right', render: row => h(MoneyText, { value: row.settlement_ggr, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
-  { title: '代理應收', key: 'agent_receivable', align: 'right', render: row => h(MoneyText, { value: row.agent_receivable, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
-  { title: '供應商成本', key: 'provider_cost', align: 'right', render: row => h(MoneyText, { value: row.provider_cost, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
+  { title: '代理遊戲費', key: 'agent_receivable', align: 'right', render: row => h(MoneyText, { value: row.agent_receivable, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
+  { title: '供應商應付', key: 'provider_cost', align: 'right', render: row => h(MoneyText, { value: row.provider_cost, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
   { title: '匯率服務費', key: 'fx_service_fee', align: 'right', render: row => h(MoneyText, { value: row.fx_service_fee, currency: 'USDT', compact: true, color: 'text-slate-100' }) },
-  { title: '調整', key: 'adjustment_amount', align: 'right', render: row => h(MoneyText, { value: row.adjustment_amount, currency: 'USDT', compact: true, showSign: true }) },
+  { title: '代理調整', key: 'agent_adjustment', align: 'right', render: row => h(MoneyText, { value: row.agent_adjustment, currency: 'USDT', compact: true, showSign: true }) },
+  { title: '平台調整', key: 'platform_adjustment', align: 'right', render: row => h(MoneyText, { value: row.platform_adjustment, currency: 'USDT', compact: true, showSign: true }) },
   { title: '平台毛利', key: 'platform_margin', align: 'right', render: row => h(MoneyText, { value: row.platform_margin, currency: 'USDT', compact: true, showSign: true }) }
 ]
 </script>
@@ -352,7 +380,7 @@ const detailColumns: DataTableColumns<MarginDetail> = [
       <div>
         <h1 class="text-2xl font-bold">平台毛利</h1>
         <p class="mt-1 text-sm text-gray-500">
-          管理報表只彙整代理應收、供應商成本、匯率服務費與調整金額，不改動供應商或代理帳務主體。
+          管理報表彙整代理最終應收、供應商應付、平台調整及其他成本，不改動供應商或代理帳務主體。
         </p>
       </div>
       <n-button type="primary" secondary @click="generateMarginSnapshot">
@@ -363,14 +391,14 @@ const detailColumns: DataTableColumns<MarginDetail> = [
       </n-button>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
       <div class="rounded border border-white/10 bg-[#202026] p-4">
-        <n-statistic label="代理應收">
+        <n-statistic label="代理最終應收">
           <MoneyText :value="summary.agentReceivable" currency="USDT" compact color="text-slate-100" />
         </n-statistic>
       </div>
       <div class="rounded border border-white/10 bg-[#202026] p-4">
-        <n-statistic label="供應商成本">
+        <n-statistic label="供應商應付">
           <MoneyText :value="summary.providerCost" currency="USDT" compact color="text-slate-100" />
         </n-statistic>
       </div>
@@ -382,6 +410,11 @@ const detailColumns: DataTableColumns<MarginDetail> = [
       <div class="rounded border border-white/10 bg-[#202026] p-4">
         <n-statistic label="調整">
           <MoneyText :value="summary.adjustment" currency="USDT" compact show-sign />
+        </n-statistic>
+      </div>
+      <div class="rounded border border-white/10 bg-[#202026] p-4">
+        <n-statistic label="活動成本">
+          <MoneyText :value="summary.activityCost" currency="USDT" compact color="text-amber-300" />
         </n-statistic>
       </div>
       <div class="rounded border border-white/10 bg-[#202026] p-4">
@@ -405,7 +438,7 @@ const detailColumns: DataTableColumns<MarginDetail> = [
     </div>
 
     <n-alert type="info" :show-icon="false">
-      平台毛利 = 代理應收 - 供應商成本 + 匯率服務費 + 調整金額。此頁是內部管理報表，供應商帳單與代理帳單仍保持獨立。
+      平台毛利 = 代理最終應收 - 供應商應付 + 平台調整 - 活動成本 - 補償成本；代理最終應收已包含匯率服務費，不可重複加計。此頁只作平台內部管理分析，供應商帳單與代理帳單仍保持獨立。
     </n-alert>
 
     <n-data-table
@@ -431,12 +464,12 @@ const detailColumns: DataTableColumns<MarginDetail> = [
         <template v-if="currentRow">
           <div class="mb-5 grid grid-cols-1 gap-3 md:grid-cols-4">
             <div class="rounded border border-white/10 bg-[#202026] p-4">
-              <n-statistic label="代理應收">
-                <MoneyText :value="currentRow.agent_receivable" currency="USDT" compact color="text-slate-100" />
+              <n-statistic label="代理最終應收">
+                <MoneyText :value="finalAgentReceivable(currentRow)" currency="USDT" compact color="text-slate-100" />
               </n-statistic>
             </div>
             <div class="rounded border border-white/10 bg-[#202026] p-4">
-              <n-statistic label="供應商成本">
+              <n-statistic label="供應商應付">
                 <MoneyText :value="currentRow.provider_cost" currency="USDT" compact color="text-slate-100" />
               </n-statistic>
             </div>
