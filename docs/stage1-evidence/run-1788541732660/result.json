@@ -1,0 +1,13 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "vue-tsc",
+    "--noEmit"
+  ],
+  "startedAt": "2026-09-04T17:08:52.680Z",
+  "endedAt": "2026-09-04T17:09:26.146Z",
+  "exitCode": 0,
+  "changed": [],
+  "removed": []
+}

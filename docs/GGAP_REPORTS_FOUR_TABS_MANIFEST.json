@@ -1,0 +1,764 @@
+{
+  "delivery": "R03-REPORTS-4TABS v1.0",
+  "files": [
+    {
+      "path": "src/domain/report-four-tabs.ts",
+      "sha256": "994ed7e5c30912fc087936763110140dee9a43565cf4d7382e7704db3da6553b"
+    },
+    {
+      "path": "src/domain/report-navigation.ts",
+      "sha256": "1cd1ad78e4a54a515922874695c803150d1fa87df0c0698dca0b4c31c875505b"
+    },
+    {
+      "path": "src/domain/report-query.ts",
+      "sha256": "20dbf878f190390ca5f3f6fcde9c25c0e1dedc79a4288bc60bf4a9d889639665"
+    },
+    {
+      "path": "src/mock/game-provider/report-four-tabs.ts",
+      "sha256": "597ab3e4d4db88452e42a2fb64c0d23196103d797043b62e045afef81e9da910"
+    },
+    {
+      "path": "src/composables/useReportFourTabs.ts",
+      "sha256": "76dbd4bddbfe37daea7c2aa5e54baa6d4245925920f5d16bedd2bfa2639d099b"
+    },
+    {
+      "path": "src/components/business/ReportBetDrilldown.vue",
+      "sha256": "465361d169db720695d2a864e3315b4db22689d1cc8789f4f82d2ec58826f3d2"
+    },
+    {
+      "path": "src/components/business/ModuleSummary.vue",
+      "sha256": "4c6c8e1c9383645ad1aaea534b9888faac9eca96ca09680e5799d890f112d421"
+    },
+    {
+      "path": "src/components/business/ReportEntryLinks.vue",
+      "sha256": "26ba03d3fbee44c90d129ece6f657c08756accdbbf67134dd38c0b367e7a76c2"
+    },
+    {
+      "path": "src/views/game-provider/report-query/index.vue",
+      "sha256": "f77c56cb12f2fa7c976c5732f172208836b764c01e793039c142137591d11247"
+    },
+    {
+      "path": "src/views/game-provider/reports/index.vue",
+      "sha256": "79f5afa23f4ef45fbd82af85e006d1c4ac5226674e54397c2e2ac5383a19a823"
+    },
+    {
+      "path": "src/views/game-provider/dashboard/index.vue",
+      "sha256": "f8992d3b3208740ca304d489d59cf665195ad7e92ac697d625e628fd684a38ed"
+    },
+    {
+      "path": "src/views/game-provider/agents/index.vue",
+      "sha256": "a7c88e11fc3f6be9862abc997399bc3f12f3a8332a6d3a182e4a217d0d9010d7"
+    },
+    {
+      "path": "src/views/game-provider/agents/detail.vue",
+      "sha256": "6e4d8d8518a0f52622b94dbcbcd5b402d5731fb4c9530840f22385e773f36d22"
+    },
+    {
+      "path": "src/views/game-provider/merchants/index.vue",
+      "sha256": "b8fe2bf31ab22123f668940e47987a301d86ab0411e4bd427c3b0c15a42a32f9"
+    },
+    {
+      "path": "src/views/game-provider/merchants/detail.vue",
+      "sha256": "211d2317bd26c1ca7ad3751f7c38c84356b9d603f4c38058814a0f23d61d4dad"
+    },
+    {
+      "path": "src/views/game-provider/members/index.vue",
+      "sha256": "eb39499edaaf44662b8434976214c3bca3748055424039b029bc2f66859d708d"
+    },
+    {
+      "path": "src/views/game-provider/transactions/bets/index.vue",
+      "sha256": "57aee2a8e4e097d149673b4a6951409c8e8eefd42059a41f9f4e3df49bf1eaf0"
+    },
+    {
+      "path": "src/views/game-provider/transactions/records/index.vue",
+      "sha256": "ffe59fe46a9b2f94d254b1082bf351a51f2d59bea233cf92faef3e6fb188b36d"
+    },
+    {
+      "path": "src/views/provider-hub/index.vue",
+      "sha256": "06090f4bced6881c53f9bfcdcc4d953b3b719fbd833040046dddb99f56c9bfc3"
+    },
+    {
+      "path": "src/views/navigation/system-workspace.vue",
+      "sha256": "26369e908dbf63bba3aa04042ec3f2398d68a35dc1c311a8e48699a26aee2808"
+    },
+    {
+      "path": "src/views/navigation/finance-subject.vue",
+      "sha256": "20818d03971cd641e8f4cc693c455ad70ce14e17de84aa4617faa189bd4b5c27"
+    },
+    {
+      "path": "src/views/navigation/retired-reports.vue",
+      "sha256": "82109f34bb330e5f904043ffe90efa87215f70e3c8efd2ffeac90d82c0109d7f"
+    },
+    {
+      "path": "src/router/modules/navigation.ts",
+      "sha256": "3a7e7bdd4f6f131ec9dd05d6d3eb82ac31b99eedfeff43fd4cea9e77da3108ba"
+    },
+    {
+      "path": "src/router/routes/staticRoutes.ts",
+      "sha256": "f479d0352b481c9be60b3322f810c1ed12bda44ed367a47458e0c297f9f34b94"
+    },
+    {
+      "path": "src/router/guards/beforeEach.ts",
+      "sha256": "dc9b1a169329bebebdef0b885ff652d8d2b2be33f7e816095a62f1e62aaac079"
+    },
+    {
+      "path": "src/router/core/MenuProcessor.ts",
+      "sha256": "b546a9af92ded919a809dab61ec814c641fb20a5b96086d9a437f438e84e121c"
+    },
+    {
+      "path": "src/components/core/layouts/art-header-bar/index.vue",
+      "sha256": "9732a35e4895ac45deab4f3cc06b2de54f2e5122db35342ba3a6259a57dceb4a"
+    },
+    {
+      "path": "scripts/check-navigation.ts",
+      "sha256": "487bf74ec05a6196067ba223e045471d55b61472c278e43e15e96e39cd7ecac2"
+    },
+    {
+      "path": "scripts/check-report-preview.ts",
+      "sha256": "6449dcec0d89b45335cba2aca02501c5a577d3f2ae99b6249b2d5d3877fd73ca"
+    },
+    {
+      "path": "scripts/check-reports-four-tabs.ts",
+      "sha256": "2661b2ea0fdc90b58ef7075ef91629ccf965e748985c6cd2c4bc0ef09e09f4d9"
+    },
+    {
+      "path": "scripts/report-four-tabs-manifest.ts",
+      "sha256": "6841fb960045a3040c76472fb54958e45bdc7ce7a94b594cf1dd34613b7fe252"
+    }
+  ],
+  "lockedDependencies": [
+    {
+      "path": "src/components/business/provider-hub/GamesPanel.vue",
+      "sha256": "a9d512be0cb9e746c33e96051321c25adef84e964f5c105c84026b06455ed237"
+    },
+    {
+      "path": "src/components/business/provider-hub/DemoLinks.vue",
+      "sha256": "9970f4e37fcc5e2df41358f87df303465b196cf20e7dcaad07c2c0a8b3906c23"
+    },
+    {
+      "path": "src/components/business/provider-hub/ProvidersPanel.vue",
+      "sha256": "7e61f0cd84b74bebc4abee787e8ba2e6d72fd61267dbd1414bcf22152320d04d"
+    },
+    {
+      "path": "src/domain/game-query.ts",
+      "sha256": "cbd01f18b9593692c91aaef46c642e4877bdade3402d063b98df9ff065d035ff"
+    }
+  ],
+  "migrations": [
+    {
+      "path": "/dashboard",
+      "name": "GgapLegacyGameProviderDashboard",
+      "target": "/business/merchants"
+    },
+    {
+      "path": "/providers",
+      "name": "GgapLegacyProviderCenter",
+      "target": "/admin/providers"
+    },
+    {
+      "path": "/providers/management",
+      "name": "GgapLegacyProvidersList",
+      "target": "/admin/providers"
+    },
+    {
+      "path": "/providers/management/:id(PV[0-9]+)",
+      "name": "GgapLegacyProviderDetail",
+      "target": "/admin/providers/detail/:id(PV[0-9]+)"
+    },
+    {
+      "path": "/games",
+      "name": "GgapLegacyGameCenter",
+      "target": "/admin/providers/games"
+    },
+    {
+      "path": "/games/taxonomy",
+      "name": "GgapLegacyGameTaxonomy",
+      "target": "/admin/providers/games"
+    },
+    {
+      "path": "/games/taxonomy/types",
+      "name": "GgapLegacyGameTypes",
+      "target": "/admin/providers/games"
+    },
+    {
+      "path": "/games/taxonomy/features",
+      "name": "GgapLegacyGameFeatureTags",
+      "target": "/admin/providers/games"
+    },
+    {
+      "path": "/games/taxonomy/marketing",
+      "name": "GgapLegacyGameMarketingTags",
+      "target": "/retired/reports/activity"
+    },
+    {
+      "path": "/games/management",
+      "name": "GgapLegacyGamesList",
+      "target": "/admin/providers/games"
+    },
+    {
+      "path": "/games/management/create",
+      "name": "GgapLegacyGameCreate",
+      "target": "/admin/providers/games"
+    },
+    {
+      "path": "/games/management/:id(G[0-9]+)",
+      "name": "GgapLegacyGameDetail",
+      "target": "/admin/providers/games/:id(G[0-9]+)"
+    },
+    {
+      "path": "/members",
+      "name": "GgapLegacyMemberCenter",
+      "target": "/transactions/members"
+    },
+    {
+      "path": "/members/management",
+      "name": "GgapLegacyMembersList",
+      "target": "/transactions/members"
+    },
+    {
+      "path": "/members/management/:id(P[0-9]+)",
+      "name": "GgapLegacyMemberDetail",
+      "target": "/transactions/members/:id(P[0-9]+)"
+    },
+    {
+      "path": "/risk",
+      "name": "GgapLegacyRiskCenter",
+      "target": "/retired/reports/quality"
+    },
+    {
+      "path": "/risk/overview",
+      "name": "GgapLegacyRiskOverview",
+      "target": "/retired/reports/quality"
+    },
+    {
+      "path": "/risk/alerts",
+      "name": "GgapLegacyRiskAlerts",
+      "target": "/retired/reports/quality"
+    },
+    {
+      "path": "/risk/rules",
+      "name": "GgapLegacyRiskRules",
+      "target": "/retired/reports/quality"
+    },
+    {
+      "path": "/risk/cases",
+      "name": "GgapLegacyRiskCases",
+      "target": "/retired/reports/quality"
+    },
+    {
+      "path": "/risk/cases/:id(R[0-9]+)",
+      "name": "GgapLegacyRiskCaseDetail",
+      "target": "/retired/reports/quality"
+    },
+    {
+      "path": "/risk/processing-logs",
+      "name": "GgapLegacyRiskProcessingLogs",
+      "target": "/retired/reports/quality"
+    },
+    {
+      "path": "/approvals",
+      "name": "GgapLegacyApprovalCenter",
+      "target": "/platform/logs/approvals"
+    },
+    {
+      "path": "/approvals/pending",
+      "name": "GgapLegacyApprovalPending",
+      "target": "/retired/reports/manual"
+    },
+    {
+      "path": "/approvals/approved",
+      "name": "GgapLegacyApprovalApproved",
+      "target": "/platform/logs/approvals"
+    },
+    {
+      "path": "/approvals/rejected",
+      "name": "GgapLegacyApprovalRejected",
+      "target": "/platform/logs/approvals"
+    },
+    {
+      "path": "/approvals/logs",
+      "name": "GgapLegacyApprovalLogs",
+      "target": "/platform/logs/approvals"
+    },
+    {
+      "path": "/finance/reconciliation",
+      "name": "GgapLegacyReconciliationManagement",
+      "target": "/finance/merchants/settlements"
+    },
+    {
+      "path": "/finance/reconciliation/merchants",
+      "name": "GgapLegacyMerchantReconciliation",
+      "target": "/finance/merchants/settlements"
+    },
+    {
+      "path": "/finance/reconciliation/merchants/:id",
+      "name": "GgapLegacyMerchantReconciliationDetail",
+      "target": "/finance/merchants/settlements"
+    },
+    {
+      "path": "/finance/reconciliation/agents",
+      "name": "GgapLegacyAgentReconciliation",
+      "target": "/finance/agents/commissions"
+    },
+    {
+      "path": "/finance/reconciliation/agents/:id",
+      "name": "GgapLegacyAgentReconciliationDetail",
+      "target": "/finance/agents/commissions"
+    },
+    {
+      "path": "/finance/reconciliation/differences",
+      "name": "GgapLegacyReconciliationDifferences",
+      "target": "/retired/reports/manual"
+    },
+    {
+      "path": "/finance/settlement",
+      "name": "GgapLegacySettlementManagement",
+      "target": "/finance/select"
+    },
+    {
+      "path": "/finance/settlement/batches",
+      "name": "GgapLegacySettlementBatches",
+      "target": "/finance/select"
+    },
+    {
+      "path": "/finance/settlement/batches/:id",
+      "name": "GgapLegacySettlementBatchDetail",
+      "target": "/finance/select"
+    },
+    {
+      "path": "/finance/settlement/merchant-statements",
+      "name": "GgapLegacyMerchantSettlementStatements",
+      "target": "/finance/merchants/settlements"
+    },
+    {
+      "path": "/finance/settlement/agent-statements",
+      "name": "GgapLegacyAgentSettlementStatements",
+      "target": "/finance/agents/commissions"
+    },
+    {
+      "path": "/finance/settlement/exchange-snapshots",
+      "name": "GgapLegacySettlementExchangeSnapshots",
+      "target": "/platform/exchange-rates/history"
+    },
+    {
+      "path": "/finance/settlement/adjustments",
+      "name": "GgapLegacySettlementAdjustments",
+      "target": "/retired/reports/manual"
+    },
+    {
+      "path": "/finance/settlement/logs",
+      "name": "GgapLegacySettlementChangeLogs",
+      "target": "/platform/logs/operations"
+    },
+    {
+      "path": "/reports",
+      "name": "GgapLegacyReportCenter",
+      "target": "/business/reports?tab=operations"
+    },
+    {
+      "path": "/reports/overview",
+      "name": "GgapLegacyReportOverview",
+      "target": "/business/reports?tab=operations"
+    },
+    {
+      "path": "/reports/games",
+      "name": "GgapLegacyGameReportGroup",
+      "target": "/business/reports?tab=games"
+    },
+    {
+      "path": "/reports/games/performance",
+      "name": "GgapLegacyGamePerformanceReport",
+      "target": "/business/reports?tab=games"
+    },
+    {
+      "path": "/reports/games/rtp",
+      "name": "GgapLegacyRtpReport",
+      "target": "/retired/reports/rtp"
+    },
+    {
+      "path": "/reports/merchants",
+      "name": "GgapLegacyMerchantReportGroup",
+      "target": "/business/merchants/summary"
+    },
+    {
+      "path": "/reports/merchants/overview",
+      "name": "GgapLegacyMerchantReport",
+      "target": "/business/reports?tab=merchants"
+    },
+    {
+      "path": "/reports/merchants/lines",
+      "name": "GgapLegacyMerchantLineReport",
+      "target": "/business/reports?tab=merchants"
+    },
+    {
+      "path": "/reports/agents",
+      "name": "GgapLegacyAgentReportGroup",
+      "target": "/business/agents/summary"
+    },
+    {
+      "path": "/reports/agents/overview",
+      "name": "GgapLegacyAgentReport",
+      "target": "/business/reports?tab=agents"
+    },
+    {
+      "path": "/reports/agents/merchants",
+      "name": "GgapLegacyAgentMerchantReport",
+      "target": "/business/reports?tab=merchants"
+    },
+    {
+      "path": "/reports/members",
+      "name": "GgapLegacyMemberReports",
+      "target": "/transactions/members"
+    },
+    {
+      "path": "/reports/transactions",
+      "name": "GgapLegacyTransactionReportGroup",
+      "target": "/transactions/bet-statistics"
+    },
+    {
+      "path": "/reports/transactions/bets",
+      "name": "GgapLegacyBetStatisticsReport",
+      "target": "/transactions/bets"
+    },
+    {
+      "path": "/reports/transactions/records",
+      "name": "GgapLegacyTransactionStatisticsReport",
+      "target": "/transactions/records"
+    },
+    {
+      "path": "/reports/settlements",
+      "name": "GgapLegacySettlementReportGroup",
+      "target": "/finance/select"
+    },
+    {
+      "path": "/reports/settlements/merchants",
+      "name": "GgapLegacyMerchantSettlementReport",
+      "target": "/finance/merchants/settlements"
+    },
+    {
+      "path": "/reports/settlements/providers",
+      "name": "GgapLegacyProviderPayableReport",
+      "target": "/finance/providers/reconciliation"
+    },
+    {
+      "path": "/reports/settlements/agent-commissions",
+      "name": "GgapLegacyAgentCommissionReport",
+      "target": "/finance/agents/commissions"
+    },
+    {
+      "path": "/finance-settings",
+      "name": "GgapLegacyFinanceSettings",
+      "target": "/platform/currencies/data"
+    },
+    {
+      "path": "/finance-settings/currencies",
+      "name": "GgapLegacyCurrencyManagement",
+      "target": "/platform/currencies/data"
+    },
+    {
+      "path": "/finance-settings/currencies/data",
+      "name": "GgapLegacyCurrencyData",
+      "target": "/platform/currencies/data"
+    },
+    {
+      "path": "/finance-settings/currencies/transaction",
+      "name": "GgapLegacyTransactionCurrencies",
+      "target": "/platform/currencies/transaction"
+    },
+    {
+      "path": "/finance-settings/currencies/settlement",
+      "name": "GgapLegacySettlementCurrencies",
+      "target": "/platform/currencies/settlement"
+    },
+    {
+      "path": "/finance-settings/currencies/precision",
+      "name": "GgapLegacyCurrencyPrecision",
+      "target": "/platform/currencies/precision"
+    },
+    {
+      "path": "/finance-settings/exchange-rates/daily",
+      "name": "GgapLegacyDailyExchangeRates",
+      "target": "/platform/exchange-rates/daily"
+    },
+    {
+      "path": "/finance-settings/exchange-rates/sources",
+      "name": "GgapLegacyExchangeRateSources",
+      "target": "/platform/exchange-rates/sources"
+    },
+    {
+      "path": "/finance-settings/exchange-rates/adjustments",
+      "name": "GgapLegacyExchangeRateAdjustments",
+      "target": "/platform/exchange-rates/adjustments"
+    },
+    {
+      "path": "/finance-settings/exchange-rates/history",
+      "name": "GgapLegacyExchangeRateHistory",
+      "target": "/platform/exchange-rates/history"
+    },
+    {
+      "path": "/finance-settings/exchange-rates/alerts",
+      "name": "GgapLegacyExchangeRateAlerts",
+      "target": "/platform/exchange-rates/alerts"
+    },
+    {
+      "path": "/finance-settings/exchange-rates/logs",
+      "name": "GgapLegacyExchangeRateLogs",
+      "target": "/platform/exchange-rates/logs"
+    },
+    {
+      "path": "/finance-settings/settlement",
+      "name": "GgapLegacySettlementSettings",
+      "target": "/finance/merchants/settlements"
+    },
+    {
+      "path": "/finance-settings/settlement/default-currency",
+      "name": "GgapLegacyDefaultSettlementCurrency",
+      "target": "/finance/merchants/settlements"
+    },
+    {
+      "path": "/finance-settings/settlement/cycles",
+      "name": "GgapLegacySettlementCycles",
+      "target": "/finance/merchants/settlements"
+    },
+    {
+      "path": "/finance-settings/settlement/rate-rules",
+      "name": "GgapLegacySettlementRateRules",
+      "target": "/finance/merchants/settlements"
+    },
+    {
+      "path": "/finance-settings/settlement/precision",
+      "name": "GgapLegacySettlementPrecision",
+      "target": "/platform/currencies/precision"
+    },
+    {
+      "path": "/finance-settings/settlement/rounding",
+      "name": "GgapLegacySettlementRounding",
+      "target": "/platform/currencies/precision"
+    },
+    {
+      "path": "/platform/access",
+      "name": "GgapLegacyAccessManagement",
+      "target": "/platform/access/accounts"
+    },
+    {
+      "path": "/platform/locales",
+      "name": "GgapLegacyLocaleManagement",
+      "target": "/platform/locales/languages"
+    },
+    {
+      "path": "/platform/notifications",
+      "name": "GgapLegacyNotificationManagement",
+      "target": "/retired/reports/configuration"
+    },
+    {
+      "path": "/platform/notifications/rules",
+      "name": "GgapLegacyPlatformNotificationRules",
+      "target": "/retired/reports/configuration"
+    },
+    {
+      "path": "/platform/notifications/logs",
+      "name": "GgapLegacyPlatformNotificationLogs",
+      "target": "/platform/logs/operations"
+    },
+    {
+      "path": "/platform/parameters",
+      "name": "GgapLegacyParameterManagement",
+      "target": "/platform/parameters/basic"
+    },
+    {
+      "path": "/platform/logs",
+      "name": "GgapLegacySystemLogManagement",
+      "target": "/platform/logs/operations"
+    },
+    {
+      "path": "/reports/rtp",
+      "name": "ReportRetiredreportsrtp",
+      "target": "/retired/reports/rtp"
+    },
+    {
+      "path": "/reports/jackpots",
+      "name": "ReportRetiredreportsjackpots",
+      "target": "/retired/reports/jackpot"
+    },
+    {
+      "path": "/reports/providers",
+      "name": "ReportRetiredreportsproviders",
+      "target": "/retired/reports/providers"
+    },
+    {
+      "path": "/dashboard/operations",
+      "name": "R03LegacyReportOverview",
+      "target": "/business/reports?tab=operations"
+    },
+    {
+      "path": "/dashboard/games",
+      "name": "R03LegacyGamePerformanceReport",
+      "target": "/business/reports?tab=games"
+    },
+    {
+      "path": "/business/merchants/summary",
+      "name": "R03LegacyMerchantReport",
+      "target": "/business/reports?tab=merchants"
+    },
+    {
+      "path": "/business/merchants/line-summary",
+      "name": "R03LegacyMerchantLineReport",
+      "target": "/business/reports?tab=merchants"
+    },
+    {
+      "path": "/business/agents/summary",
+      "name": "R03LegacyAgentReport",
+      "target": "/business/reports?tab=agents"
+    },
+    {
+      "path": "/business/agents/merchant-summary",
+      "name": "R03LegacyAgentMerchantReport",
+      "target": "/business/reports?tab=merchants"
+    },
+    {
+      "path": "/transactions/member-statistics",
+      "name": "R03LegacyMemberReports",
+      "target": "/transactions/members"
+    },
+    {
+      "path": "/transactions/bet-statistics",
+      "name": "R03LegacyBetStatisticsReport",
+      "target": "/transactions/bets"
+    },
+    {
+      "path": "/transactions/record-statistics",
+      "name": "R03LegacyTransactionStatisticsReport",
+      "target": "/transactions/records"
+    },
+    {
+      "path": "/admin",
+      "name": "MvpLegacyadmin",
+      "target": "/admin/providers"
+    },
+    {
+      "path": "/trials",
+      "name": "MvpLegacytrials",
+      "target": "/trials/links"
+    },
+    {
+      "path": "/finance/overview",
+      "name": "MvpLegacyfinanceoverview",
+      "target": "/finance/select"
+    },
+    {
+      "path": "/finance/merchants",
+      "name": "MvpLegacyfinancemerchants",
+      "target": "/finance/merchants/settlements"
+    },
+    {
+      "path": "/finance/merchants/invoices",
+      "name": "MvpLegacyfinancemerchantsinvoices",
+      "target": "/finance/merchants/settlements"
+    },
+    {
+      "path": "/finance/merchants/receipts",
+      "name": "MvpLegacyfinancemerchantsreceipts",
+      "target": "/retired/reports/payments"
+    },
+    {
+      "path": "/finance/providers",
+      "name": "MvpLegacyfinanceproviders",
+      "target": "/finance/providers/reconciliation"
+    },
+    {
+      "path": "/finance/providers/payables",
+      "name": "MvpLegacyfinanceproviderspayables",
+      "target": "/finance/providers/reconciliation"
+    },
+    {
+      "path": "/finance/providers/payments",
+      "name": "MvpLegacyfinanceproviderspayments",
+      "target": "/retired/reports/payments"
+    },
+    {
+      "path": "/finance/agents",
+      "name": "MvpLegacyfinanceagents",
+      "target": "/finance/agents/commissions"
+    },
+    {
+      "path": "/finance/agents/payments",
+      "name": "MvpLegacyfinanceagentspayments",
+      "target": "/retired/reports/payments"
+    },
+    {
+      "path": "/finance/adjustments",
+      "name": "MvpLegacyfinanceadjustments",
+      "target": "/retired/reports/payments"
+    },
+    {
+      "path": "/finance/exchange-rates",
+      "name": "MvpLegacyfinanceexchangerates",
+      "target": "/platform/exchange-rates"
+    },
+    {
+      "path": "/finance/exchange-rates/daily",
+      "name": "MvpLegacyfinanceexchangeratesdaily",
+      "target": "/platform/exchange-rates/daily"
+    },
+    {
+      "path": "/finance/exchange-rates/sources",
+      "name": "MvpLegacyfinanceexchangeratessources",
+      "target": "/platform/exchange-rates/sources"
+    },
+    {
+      "path": "/finance/exchange-rates/adjustments",
+      "name": "MvpLegacyfinanceexchangeratesadjustments",
+      "target": "/platform/exchange-rates/adjustments"
+    },
+    {
+      "path": "/finance/exchange-rates/history",
+      "name": "MvpLegacyfinanceexchangerateshistory",
+      "target": "/platform/exchange-rates/history"
+    },
+    {
+      "path": "/finance/exchange-rates/alerts",
+      "name": "MvpLegacyfinanceexchangeratesalerts",
+      "target": "/platform/exchange-rates/alerts"
+    },
+    {
+      "path": "/finance/exchange-rates/logs",
+      "name": "MvpLegacyfinanceexchangerateslogs",
+      "target": "/platform/exchange-rates/logs"
+    },
+    {
+      "path": "/insights",
+      "name": "MvpLegacyinsights",
+      "target": "/business/reports"
+    },
+    {
+      "path": "/platform/exchange-rates",
+      "name": "MvpLegacyplatformexchangerates",
+      "target": "/platform/exchange-rates/daily"
+    },
+    {
+      "path": "/transactions/rounds",
+      "name": "MvpLegacytransactionsrounds",
+      "target": "/transactions/bets?focus=round"
+    },
+    {
+      "path": "/transactions/transfers",
+      "name": "MvpLegacytransactionstransfers",
+      "target": "/transactions/records?tab=transfers"
+    },
+    {
+      "path": "/transactions/supplements",
+      "name": "MvpLegacytransactionssupplements",
+      "target": "/retired/reports/manual"
+    },
+    {
+      "path": "/transactions/manual",
+      "name": "MvpLegacytransactionsmanual",
+      "target": "/retired/reports/manual"
+    },
+    {
+      "path": "/admin/providers/demo-links",
+      "name": "MvpLegacyadminprovidersdemolinks",
+      "target": "/trials/links"
+    }
+  ]
+}

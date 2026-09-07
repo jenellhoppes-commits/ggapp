@@ -1,0 +1,16 @@
+src/router/modules/navigation.ts 111ms
+src/utils/navigation/section-menu.ts 7ms
+src/components/core/layouts/art-menus/art-sidebar-menu/index.vue 158ms
+src/components/core/layouts/art-menus/art-sidebar-menu/widget/GgapSectionMenu.vue 41ms
+src/components/core/layouts/art-header-bar/index.vue 156ms
+src/domain/report-financial-summary.ts 10ms
+src/domain/report-presentation.ts 5ms
+src/components/business/ReportFinancialSummary.vue 43ms
+src/components/business/ReportOperationalMetrics.vue 12ms
+src/views/game-provider/overview/index.vue 2ms (unchanged)
+src/views/game-provider/report-query/index.vue 151ms
+src/composables/useReportFourTabs.ts 9ms
+scripts/check-navigation.ts 38ms (unchanged)
+scripts/check-reports-four-tabs.ts 68ms (unchanged)
+scripts/check-stage1.ts 16ms
+scripts/stage1-evidence.mjs 22ms

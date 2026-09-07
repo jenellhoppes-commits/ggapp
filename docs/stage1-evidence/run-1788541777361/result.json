@@ -1,0 +1,13 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "tsx",
+    "scripts/check-reports-four-tabs.ts"
+  ],
+  "startedAt": "2026-09-04T17:09:37.398Z",
+  "endedAt": "2026-09-04T17:09:40.461Z",
+  "exitCode": 0,
+  "changed": [],
+  "removed": []
+}

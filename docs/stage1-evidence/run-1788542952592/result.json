@@ -1,0 +1,27 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "eslint",
+    "src/router/modules/navigation.ts",
+    "src/utils/navigation/section-menu.ts",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/index.vue",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/widget/GgapSectionMenu.vue",
+    "src/components/core/layouts/art-header-bar/index.vue",
+    "src/domain/report-financial-summary.ts",
+    "src/domain/report-presentation.ts",
+    "src/components/business/ReportFinancialSummary.vue",
+    "src/components/business/ReportOperationalMetrics.vue",
+    "src/views/game-provider/overview/index.vue",
+    "src/views/game-provider/report-query/index.vue",
+    "src/composables/useReportFourTabs.ts",
+    "scripts/check-navigation.ts",
+    "scripts/check-reports-four-tabs.ts",
+    "scripts/check-stage1.ts"
+  ],
+  "startedAt": "2026-09-04T17:29:12.644Z",
+  "endedAt": "2026-09-04T17:29:23.984Z",
+  "exitCode": 0,
+  "changed": [],
+  "removed": []
+}

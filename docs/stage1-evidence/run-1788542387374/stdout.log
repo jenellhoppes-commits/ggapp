@@ -1,0 +1,4 @@
+src/components/core/layouts/art-menus/art-sidebar-menu/index.vue 707ms
+src/components/core/layouts/art-menus/art-sidebar-menu/widget/GgapSectionMenu.vue 127ms
+src/components/business/ReportFinancialSummary.vue 119ms
+src/domain/report-financial-summary.ts 46ms

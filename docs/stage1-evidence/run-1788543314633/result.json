@@ -1,0 +1,17 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "eslint",
+    "src/views/game-provider/report-query/index.vue",
+    "src/components/business/ReportFinancialSummary.vue",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/index.vue",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/widget/GgapSectionMenu.vue",
+    "scripts/check-stage1-download.ts"
+  ],
+  "startedAt": "2026-09-04T17:35:14.653Z",
+  "endedAt": "2026-09-04T17:35:24.396Z",
+  "exitCode": 1,
+  "changed": [],
+  "removed": []
+}

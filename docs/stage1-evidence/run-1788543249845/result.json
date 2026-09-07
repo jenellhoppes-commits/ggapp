@@ -1,0 +1,18 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "prettier",
+    "--write",
+    "src/views/game-provider/report-query/index.vue",
+    "scripts/check-stage1-download.ts",
+    "scripts/stage1-delivery-manifest.mjs"
+  ],
+  "startedAt": "2026-09-04T17:34:09.864Z",
+  "endedAt": "2026-09-04T17:34:11.485Z",
+  "exitCode": 0,
+  "changed": [
+    "scripts/check-stage1-download.ts"
+  ],
+  "removed": []
+}

@@ -1,0 +1,13 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "tsx",
+    "scripts/check-stage1-download.ts"
+  ],
+  "startedAt": "2026-09-04T17:31:32.416Z",
+  "endedAt": "2026-09-04T17:31:34.051Z",
+  "exitCode": 0,
+  "changed": [],
+  "removed": []
+}

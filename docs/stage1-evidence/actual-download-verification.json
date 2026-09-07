@@ -1,0 +1,11 @@
+{
+  "sourceFile": "C:/Users/user/Downloads/運營報表_2026-09-04_2026-09-04_TWD.csv",
+  "downloadedAt": "2026-09-04T17:29:52.567Z",
+  "uiBaselineAt": "2026-09-04T17:29:27.182Z",
+  "bytes": 308,
+  "sha256": "3cac8c27a9452ac1c4cf9c858e0d4b4bb6b35c57bdbe23cccd4f0e8464961a14",
+  "rows": 1,
+  "columns": 13,
+  "expected": "M2 operations 1/1/200/100 TWD, 2026-09-04, R4T-demo-v1",
+  "downloadEvent": "Browser event hook timed out; actual downloaded file independently verified by timestamp, content and hash."
+}

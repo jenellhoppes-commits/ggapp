@@ -1,0 +1,5 @@
+CH-01/02/05/06 模擬通過：七分區直接功能、唯一報表、空權限分區隱藏；路由相容另由導航測試驗證
+OV-01 模擬通過：儀錶板重用同一查詢元件，已套用期間、幣別及商戶範圍往返一致；不複製資料
+RP-01 模擬通過：三財務摘要全部缺來源不當0；八類來源、既有財務View權限、唯讀無公式
+CH-03/R4T-002 模擬通過：排序升降冪及單一抽屜結構通過；真實Tab/Enter/Space另作瀏覽器驗證
+Stage 1 structural/domain self-checks complete. No production/backend acceptance.

@@ -1,0 +1,56 @@
+GGAP Batch 02 developer self-test evidence (not independent acceptance)
+Date: 2026-09-04 Asia/Taipei
+Workspace: C:/Users/user/Desktop/game-admin
+HEAD: 6e8d876e9e8d9cc25557107778b98a232841cafd
+Branch: codex/ggap-v2-foundation
+Uncommitted working tree; no push/deploy.
+
+pnpm test:provider-batch02
+Exit code: 0
+$ tsx scripts/check-provider-batch02.ts
+A1 PASS (simulation): independent general/demo gates; production still blocked
+A2 PASS (simulation): TWD availability does not imply game authorization
+A3 PASS (simulation): currency, grant, wallet, line and environment use shared rejection
+A4 PASS (simulation): no duplicates, no manual/grant overwrite, new games unpublished, versions enforced
+A5 PASS (simulation): partial/full failure preserves missing source records
+A6 PASS (simulation): revocation blocks new sessions, historical sessions retained
+A7 PASS (simulation): replacement lineage, immutable old history, old URL disabled
+A8 DOMAIN PASS (simulation): query replay, sort, 10/20/50 paging; browser evidence recorded separately
+
+pnpm test:provider-demo
+Exit code: 0
+$ tsx scripts/check-provider-demo.ts
+Provider demo checks passed: authorizations, capabilities, expiry, limits, rotation, failures, isolated sessions and sandbox wallet tests.
+
+pnpm test:provider-core
+Exit code: 0
+$ tsx scripts/check-provider-core.ts
+Provider core simulation checks passed: migration, permission gates, version conflicts, settings validation, credential metadata, activation gates, historical sessions, original-value pagination.
+
+pnpm test:navigation
+Exit code: 0
+$ tsx scripts/check-navigation.ts
+Navigation checks passed: 119 canonical routes, 60 migrations, 3 role menus.
+
+pnpm test:realignment
+Exit code: 0
+$ tsx scripts/check-realignment.ts
+Realignment checks passed: deferred risk actions blocked, history retained, operational counts and Traditional Chinese chrome verified.
+
+pnpm lint
+Exit code: 0
+$ eslint
+No errors.
+
+pnpm build
+Exit code: 0
+$ vue-tsc --noEmit && vite build
+3510 modules transformed.
+built in 1m 9s
+(Full asset-size listing omitted.)
+
+git diff --check
+Exit code: 0
+Existing LF/CRLF informational warnings only.
+
+UI self-test: desktop and 390x844, explicit query/Enter, query reload, raw ID sort, page 2, page size 20 (10/20/50 options), drawer cancel guard, capability/grant tabs, partial sync running->partial 0/1/0/2, independent trial shortcut and incompatible merchant options. Browser error logs returned []. See GGAP_V22_BATCH02.md for steps and limitations.

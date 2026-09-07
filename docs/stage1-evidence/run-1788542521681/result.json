@@ -1,0 +1,16 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "prettier",
+    "--write",
+    "src/views/game-provider/report-query/index.vue"
+  ],
+  "startedAt": "2026-09-04T17:22:01.696Z",
+  "endedAt": "2026-09-04T17:22:03.218Z",
+  "exitCode": 0,
+  "changed": [
+    "src/views/game-provider/report-query/index.vue"
+  ],
+  "removed": []
+}

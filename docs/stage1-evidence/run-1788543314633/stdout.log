@@ -1,0 +1,33 @@
+
+C:\Users\user\Desktop\game-admin\scripts\check-stage1-download.ts
+  18:43   error  Unnecessary escape character: \"  no-useless-escape
+  18:46   error  Unnecessary escape character: \"  no-useless-escape
+  21:4    error  Unnecessary escape character: \"  no-useless-escape
+  21:6    error  Unnecessary escape character: \"  no-useless-escape
+  21:9    error  Unnecessary escape character: \"  no-useless-escape
+  21:21   error  Unnecessary escape character: \"  no-useless-escape
+  21:24   error  Unnecessary escape character: \"  no-useless-escape
+  21:26   error  Unnecessary escape character: \"  no-useless-escape
+  21:29   error  Unnecessary escape character: \"  no-useless-escape
+  21:32   error  Unnecessary escape character: \"  no-useless-escape
+  21:35   error  Unnecessary escape character: \"  no-useless-escape
+  21:38   error  Unnecessary escape character: \"  no-useless-escape
+  21:41   error  Unnecessary escape character: \"  no-useless-escape
+  21:46   error  Unnecessary escape character: \"  no-useless-escape
+  21:49   error  Unnecessary escape character: \"  no-useless-escape
+  21:54   error  Unnecessary escape character: \"  no-useless-escape
+  21:57   error  Unnecessary escape character: \"  no-useless-escape
+  21:62   error  Unnecessary escape character: \"  no-useless-escape
+  21:65   error  Unnecessary escape character: \"  no-useless-escape
+  21:77   error  Unnecessary escape character: \"  no-useless-escape
+  21:80   error  Unnecessary escape character: \"  no-useless-escape
+  21:92   error  Unnecessary escape character: \"  no-useless-escape
+  21:95   error  Unnecessary escape character: \"  no-useless-escape
+  21:108  error  Unnecessary escape character: \"  no-useless-escape
+  21:111  error  Unnecessary escape character: \"  no-useless-escape
+  21:133  error  Unnecessary escape character: \"  no-useless-escape
+  21:136  error  Unnecessary escape character: \"  no-useless-escape
+  21:149  error  Unnecessary escape character: \"  no-useless-escape
+
+✖ 28 problems (28 errors, 0 warnings)
+

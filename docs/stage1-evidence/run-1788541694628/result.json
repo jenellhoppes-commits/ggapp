@@ -1,0 +1,43 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "prettier",
+    "--write",
+    "src/router/modules/navigation.ts",
+    "src/utils/navigation/section-menu.ts",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/index.vue",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/widget/GgapSectionMenu.vue",
+    "src/components/core/layouts/art-header-bar/index.vue",
+    "src/domain/report-financial-summary.ts",
+    "src/domain/report-presentation.ts",
+    "src/components/business/ReportFinancialSummary.vue",
+    "src/components/business/ReportOperationalMetrics.vue",
+    "src/views/game-provider/overview/index.vue",
+    "src/views/game-provider/report-query/index.vue",
+    "src/composables/useReportFourTabs.ts",
+    "scripts/check-navigation.ts",
+    "scripts/check-reports-four-tabs.ts",
+    "scripts/check-stage1.ts",
+    "scripts/stage1-evidence.mjs"
+  ],
+  "startedAt": "2026-09-04T17:08:14.644Z",
+  "endedAt": "2026-09-04T17:08:16.497Z",
+  "exitCode": 0,
+  "changed": [
+    "scripts/check-stage1.ts",
+    "scripts/stage1-evidence.mjs",
+    "src/components/business/ReportFinancialSummary.vue",
+    "src/components/business/ReportOperationalMetrics.vue",
+    "src/components/core/layouts/art-header-bar/index.vue",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/index.vue",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/widget/GgapSectionMenu.vue",
+    "src/composables/useReportFourTabs.ts",
+    "src/domain/report-financial-summary.ts",
+    "src/domain/report-presentation.ts",
+    "src/router/modules/navigation.ts",
+    "src/utils/navigation/section-menu.ts",
+    "src/views/game-provider/report-query/index.vue"
+  ],
+  "removed": []
+}

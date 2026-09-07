@@ -1,0 +1,18 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "prettier",
+    "--write",
+    "src/views/game-provider/report-query/index.vue",
+    "scripts/stage1-delivery-manifest.mjs"
+  ],
+  "startedAt": "2026-09-04T17:28:10.047Z",
+  "endedAt": "2026-09-04T17:28:11.715Z",
+  "exitCode": 0,
+  "changed": [
+    "scripts/stage1-delivery-manifest.mjs",
+    "src/views/game-provider/report-query/index.vue"
+  ],
+  "removed": []
+}

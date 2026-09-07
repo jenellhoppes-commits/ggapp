@@ -1,0 +1,13 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "tsx",
+    "scripts/check-navigation.ts"
+  ],
+  "startedAt": "2026-09-04T17:08:37.828Z",
+  "endedAt": "2026-09-04T17:08:39.497Z",
+  "exitCode": 0,
+  "changed": [],
+  "removed": []
+}

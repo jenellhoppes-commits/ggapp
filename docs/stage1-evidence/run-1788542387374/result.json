@@ -1,0 +1,22 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "prettier",
+    "--write",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/index.vue",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/widget/GgapSectionMenu.vue",
+    "src/components/business/ReportFinancialSummary.vue",
+    "src/domain/report-financial-summary.ts"
+  ],
+  "startedAt": "2026-09-04T17:19:47.402Z",
+  "endedAt": "2026-09-04T17:19:50.073Z",
+  "exitCode": 0,
+  "changed": [
+    "src/components/business/ReportFinancialSummary.vue",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/index.vue",
+    "src/components/core/layouts/art-menus/art-sidebar-menu/widget/GgapSectionMenu.vue",
+    "src/domain/report-financial-summary.ts"
+  ],
+  "removed": []
+}

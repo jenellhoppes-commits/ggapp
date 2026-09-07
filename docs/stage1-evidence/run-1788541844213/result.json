@@ -1,0 +1,13 @@
+{
+  "command": [
+    "pnpm",
+    "build"
+  ],
+  "startedAt": "2026-09-04T17:10:44.234Z",
+  "endedAt": "2026-09-04T17:12:53.097Z",
+  "exitCode": 0,
+  "changed": [
+    "src/types/import/components.d.ts"
+  ],
+  "removed": []
+}

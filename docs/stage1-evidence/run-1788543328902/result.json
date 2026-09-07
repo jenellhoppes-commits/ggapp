@@ -1,0 +1,13 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "tsx",
+    "scripts/check-stage1.ts"
+  ],
+  "startedAt": "2026-09-04T17:35:28.927Z",
+  "endedAt": "2026-09-04T17:35:30.531Z",
+  "exitCode": 0,
+  "changed": [],
+  "removed": []
+}
