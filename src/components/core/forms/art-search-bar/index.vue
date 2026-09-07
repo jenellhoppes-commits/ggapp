@@ -72,9 +72,6 @@
         <ElCol :xs="24" :sm="24" :md="span" :lg="span" :xl="span" class="action-column">
           <div class="action-buttons-wrapper" :style="actionButtonsStyle">
             <div class="form-buttons">
-              <ElButton v-if="showReset" class="reset-button" @click="handleReset" v-ripple>
-                {{ t('table.searchBar.reset') }}
-              </ElButton>
               <ElButton
                 v-if="showSearch"
                 type="primary"
@@ -84,6 +81,9 @@
                 :disabled="disabledSearch"
               >
                 {{ t('table.searchBar.search') }}
+              </ElButton>
+              <ElButton v-if="showReset" class="reset-button" @click="handleReset" v-ripple>
+                {{ t('table.searchBar.reset') }}
               </ElButton>
             </div>
             <div v-if="shouldShowExpandToggle" class="filter-toggle" @click="toggleExpand">
@@ -103,6 +103,7 @@
 </template>
 
 <script setup lang="ts">
+  import { FILTER_LABEL_WIDTH, FILTER_MOBILE_BREAKPOINT } from '@/utils/form/filter-layout'
   import { ArrowUpBold, ArrowDownBold } from '@element-plus/icons-vue'
   import { useWindowSize } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
@@ -233,8 +234,6 @@
     span: 6,
     gutter: 12,
     isExpand: false,
-    labelPosition: 'right',
-    labelWidth: '70px',
     showExpand: true,
     defaultExpanded: false,
     buttonLeftLimit: 2,
@@ -502,7 +501,13 @@
   })
 
   // 解构 props 以便在模板中直接使用
-  const { span, gutter, labelPosition, labelWidth } = toRefs(props)
+  const { span, gutter } = toRefs(props)
+  const labelPosition = computed(
+    () => props.labelPosition ?? (width.value < FILTER_MOBILE_BREAKPOINT ? 'top' : 'right')
+  )
+  const labelWidth = computed(
+    () => props.labelWidth ?? (labelPosition.value === 'top' ? 'auto' : FILTER_LABEL_WIDTH)
+  )
 </script>
 
 <style lang="scss" scoped>
@@ -524,6 +529,9 @@
       .form-buttons {
         display: flex;
         gap: 8px;
+        :deep(.el-button + .el-button) {
+          margin-left: 0;
+        }
       }
 
       .filter-toggle {

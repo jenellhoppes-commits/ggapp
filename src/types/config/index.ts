@@ -181,6 +181,8 @@ export interface AppConfig extends SystemConfig {
 // 功能配置项基础接口
 export interface FeatureConfigItem {
   enabled: boolean
+  /** Hide the header entry without disabling the underlying feature. */
+  visible?: boolean
   description: string
 }
 

@@ -73,8 +73,9 @@ for (const path of [
   assert.ok(!read(`src/views/game-provider/${path}`).includes('/risk/'), `Stale risk link: ${path}`)
 }
 const header = read('src/components/core/layouts/art-header-bar/index.vue')
-assert.ok(header.includes('開發演示'))
-assert.ok(header.includes('demo-notice'))
+// The approved compact header no longer displays demo notices.
+assert.ok(!header.includes('開發演示'))
+assert.ok(!/<[^>]+class=["'][^"']*demo-notice/.test(header))
 assert.ok(!header.includes('正式環境'))
 const locale = JSON.parse(read('src/locales/langs/zh.json'))
 assert.equal(locale.topBar.user.logout, '登出')

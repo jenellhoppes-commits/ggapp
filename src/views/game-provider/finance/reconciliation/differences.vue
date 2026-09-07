@@ -7,7 +7,7 @@
     >
       <template #actions
         ><ElButton @click="refresh">重新整理</ElButton
-        ><ElButton @click="ElMessage.success('差異明細已匯出')">匯出</ElButton></template
+        ><ElButton @click="exportRows">匯出 CSV</ElButton></template
       >
     </AppPageHeader>
 
@@ -64,7 +64,15 @@
           ><strong>差異案件</strong><span>共 {{ filteredRows.length }} 筆</span></div
         ><span>依處理期限排序</span></div
       >
-      <ElTable :data="pagedRows" border row-key="id">
+      <ArtTable
+        :data="pagedRows"
+        row-key="id"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
+      >
         <ElTableColumn label="差異案件" min-width="230" fixed="left"
           ><template #default="scope"
             ><button class="primary-link" type="button" @click="openDrawer(scope.row.id)"
@@ -121,7 +129,7 @@
             ></template
           ></ElTableColumn
         >
-      </ElTable>
+      </ArtTable>
       <div class="pagination-wrap"
         ><ElPagination
           v-model:current-page="pagination.current"
@@ -274,6 +282,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useCsvExport } from '@/hooks/business/useCsvExport'
   import { ElMessage } from 'element-plus'
   import { useWindowSize } from '@vueuse/core'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
@@ -342,6 +351,39 @@
       pagination.current * pagination.size
     )
   )
+  const { exportCsv } = useCsvExport()
+  const exportRows = () =>
+    exportCsv(
+      '差異案件',
+      [
+        '案件編號',
+        '對帳編號',
+        '期間',
+        '對象',
+        '對象識別碼',
+        '差異類型',
+        '系統值',
+        '合作方值',
+        '差異金額',
+        '負責人',
+        '狀態',
+        '處理期限'
+      ],
+      filteredRows.value.map((row) => [
+        row.id,
+        row.reconciliationId,
+        row.period,
+        row.providerName || row.merchantName || row.agentName,
+        row.providerId || row.lineUid || row.agentId,
+        typeLabel(row.type),
+        money(row.systemValue, row.currency),
+        money(row.partnerValue, row.currency),
+        money(row.differenceAmount, row.currency),
+        row.assignee || '未指派',
+        statusLabel(row.status),
+        row.dueAt
+      ])
+    )
   const completedCount = computed(
     () => store.differences.filter((item) => isCompleted(item.status)).length
   )
@@ -456,7 +498,7 @@
     cursor: pointer;
     background: var(--art-main-bg-color);
     border: 1px solid var(--art-border-color);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
   }
 
   .summary-grid span,
@@ -558,7 +600,7 @@
     gap: 7px;
     padding: 14px;
     background: var(--art-gray-50);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
 
   .compare-grid strong {
@@ -578,7 +620,7 @@
     align-items: center;
     padding: 12px;
     border: 1px solid var(--art-border-color);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
 
   .drawer-actions {

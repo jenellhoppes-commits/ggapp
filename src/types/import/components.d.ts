@@ -8,6 +8,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AppFilterForm: typeof import('./../../components/business/game-provider/app-filter-form/index.vue')['default']
     AppPageHeader: typeof import('./../../components/business/game-provider/app-page-header/index.vue')['default']
     ApprovalPanel: typeof import('./../../components/business/game-provider/approval-panel/index.vue')['default']
     ArtBackToTop: typeof import('./../../components/core/base/art-back-to-top/index.vue')['default']
@@ -157,6 +158,7 @@ declare module 'vue' {
     ModuleSummary: typeof import('./../../components/business/ModuleSummary.vue')['default']
     OverrideField: typeof import('./../../components/business/game-provider/override-field/index.vue')['default']
     ProvidersPanel: typeof import('./../../components/business/provider-hub/ProvidersPanel.vue')['default']
+    ProviderTerms: typeof import('./../../components/business/provider-hub/ProviderTerms.vue')['default']
     ReportBetDrilldown: typeof import('./../../components/business/ReportBetDrilldown.vue')['default']
     ReportEntryLinks: typeof import('./../../components/business/ReportEntryLinks.vue')['default']
     ReportFinancialSummary: typeof import('./../../components/business/ReportFinancialSummary.vue')['default']

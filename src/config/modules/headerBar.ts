@@ -32,6 +32,7 @@ export const headerBarConfig: HeaderBarFeatureConfig = {
   },
   globalSearch: {
     enabled: true,
+    visible: false,
     description: '全局搜索功能，支持快捷键 Ctrl+K 或 Cmd+K'
   },
   fullscreen: {
@@ -44,6 +45,7 @@ export const headerBarConfig: HeaderBarFeatureConfig = {
   },
   chat: {
     enabled: true,
+    visible: false,
     description: '聊天功能，提供实时沟通'
   },
   language: {

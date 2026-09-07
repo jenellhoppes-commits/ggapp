@@ -9,9 +9,11 @@
       ><ElTabPane v-for="tab in reportTabs" :key="tab" :name="tab" :label="reportTabLabels[tab]"
     /></ElTabs>
     <ElCard shadow="never">
-      <ElForm label-position="top" class="report-filters" @submit.prevent="submit">
+      <AppFilterForm class="report-filters" @submit.prevent="submit">
         <ElFormItem label="日期範圍" :error="errors.date" class="dates"
           ><ElDatePicker
+            :shortcuts="dateShortcuts"
+            popper-class="report-date-picker"
             v-model="range"
             type="daterange"
             value-format="YYYY-MM-DD"
@@ -108,7 +110,7 @@
           ><ElButton type="primary" native-type="submit" :disabled="!scope.canView">查詢</ElButton
           ><ElButton @click="reset">重置</ElButton></div
         >
-      </ElForm>
+      </AppFilterForm>
       <p class="context"
         >平台時區：{{ scope.timezone || '缺設定' }} · 固定演示樣本日期 {{ reportSampleDate }} ·
         {{
@@ -173,12 +175,15 @@
             ></div
           >
           <div class="table-region"
-            ><ElTable
+            ><ArtTable
               :key="result.query.tab"
               :data="page.items"
               row-key="key"
-              border
               empty-text="本範圍沒有可呈現明細；若有來源缺項，請以上方警示及合計狀態為準"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
             >
               <ElTableColumn
                 v-if="result.query.tab === 'operations'"
@@ -242,8 +247,8 @@
                     >查看注單</ElButton
                   ><span v-else>無權限</span></template
                 ></ElTableColumn
-              >
-            </ElTable></div
+              > </ArtTable
+            >></div
           >
           <div class="pagination"
             ><ElPagination
@@ -265,6 +270,7 @@
   </section>
 </template>
 <script setup lang="ts">
+  import AppFilterForm from '@/components/business/game-provider/app-filter-form/index.vue'
   import { computed, nextTick, reactive, ref, watch, onBeforeUnmount } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { ElMessage } from 'element-plus'
@@ -278,6 +284,7 @@
     reportSortState
   } from '@/domain/report-presentation'
   import { useReportFourTabs } from '@/composables/useReportFourTabs'
+  import { createDateRangeShortcuts } from '@/utils/form/date-range-shortcuts'
   import { reportSampleDate } from '@/mock/game-provider/report-four-tabs'
   import {
     reportTabs,
@@ -301,6 +308,7 @@
   const route = useRoute(),
     router = useRouter(),
     { scope, source, lastCurrency, rememberCurrency, canViewFinancial } = useReportFourTabs()
+  const dateShortcuts = createDateRangeShortcuts(() => scope.value.timezone)
   const today = () => {
     try {
       return platformDate(new Date(), scope.value.timezone)
@@ -573,7 +581,7 @@
   .sort-control:focus-visible {
     outline: 2px solid var(--el-color-primary);
     outline-offset: 2px;
-    border-radius: 4px;
+    border-radius: var(--el-border-radius-base);
   }
   .extra-filter-grid {
     display: grid;

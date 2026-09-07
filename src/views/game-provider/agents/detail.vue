@@ -106,7 +106,13 @@
                 ><span>轄下商戶總數</span><strong>{{ allMerchants.length }}</strong></div
               ></div
             >
-            <ElTable :data="directChildren" border empty-text="目前沒有直接下級代理"
+            <ArtTable
+              :data="directChildren"
+              empty-text="目前沒有直接下級代理"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
               ><ElTableColumn label="代理" min-width="230"
                 ><template #default="{ row }"
                   ><EntityLink
@@ -126,7 +132,8 @@
                     >查看</ElButton
                   ></template
                 ></ElTableColumn
-              ></ElTable
+              ></ArtTable
+            >
             >
           </div>
         </ElTabPane>
@@ -144,7 +151,13 @@
               :closable="false"
               show-icon
             />
-            <ElTable :data="terms" border
+            <ArtTable
+              :data="terms"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
+              empty-text="暫無資料"
               ><ElTableColumn label="版本" width="75"
                 ><template #default="{ row }">V{{ row.version }}</template></ElTableColumn
               ><ElTableColumn label="結算基礎" width="110"
@@ -182,7 +195,8 @@
                     >設為生效</ElButton
                   ><span v-else>—</span></template
                 ></ElTableColumn
-              ></ElTable
+              ></ArtTable
+            >
             >
           </div>
         </ElTabPane>
@@ -198,7 +212,13 @@
                 ><ElRadioButton value="direct">直屬商戶</ElRadioButton
                 ><ElRadioButton value="all">全部轄下</ElRadioButton></ElRadioGroup
               ></div
-            ><ElTable :data="visibleMerchants" border empty-text="目前沒有商戶"
+            ><ArtTable
+              :data="visibleMerchants"
+              empty-text="目前沒有商戶"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
               ><ElTableColumn prop="id" label="Merchant ID" width="120" /><ElTableColumn
                 label="商戶"
                 min-width="200"
@@ -221,9 +241,10 @@
                 ><template #default="{ row }">{{ row.lines.length }}</template></ElTableColumn
               ><ElTableColumn label="狀態" width="110"
                 ><template #default="{ row }"
-                  ><GameProviderStatusTag
-                    :status="row.status" /></template></ElTableColumn></ElTable
-          ></div>
+                  ><GameProviderStatusTag :status="row.status" /></template></ElTableColumn
+            ></ArtTable>
+            ></div
+          >
         </ElTabPane>
 
         <ElTabPane label="對帳" name="reconciliation">
@@ -248,7 +269,13 @@
                 ><span>預估代理收益</span
                 ><strong>{{ money(latestReconciliation?.estimatedRevenue) }}</strong></div
               ></div
-            ><ElTable :data="reconciliations" border
+            ><ArtTable
+              :data="reconciliations"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
+              empty-text="暫無資料"
               ><ElTableColumn prop="period" label="對帳期間" width="105" /><ElTableColumn
                 label="結算基礎"
                 width="105"
@@ -283,7 +310,8 @@
                 ><template #default="{ row }">{{
                   reconciliationStatusText(row.status)
                 }}</template></ElTableColumn
-              ></ElTable
+              ></ArtTable
+            >
             ></div
           >
         </ElTabPane>
@@ -840,7 +868,7 @@
     padding: 14px;
     overflow-x: auto;
     background: var(--art-gray-50);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
   }
 
   .path-card {
@@ -851,7 +879,7 @@
     padding: 12px;
     background: var(--art-bg-color);
     border: 1px solid var(--art-gray-200);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
 
   .path-card:not(:last-child)::after {
@@ -886,7 +914,7 @@
     gap: 6px;
     padding: 13px;
     background: var(--art-gray-50);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
 
   .relationship-summary span,
@@ -935,7 +963,7 @@
     word-break: break-word;
     white-space: pre-wrap;
     background: var(--art-gray-50);
-    border-radius: 6px;
+    border-radius: var(--el-border-radius-base);
   }
 
   @media (width <= 1100px) {

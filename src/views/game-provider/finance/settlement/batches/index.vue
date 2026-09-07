@@ -75,19 +75,17 @@
         >
         <ElTableColumn label="原始應結" min-width="155" align="right"
           ><template #default="scope">{{
-            money(scope.row.totalAmount, scope.row.settlementCurrency)
+            batchMoney(scope.row.totalAmount, scope.row)
           }}</template></ElTableColumn
         >
         <ElTableColumn label="調整" min-width="130" align="right"
           ><template #default="scope">{{
-            money(scope.row.adjustmentAmount, scope.row.settlementCurrency)
+            batchMoney(scope.row.adjustmentAmount, scope.row)
           }}</template></ElTableColumn
         >
         <ElTableColumn label="最終應結" min-width="160" align="right"
           ><template #default="scope"
-            ><strong>{{
-              money(scope.row.finalAmount, scope.row.settlementCurrency)
-            }}</strong></template
+            ><strong>{{ batchMoney(scope.row.finalAmount, scope.row) }}</strong></template
           ></ElTableColumn
         >
         <ElTableColumn label="匯率快照" width="100" align="center"
@@ -157,6 +155,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useFinanceMoney } from '@/hooks/business/useFinanceMoney'
   import { ElMessage } from 'element-plus'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import { useFinanceCenterStore } from '@/store/modules/financeCenter'
@@ -247,8 +246,7 @@
     ElMessage.success('結算批次已建立')
     if (result.batch) openDetail(result.batch.id)
   }
-  const money = (value: number, currency: string) =>
-    `${currency} ${new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 2 }).format(value)}`
+  const { batchMoney } = useFinanceMoney()
   const cycleLabel = (cycle: string) =>
     ({ Daily: '每日', Weekly: '每週', Semimonthly: '每半月', Monthly: '每月' })[cycle] || cycle
   const statusLabel = (status: string) =>

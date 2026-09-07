@@ -75,7 +75,7 @@ export function useHeaderBar() {
 
   // 检查全局搜索是否显示
   const shouldShowGlobalSearch = computed(() => {
-    return isFeatureEnabled('globalSearch')
+    return isFeatureEnabled('globalSearch') && getFeatureConfig('globalSearch').visible !== false
   })
 
   // 检查全屏按钮是否显示
@@ -90,7 +90,7 @@ export function useHeaderBar() {
 
   // 检查聊天功能是否显示
   const shouldShowChat = computed(() => {
-    return isFeatureEnabled('chat')
+    return isFeatureEnabled('chat') && getFeatureConfig('chat').visible !== false
   })
 
   // 检查语言切换是否显示

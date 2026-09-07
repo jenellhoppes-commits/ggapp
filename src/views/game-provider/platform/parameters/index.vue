@@ -277,7 +277,14 @@
     </template>
 
     <ElDrawer v-model="showLogs" title="系統參數異動紀錄" size="min(760px, 94vw)"
-      ><ElTable :data="store.settingLogs" border row-key="id"
+      ><ArtTable
+        :data="store.settingLogs"
+        row-key="id"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
         ><ElTableColumn prop="createdAt" label="時間" min-width="160" /><ElTableColumn
           label="設定類型"
           width="130"
@@ -295,7 +302,7 @@
           prop="afterValue"
           label="修改後"
           min-width="180"
-          show-overflow-tooltip /></ElTable
+          show-overflow-tooltip /></ArtTable
     ></ElDrawer>
   </div>
 </template>
@@ -413,7 +420,7 @@
   .preview {
     padding: 14px;
     background: var(--art-gray-100);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
 
   .preview span {
@@ -441,7 +448,7 @@
     padding: 18px;
     background: var(--art-main-bg-color);
     border: 1px solid var(--art-border-color);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
   }
 
   .security-summary .art-svg-icon {

@@ -6,7 +6,7 @@
       :description="copy.description"
     >
       <template #actions
-        ><ElButton @click="ElMessage.success('設定清單已匯出')">匯出</ElButton
+        ><ElButton disabled>匯出（未開放）</ElButton
         ><ElButton type="primary" plain @click="showLogs = true">異動紀錄</ElButton></template
       >
     </AppPageHeader>
@@ -32,7 +32,7 @@
 
     <ElAlert :title="copy.rule" type="info" :closable="false" show-icon />
     <ElCard shadow="never" class="filter-card"
-      ><ElForm inline
+      ><AppFilterForm
         ><ElFormItem label="關鍵字"
           ><ElInput v-model="keyword" clearable :placeholder="copy.placeholder" /></ElFormItem
         ><ElFormItem label="狀態"
@@ -40,8 +40,9 @@
             ><ElOption label="啟用" value="Active" /><ElOption
               label="停用"
               value="Inactive" /></ElSelect></ElFormItem
-        ><ElFormItem><ElButton type="primary">查詢</ElButton></ElFormItem
-        ><ElFormItem><ElButton @click="reset">重置</ElButton></ElFormItem></ElForm
+        ><div class="filter-actions"
+          ><ElButton type="primary">查詢</ElButton> <ElButton @click="reset">重置</ElButton></div
+        ></AppFilterForm
       ></ElCard
     >
 
@@ -51,7 +52,14 @@
           ><strong>語系清單</strong><span>共 {{ languageRows.length }} 種</span></div
         ><span>翻譯完成度 100% 才可開放後台使用</span></div
       >
-      <ElTable :data="languageRows" border row-key="code"
+      <ArtTable
+        :data="languageRows"
+        row-key="code"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
         ><ElTableColumn label="語系" min-width="200" fixed="left"
           ><template #default="scope"
             ><strong>{{ scope.row.nativeName }}</strong
@@ -102,7 +110,7 @@
               >編輯</ElButton
             ></template
           ></ElTableColumn
-        ></ElTable
+        ></ArtTable
       >
     </ElCard>
 
@@ -112,7 +120,14 @@
           ><strong>國家／地區清單</strong><span>共 {{ regionRows.length }} 筆</span></div
         ><span>地區設定不等同法律合規許可</span></div
       >
-      <ElTable :data="regionRows" border row-key="code"
+      <ArtTable
+        :data="regionRows"
+        row-key="code"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
         ><ElTableColumn label="國家／地區" min-width="200" fixed="left"
           ><template #default="scope"
             ><div class="region-name"
@@ -155,7 +170,7 @@
               >編輯</ElButton
             ></template
           ></ElTableColumn
-        ></ElTable
+        ></ArtTable
       >
     </ElCard>
 
@@ -165,7 +180,14 @@
           ><strong>時區清單</strong><span>共 {{ timezoneRows.length }} 個</span></div
         ><span>資料儲存建議統一使用 UTC，畫面依時區轉換</span></div
       >
-      <ElTable :data="timezoneRows" border row-key="id"
+      <ArtTable
+        :data="timezoneRows"
+        row-key="id"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
         ><ElTableColumn label="時區" min-width="240" fixed="left"
           ><template #default="scope"
             ><strong>{{ scope.row.name }}</strong
@@ -209,7 +231,7 @@
               >編輯</ElButton
             ></template
           ></ElTableColumn
-        ></ElTable
+        ></ArtTable
       >
     </ElCard>
 
@@ -316,6 +338,7 @@
 </template>
 
 <script setup lang="ts">
+  import AppFilterForm from '@/components/business/game-provider/app-filter-form/index.vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import { useFinanceSettingsStore } from '@/store/modules/financeSettings'
@@ -507,6 +530,8 @@
 
 <style scoped lang="scss">
   .page {
+    min-width: 0;
+    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -522,7 +547,7 @@
       padding: 18px 20px;
       background: var(--art-main-bg-color);
       border: 1px solid var(--art-border-color);
-      border-radius: 10px;
+      border-radius: calc(var(--custom-radius) / 2 + 2px);
     }
 
     span,
@@ -543,10 +568,6 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-  }
-
-  .filter-card :deep(.el-card__body) {
-    padding-bottom: 2px;
   }
 
   .toolbar {
@@ -588,7 +609,7 @@
       height: 32px;
       color: var(--el-color-primary);
       background: var(--el-color-primary-light-9);
-      border-radius: 6px;
+      border-radius: var(--el-border-radius-base);
     }
 
     span,

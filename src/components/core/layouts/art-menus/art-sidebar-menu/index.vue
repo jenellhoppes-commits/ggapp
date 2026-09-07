@@ -102,6 +102,7 @@
           v-if="useSections"
           v-show="!isMobileScreen || menuOpen"
           :routes="rawMenus"
+          :theme="getMenuTheme"
           :active-path="routerPath"
           :collapsed="!menuOpen && !isMobileScreen"
           :mobile="isMobileScreen"

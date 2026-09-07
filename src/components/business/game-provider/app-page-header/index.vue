@@ -33,10 +33,28 @@
 <style scoped lang="scss">
   .app-page-header {
     display: flex;
-    gap: 24px;
+    flex-wrap: wrap;
+    gap: 12px 24px;
     align-items: flex-start;
     justify-content: space-between;
     padding: 4px 2px;
+  }
+
+  .heading-copy {
+    flex: 1 1 280px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .header-actions {
+    max-width: 100%;
+    min-width: 0;
+    margin-left: auto;
+    overflow-wrap: anywhere;
+  }
+
+  .header-actions :deep(.el-space__item) {
+    max-width: 100%;
   }
 
   .eyebrow {
@@ -76,6 +94,12 @@
     }
 
     .header-actions {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    .heading-copy {
+      flex-basis: auto;
       width: 100%;
     }
   }

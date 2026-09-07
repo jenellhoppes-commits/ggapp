@@ -110,7 +110,9 @@
                 scope.row.direction === 'Credit' ? '加項' : '減項'
               }}</template></ElTableColumn
             ><ElTableColumn label="金額" min-width="140" align="right"
-              ><template #default="scope">{{ money(scope.row.amount) }}</template></ElTableColumn
+              ><template #default="scope">{{
+                adjustmentMoney(scope.row.amount, scope.row)
+              }}</template></ElTableColumn
             ><ElTableColumn prop="reason" label="原因" min-width="240" /><ElTableColumn
               label="狀態"
               width="110"
@@ -142,6 +144,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useFinanceMoney } from '@/hooks/business/useFinanceMoney'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { useWindowSize } from '@vueuse/core'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
@@ -167,8 +170,8 @@
   const logs = computed(() => (batch.value ? store.getLogs(batch.value.id) : []))
   const columns = computed(() => (width.value < 700 ? 1 : 2))
   const activeTab = ref('summary')
-  const money = (value: number) =>
-    `${batch.value?.settlementCurrency || ''} ${new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 2 }).format(value)}`
+  const { batchMoney, adjustmentMoney } = useFinanceMoney()
+  const money = (value: number) => (batch.value ? batchMoney(value, batch.value) : '—')
   const cycleLabel = (cycle: string) =>
     ({ Daily: '每日', Weekly: '每週', Semimonthly: '每半月', Monthly: '每月' })[cycle] || cycle
   const statusLabel = (status: string) =>

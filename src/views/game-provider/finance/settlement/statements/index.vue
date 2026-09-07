@@ -79,10 +79,10 @@
           ><ElTag effect="plain">{{ current.settlementCurrency }}</ElTag></div
         ><div class="amount-card"
           ><span>最終應結金額</span
-          ><strong>{{ money(current.finalAmount, current.settlementCurrency) }}</strong
+          ><strong>{{ statementMoney(current.finalAmount, current) }}</strong
           ><small
-            >原始 {{ money(current.grossAmount, current.settlementCurrency) }}／調整
-            {{ money(current.adjustmentAmount, current.settlementCurrency) }}</small
+            >原始 {{ statementMoney(current.grossAmount, current) }}／調整
+            {{ statementMoney(current.adjustmentAmount, current) }}</small
           ></div
         ><ElDescriptions :column="drawerColumns" border
           ><ElDescriptionsItem label="結算批次">{{ current.batchId }}</ElDescriptionsItem
@@ -110,6 +110,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useFinanceMoney } from '@/hooks/business/useFinanceMoney'
   import { ElMessage } from 'element-plus'
   import { useWindowSize } from '@vueuse/core'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
@@ -172,8 +173,7 @@
       path: '/finance/settlement/adjustments',
       query: { statementId: current.value.id, targetType: isMerchant.value ? 'Merchant' : 'Agent' }
     })
-  const money = (value: number, currency: string) =>
-    `${currency} ${new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 2 }).format(value)}`
+  const { statementMoney } = useFinanceMoney()
   const statusLabel = (status: string) =>
     ({
       Draft: '草稿',

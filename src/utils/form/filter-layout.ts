@@ -1,0 +1,2 @@
+export const FILTER_LABEL_WIDTH = '100px'
+export const FILTER_MOBILE_BREAKPOINT = 640

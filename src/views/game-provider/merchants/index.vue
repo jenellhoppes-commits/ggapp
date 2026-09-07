@@ -25,7 +25,6 @@
       :items="searchItems"
       :span="6"
       :label-position="isMobile ? 'top' : 'right'"
-      :label-width="isMobile ? 'auto' : '104px'"
       @search="applyFilters"
       @reset="resetFilters"
     />
@@ -34,9 +33,7 @@
       <ArtTableHeader class="merchant-table-header" :loading="loading" @refresh="refreshData">
         <template #left>
           <div class="merchant-toolbar">
-            <ElButton :disabled="selectedRows.length === 0" @click="batchAction">
-              批次操作<span v-if="selectedRows.length">（{{ selectedRows.length }}）</span>
-            </ElButton>
+            <ElButton disabled> 批次操作（未開放） </ElButton>
             <ElButton @click="exportRows">匯出</ElButton>
           </div>
         </template>
@@ -403,7 +400,6 @@
     resetFilters()
     ElMessage.success(nextStatus === 'Active' ? '商戶已恢復' : '商戶已暫停')
   }
-  const batchAction = () => ElMessage.info('批次操作將在審核中心流程完成後開放')
   const exportRows = () => {
     const escapeCell = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`
     const header = [

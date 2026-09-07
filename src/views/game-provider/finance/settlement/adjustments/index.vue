@@ -82,7 +82,7 @@
           ></ElTableColumn
         ><ElTableColumn label="金額" min-width="140" align="right"
           ><template #default="scope"
-            ><strong>{{ money(scope.row.amount, scope.row.currency) }}</strong></template
+            ><strong>{{ adjustmentMoney(scope.row.amount, scope.row) }}</strong></template
           ></ElTableColumn
         ><ElTableColumn prop="reason" label="原因" min-width="260" /><ElTableColumn
           prop="requester"
@@ -122,7 +122,7 @@
             current.direction === 'Credit' ? '加項' : '減項'
           }}</ElTag></div
         ><div class="amount-card"
-          ><span>調整金額</span><strong>{{ money(current.amount, current.currency) }}</strong
+          ><span>調整金額</span><strong>{{ adjustmentMoney(current.amount, current) }}</strong
           ><small>{{ current.targetName }} · {{ current.statementId }}</small></div
         ><ElDescriptions :column="drawerColumns" border
           ><ElDescriptionsItem label="調整類型">{{ typeLabel(current.type) }}</ElDescriptionsItem
@@ -184,7 +184,7 @@
           ><ElInputNumber
             v-model="form.amount"
             :min="0.01"
-            :precision="2"
+            :precision="settingsStore.settlementRule.amountPrecision"
             class="full" /></ElFormItem
         ><ElFormItem label="調整原因" required
           ><ElInput v-model="form.reason" type="textarea" :rows="3" /></ElFormItem
@@ -198,14 +198,18 @@
 </template>
 
 <script setup lang="ts">
+  import { useFinanceMoney } from '@/hooks/business/useFinanceMoney'
+  import { legacyAmountPrecision } from '@/utils/finance/format-money'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { useWindowSize } from '@vueuse/core'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import { useFinanceCenterStore } from '@/store/modules/financeCenter'
+  import { useFinanceSettingsStore } from '@/store/modules/financeSettings'
   import type { SettlementAdjustmentRecord } from '@/types/game-provider'
   defineOptions({ name: 'SettlementAdjustments' })
   const route = useRoute()
   const store = useFinanceCenterStore()
+  const settingsStore = useFinanceSettingsStore()
   const { width } = useWindowSize()
   const filters = reactive({ keyword: '', batchId: '', status: '' })
   const selectedId = ref(String(route.query.adjustmentId || ''))
@@ -300,8 +304,18 @@
     if (store.reviewSettlementAdjustment(id, approved))
       ElMessage.success(approved ? '調整已核准並套用' : '調整已駁回')
   }
+  const { money: formatMoney, adjustmentMoney } = useFinanceMoney()
   const money = (value: number, currency: string) =>
-    `${currency} ${new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 2 }).format(value)}`
+    formatMoney(
+      value,
+      currency,
+      Math.max(
+        legacyAmountPrecision(value),
+        ...rows.value
+          .filter((item) => item.currency === currency && item.status === 'Applied')
+          .map((item) => item.amountPrecision ?? legacyAmountPrecision(item.amount))
+      )
+    )
   const typeLabel = (type: string) =>
     ({
       'Reconciliation Difference': '對帳差異',

@@ -156,12 +156,19 @@
               <div class="section-heading"
                 ><h2>共用錯誤碼</h2><p>正式清單以核准的 OpenAPI 規格為準。</p></div
               >
-              <ElTable :data="errorCodes" border>
+              <ArtTable
+                :data="errorCodes"
+                height="auto"
+                empty-height="auto"
+                :show-table-header="false"
+                style="height: auto"
+                empty-text="暫無資料"
+              >
                 <ElTableColumn prop="code" label="錯誤碼" width="150" />
                 <ElTableColumn prop="http" label="HTTP" width="90" />
                 <ElTableColumn prop="meaning" label="說明" min-width="180" />
-                <ElTableColumn prop="retry" label="建議處理" min-width="220" />
-              </ElTable>
+                <ElTableColumn prop="retry" label="建議處理" min-width="220" /> </ArtTable
+              >>
             </section>
           </div>
         </ElTabPane>
@@ -478,7 +485,7 @@
     gap: 6px;
     padding: 16px;
     border: 1px solid var(--art-border-color);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
   }
   .summary-grid strong {
     font-size: 22px;
@@ -526,7 +533,7 @@
     gap: 12px;
     padding: 14px;
     border: 1px solid var(--art-border-color);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
   .rule-list svg {
     flex: 0 0 auto;
@@ -566,7 +573,7 @@
     padding: 3px 8px;
     color: white;
     text-align: center;
-    border-radius: 5px;
+    border-radius: var(--el-border-radius-base);
   }
   .method.get {
     background: #2563eb;
@@ -603,7 +610,7 @@
     overflow: auto;
     color: #d7e3ff;
     background: #101522;
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
   @media (width <= 980px) {
     .summary-grid {

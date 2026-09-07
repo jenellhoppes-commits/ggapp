@@ -14,9 +14,7 @@
       "
     >
       <template #actions>
-        <ElButton v-if="isHistory" @click="ElMessage.success('演示資料已準備匯出')"
-          >匯出紀錄</ElButton
-        >
+        <ElButton v-if="isHistory" disabled>匯出紀錄（未開放）</ElButton>
         <ElButton v-else type="primary" @click="openCreate">新增匯率設定</ElButton>
       </template>
     </AppPageHeader>
@@ -55,7 +53,7 @@
     </div>
 
     <ElCard shadow="never" class="filter-card">
-      <ElForm class="filter-grid" label-position="top">
+      <AppFilterForm class="filter-grid">
         <ElFormItem label="幣別"
           ><ElInput v-model="filters.keyword" clearable placeholder="例如 TWD、ASGU"
         /></ElFormItem>
@@ -87,7 +85,7 @@
           ><ElButton type="primary" @click="applyFilters">查詢</ElButton
           ><ElButton @click="resetFilters">重置</ElButton></div
         >
-      </ElForm>
+      </AppFilterForm>
     </ElCard>
 
     <ElCard shadow="never" class="table-card">
@@ -99,7 +97,16 @@
         <span v-if="!isHistory">調整單位第一版以百分比演示，正式契約確認後再固定</span>
       </div>
 
-      <ElTable v-if="!mobile" :data="pagedRows" border row-key="id">
+      <ArtTable
+        v-if="!mobile"
+        :data="pagedRows"
+        row-key="id"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
+      >
         <template v-if="!isHistory">
           <ElTableColumn label="幣別" min-width="145" fixed="left"
             ><template #default="scope"
@@ -200,7 +207,7 @@
             ></ElTableColumn
           >
         </template>
-      </ElTable>
+      </ArtTable>
 
       <div v-else-if="!isHistory" class="mobile-list">
         <article v-for="row in pagedSettingRows" :key="row.id" class="mobile-card">
@@ -437,6 +444,7 @@
 </template>
 
 <script setup lang="ts">
+  import AppFilterForm from '@/components/business/game-provider/app-filter-form/index.vue'
   import { ElMessage } from 'element-plus'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import { useFinanceSettingsStore } from '@/store/modules/financeSettings'
@@ -685,7 +693,7 @@
     padding: 18px 20px;
     background: var(--art-main-bg-color);
     border: 1px solid var(--art-border-color);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
     min-width: 0;
   }
   .summary-grid span,
@@ -700,7 +708,7 @@
   }
   .filter-grid {
     display: grid;
-    grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr) minmax(220px, 1.2fr) auto;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
     gap: 12px;
     align-items: end;
   }
@@ -751,7 +759,7 @@
     padding: 14px 16px;
     margin-bottom: 18px;
     border: 1px solid var(--el-color-primary-light-5);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
     background: var(--el-color-primary-light-9);
   }
   .anchor-card span {
@@ -785,7 +793,7 @@
   .mobile-card {
     padding: 14px;
     border: 1px solid var(--art-border-color);
-    border-radius: 9px;
+    border-radius: var(--el-border-radius-base);
     background: var(--art-main-bg-color);
   }
   .mobile-card__heading {

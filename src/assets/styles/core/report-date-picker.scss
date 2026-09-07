@@ -1,0 +1,59 @@
+// Opt-in for report date ranges only; leave other date/time editors unchanged.
+@media (width < 768px), (height < 600px) {
+  .report-date-picker.el-picker__popper {
+    position: fixed !important;
+    inset: 12px auto auto 50% !important;
+    transform: translateX(-50%) !important;
+    width: min(756px, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
+    overscroll-behavior: contain;
+
+    .el-popper__arrow {
+      display: none;
+    }
+
+    .el-date-range-picker {
+      width: 100%;
+    }
+  }
+}
+
+@media (width < 768px) {
+  .report-date-picker {
+    .el-picker-panel__sidebar {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+      padding: 4px;
+      border-right: 0;
+      border-bottom: 1px solid var(--el-border-color-light);
+      background: var(--el-bg-color-overlay);
+    }
+
+    .el-picker-panel__shortcut {
+      min-height: 40px;
+      padding: 0 8px;
+      text-align: center;
+    }
+
+    .el-picker-panel__sidebar + .el-picker-panel__body {
+      min-width: 0;
+      margin-left: 0;
+    }
+
+    .el-date-range-picker__content {
+      display: block;
+      width: 100%;
+      padding: 12px;
+    }
+
+    .el-date-range-picker__content.is-left {
+      border-right: 0;
+      border-bottom: 1px solid var(--el-border-color-light);
+    }
+  }
+}

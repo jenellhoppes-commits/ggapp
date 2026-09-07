@@ -94,6 +94,7 @@
 </template>
 
 <script lang="ts" setup>
+  import { headerBarConfig } from '@/config/modules/headerBar'
   import { useUserStore } from '@/store/modules/user'
   import { AppRouteRecord } from '@/types/router'
   import { Search } from '@element-plus/icons-vue'
@@ -128,11 +129,13 @@
   })
 
   onUnmounted(() => {
+    mittBus.off('openSearchDialog', openSearchDialog)
     document.removeEventListener('keydown', handleKeydown)
   })
 
   // 键盘快捷键处理
   const handleKeydown = (event: KeyboardEvent) => {
+    if (!headerBarConfig.globalSearch.enabled) return
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
     const isCommandKey = isMac ? event.metaKey : event.ctrlKey
 
@@ -341,6 +344,7 @@
 
   // 对话框控制
   const openSearchDialog = () => {
+    if (!headerBarConfig.globalSearch.enabled) return
     showSearchDialog.value = true
     focusInput()
   }

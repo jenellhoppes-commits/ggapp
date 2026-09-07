@@ -9,8 +9,8 @@
         <ElTag :type="statusType(record.status)" effect="light">{{
           statusLabel(record.status)
         }}</ElTag>
-        <ElButton v-if="kind === 'merchant'" :disabled="!canRecalculate" @click="recalculate"
-          >重新計算</ElButton
+        <ElButton v-if="kind === 'merchant'" disabled title="計算規則與快照更新流程尚未完成"
+          >重新計算（未開放）</ElButton
         >
         <ElButton type="primary" :disabled="!canConfirm" @click="openConfirm">確認對帳</ElButton>
       </template>
@@ -107,7 +107,14 @@
         </ElTabPane>
 
         <ElTabPane v-if="kind === 'merchant'" label="每日彙總" name="daily">
-          <ElTable :data="dailyRows" border>
+          <ArtTable
+            :data="dailyRows"
+            height="auto"
+            empty-height="auto"
+            empty-text="暫無資料"
+            :show-table-header="false"
+            style="height: auto"
+          >
             <ElTableColumn prop="date" label="日期" width="120" />
             <ElTableColumn prop="betCount" label="投注筆數" width="110" align="right" />
             <ElTableColumn label="投注總額" min-width="140" align="right"
@@ -129,11 +136,18 @@
                 ><strong>{{ settlementMoney(scope.row.settlementAmount) }}</strong></template
               ></ElTableColumn
             >
-          </ElTable>
+          </ArtTable>
         </ElTabPane>
 
         <ElTabPane v-if="kind === 'merchant'" label="遊戲彙總" name="games">
-          <ElTable :data="gameRows" border>
+          <ArtTable
+            :data="gameRows"
+            height="auto"
+            empty-height="auto"
+            empty-text="暫無資料"
+            :show-table-header="false"
+            style="height: auto"
+          >
             <ElTableColumn label="遊戲" min-width="220"
               ><template #default="scope"
                 ><strong>{{ scope.row.gameName }}</strong
@@ -157,11 +171,18 @@
                 ><strong>{{ settlementMoney(scope.row.settlementAmount) }}</strong></template
               ></ElTableColumn
             >
-          </ElTable>
+          </ArtTable>
         </ElTabPane>
 
         <ElTabPane v-if="kind === 'agent'" label="商戶對帳" name="merchants">
-          <ElTable :data="includedMerchants" border>
+          <ArtTable
+            :data="includedMerchants"
+            height="auto"
+            empty-height="auto"
+            empty-text="暫無資料"
+            :show-table-header="false"
+            style="height: auto"
+          >
             <ElTableColumn label="商戶／線路" min-width="240"
               ><template #default="scope"
                 ><button
@@ -190,7 +211,7 @@
                 }}</ElTag></template
               ></ElTableColumn
             >
-          </ElTable>
+          </ArtTable>
         </ElTabPane>
 
         <ElTabPane label="結算單" name="statement">
@@ -245,7 +266,14 @@
             ><div><h2>差異案件</h2><p>差異未清除前，對帳不能進入確認與結算。</p></div
             ><ElButton type="primary" plain @click="openDifferences">集中處理差異</ElButton></div
           >
-          <ElTable :data="recordDifferences" border empty-text="本筆對帳沒有差異">
+          <ArtTable
+            :data="recordDifferences"
+            empty-text="本筆對帳沒有差異"
+            height="auto"
+            empty-height="auto"
+            :show-table-header="false"
+            style="height: auto"
+          >
             <ElTableColumn prop="id" label="差異編號" width="135" />
             <ElTableColumn label="類型" width="120"
               ><template #default="scope">{{
@@ -272,7 +300,7 @@
                 differenceStatusLabel(scope.row.status)
               }}</template></ElTableColumn
             >
-          </ElTable>
+          </ArtTable>
         </ElTabPane>
 
         <ElTabPane label="計算快照" name="snapshot">
@@ -369,6 +397,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useFinanceMoney } from '@/hooks/business/useFinanceMoney'
   import { ElMessage } from 'element-plus'
   import { useWindowSize } from '@vueuse/core'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
@@ -463,12 +492,6 @@
           : '待確認'
     return { id: `${prefix}-${record.value?.id || ''}`, status }
   })
-  const canRecalculate = computed(() =>
-    Boolean(
-      merchantRecord.value &&
-        !['Confirmed', 'Locked', 'Cancelled'].includes(merchantRecord.value.status)
-    )
-  )
   const confirmBlockReason = computed(() => {
     if (!agentRecord.value) return ''
     const incomplete = includedMerchants.value.filter(
@@ -487,8 +510,9 @@
       return includedMerchants.value.every((item) => ['Confirmed', 'Locked'].includes(item.status))
     return true
   })
+  const { money: formatMoney } = useFinanceMoney()
   const moneyWithCurrency = (value: number, currency: string) =>
-    `${currency} ${new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 2 }).format(value)}`
+    formatMoney(value, currency, record.value?.snapshot.amountPrecision)
   const money = (value: number) => moneyWithCurrency(value, record.value?.currency || '')
   const settlementMoney = (value: number) =>
     moneyWithCurrency(value, record.value?.snapshot.settlementCurrency || '')
@@ -537,10 +561,6 @@
       path: '/finance/reconciliation/differences',
       query: { reconciliationId: record.value?.id }
     })
-  const recalculate = () => {
-    if (merchantRecord.value && store.recalculateMerchant(merchantRecord.value.id))
-      ElMessage.success('已重新計算並更新快照')
-  }
   const confirmDialogVisible = ref(false)
   const expectedBeforeConfirmation = ref(0)
   const confirmationForm = reactive({ actualAmount: 0, note: '' })
@@ -598,7 +618,7 @@
     padding: 16px;
     background: var(--art-main-bg-color);
     border: 1px solid var(--art-border-color);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
   }
 
   .metric-grid .accent {

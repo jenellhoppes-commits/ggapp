@@ -406,6 +406,7 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
 
   const settlementBatches = ref<SettlementBatchRecord[]>(
     settlementCurrencyList.map((currency, index) => ({
+      amountPrecision: getAmountPrecision(),
       id: `STB-202607-${String(index + 1).padStart(3, '0')}`,
       name: `2026-07 ${currency} 月結批次`,
       period: '2026-07',
@@ -442,6 +443,7 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
           id: `MST-${batch.period.replace('-', '')}-${String(batchIndex * 20 + index + 1).padStart(4, '0')}`,
           batchId: batch.id,
           reconciliationId: record.id,
+          amountPrecision: record.snapshot.amountPrecision,
           period: record.period,
           merchantId: record.merchantId,
           merchantCode: record.merchantCode,
@@ -479,6 +481,7 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
           id: `AST-${batch.period.replace('-', '')}-${String(batchIndex * 10 + index + 1).padStart(4, '0')}`,
           batchId: batch.id,
           reconciliationId: record.id,
+          amountPrecision: record.snapshot.amountPrecision,
           period: record.period,
           agentId: record.agentId,
           agentCode: record.agentCode,
@@ -537,6 +540,7 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
       )
       .slice(0, 8)
       .map((statement, index) => ({
+        amountPrecision: getAmountPrecision(),
         id: `ADJ-${String(index + 1).padStart(6, '0')}`,
         batchId: statement.batchId,
         targetType: 'Merchant',
@@ -561,6 +565,8 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
   const refreshBatchTotals = (batchId: string) => {
     const batch = settlementBatches.value.find((item) => item.id === batchId)
     if (!batch) return
+    // Record the precision actually used by this recalculation, not a live setting reference.
+    batch.amountPrecision = getAmountPrecision()
     const merchantRows = merchantStatements.value.filter((item) => item.batchId === batchId)
     const agentRows = agentStatements.value.filter((item) => item.batchId === batchId)
     batch.merchantStatementCount = merchantRows.length
@@ -769,6 +775,7 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
     const id = `STB-${payload.period.replace('-', '')}-${String(settlementBatches.value.length + 1).padStart(3, '0')}`
     const now = formatNow()
     const batch: SettlementBatchRecord = {
+      amountPrecision: getAmountPrecision(),
       id,
       name: payload.name,
       period: payload.period,
@@ -793,6 +800,7 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
         id: `MST-${payload.period.replace('-', '')}-${String(merchantStatements.value.length + index + 1).padStart(4, '0')}`,
         batchId: id,
         reconciliationId: record.id,
+        amountPrecision: record.snapshot.amountPrecision,
         period: record.period,
         merchantId: record.merchantId,
         merchantCode: record.merchantCode,
@@ -816,6 +824,7 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
         id: `AST-${payload.period.replace('-', '')}-${String(agentStatements.value.length + index + 1).padStart(4, '0')}`,
         batchId: id,
         reconciliationId: record.id,
+        amountPrecision: record.snapshot.amountPrecision,
         period: record.period,
         agentId: record.agentId,
         agentCode: record.agentCode,
@@ -944,6 +953,7 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
     const batch = findSettlementBatch(statement.batchId)
     if (!batch || batch.status === 'Completed' || batch.status === 'Cancelled') return undefined
     const adjustment: SettlementAdjustmentRecord = {
+      amountPrecision: getAmountPrecision(),
       id: `ADJ-${String(settlementAdjustments.value.length + 1).padStart(6, '0')}`,
       batchId: statement.batchId,
       targetType: payload.targetType,
@@ -988,6 +998,8 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
       if (statement) {
         const signedAmount =
           adjustment.direction === 'Credit' ? adjustment.amount : -adjustment.amount
+        // A newly applied adjustment may carry more precision than the original statement.
+        statement.amountPrecision = Math.max(statement.amountPrecision ?? 2, getAmountPrecision())
         statement.adjustmentAmount = roundMoney(statement.adjustmentAmount + signedAmount)
         statement.finalAmount = roundMoney(statement.grossAmount + statement.adjustmentAmount)
       }

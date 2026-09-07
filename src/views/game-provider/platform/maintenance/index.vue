@@ -99,7 +99,14 @@
         ><div class="table-heading"
           ><strong>維護排程</strong><span>共 {{ filtered.length }} 筆</span></div
         ><div class="table-region"
-          ><ElTable :data="pageItems" border row-key="id" empty-text="沒有符合條件的維護排程"
+          ><ArtTable
+            :data="pageItems"
+            row-key="id"
+            empty-text="沒有符合條件的維護排程"
+            height="auto"
+            empty-height="auto"
+            :show-table-header="false"
+            style="height: auto"
             ><ElTableColumn prop="id" label="排程編號" min-width="145" /><ElTableColumn
               prop="name"
               label="名稱"
@@ -136,7 +143,7 @@
                   >取消</ElButton
                 ></template
               ></ElTableColumn
-            ></ElTable
+            ></ArtTable
           ></div
         ><ElPagination
           v-model:current-page="pageNumber"
@@ -152,7 +159,14 @@
       ><div class="table-heading"
         ><strong>維護設定異動紀錄</strong><span>共 {{ maintenanceLogs.length }} 筆</span></div
       ><div class="table-region"
-        ><ElTable :data="maintenanceLogs" border row-key="id"
+        ><ArtTable
+          :data="maintenanceLogs"
+          row-key="id"
+          height="auto"
+          empty-height="auto"
+          :show-table-header="false"
+          style="height: auto"
+          empty-text="暫無資料"
           ><ElTableColumn prop="createdAt" label="時間" min-width="170" /><ElTableColumn
             prop="action"
             label="操作"
@@ -165,7 +179,7 @@
             min-width="220" /><ElTableColumn
             prop="operator"
             label="操作人"
-            min-width="130" /></ElTable></div
+            min-width="130" /></ArtTable></div
     ></ElCard>
 
     <ElDrawer

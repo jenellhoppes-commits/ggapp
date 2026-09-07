@@ -168,7 +168,14 @@
             <div class="section-title"
               ><div><h3>關聯注單</h3><p>透過局號與會員識別碼關聯。</p></div></div
             >
-            <ElTable :data="relatedBet ? [relatedBet] : []" border empty-text="此交易沒有關聯注單">
+            <ArtTable
+              :data="relatedBet ? [relatedBet] : []"
+              empty-text="此交易沒有關聯注單"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
+            >
               <ElTableColumn label="注單編號" width="130"
                 ><template #default="scope"
                   ><EntityLink
@@ -196,8 +203,8 @@
                   }}</ElTag></template
                 ></ElTableColumn
               >
-              <ElTableColumn prop="time" label="投注時間" width="160" />
-            </ElTable>
+              <ElTableColumn prop="time" label="投注時間" width="160" /> </ArtTable
+            >>
           </div>
         </ElTabPane>
 
@@ -206,7 +213,14 @@
             <div class="section-title"
               ><div><h3>交易異常</h3><p>保留交易異常與歷史參照，供查詢及追蹤。</p></div></div
             >
-            <ElTable :data="anomalies" border empty-text="此交易尚無異常紀錄">
+            <ArtTable
+              :data="anomalies"
+              empty-text="此交易尚無異常紀錄"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
+            >
               <ElTableColumn prop="id" label="異常編號" width="120" />
               <ElTableColumn prop="type" label="異常類型" min-width="190" />
               <ElTableColumn label="風險等級" width="100"
@@ -237,8 +251,8 @@
                   anomalyStatusLabel(scope.row.status)
                 }}</template></ElTableColumn
               >
-              <ElTableColumn prop="occurredAt" label="發生時間" width="160" />
-            </ElTable>
+              <ElTableColumn prop="occurredAt" label="發生時間" width="160" /> </ArtTable
+            >>
           </div>
         </ElTabPane>
       </ElTabs>
@@ -445,7 +459,7 @@
     min-width: 0;
     padding: 18px;
     border: 1px solid var(--art-gray-200);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
   }
 
   .section-title {
@@ -480,7 +494,7 @@
     min-width: 0;
     padding: 14px;
     background: var(--art-gray-50);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
 
   .balance-flow strong {

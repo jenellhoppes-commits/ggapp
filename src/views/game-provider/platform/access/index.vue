@@ -6,7 +6,7 @@
       :description="copy.description"
     >
       <template #actions>
-        <ElButton @click="ElMessage.success('目前清單已匯出')">匯出</ElButton>
+        <ElButton disabled>匯出（未開放）</ElButton>
         <ElButton v-if="mode === 'accounts'" type="primary" @click="openAccount()"
           >新增後台帳號</ElButton
         >
@@ -41,7 +41,7 @@
 
     <template v-if="mode === 'accounts'">
       <ElCard shadow="never" class="filter-card"
-        ><ElForm inline
+        ><AppFilterForm
           ><ElFormItem label="關鍵字"
             ><ElInput
               v-model="filters.keyword"
@@ -61,8 +61,10 @@
                 value="Locked" /><ElOption label="停用" value="Inactive" /><ElOption
                 label="待啟用"
                 value="Pending" /></ElSelect></ElFormItem
-          ><ElFormItem><ElButton type="primary">查詢</ElButton></ElFormItem
-          ><ElFormItem><ElButton @click="resetFilters">重置</ElButton></ElFormItem></ElForm
+          ><div class="filter-actions"
+            ><ElButton type="primary">查詢</ElButton>
+            <ElButton @click="resetFilters">重置</ElButton></div
+          ></AppFilterForm
         ></ElCard
       >
       <ElCard shadow="never" class="table-card"
@@ -71,7 +73,14 @@
             ><strong>後台帳號清單</strong><span>共 {{ accountRows.length }} 筆</span></div
           ><span>帳號停用不會刪除歷史操作紀錄</span></div
         >
-        <ElTable :data="accountRows" border row-key="id"
+        <ArtTable
+          :data="accountRows"
+          row-key="id"
+          height="auto"
+          empty-height="auto"
+          empty-text="暫無資料"
+          :show-table-header="false"
+          style="height: auto"
           ><ElTableColumn label="帳號" min-width="230" fixed="left"
             ><template #default="scope"
               ><button class="link account-name" type="button" @click="openAccount(scope.row)"
@@ -129,7 +138,7 @@
                 >停用</ElButton
               ></template
             ></ElTableColumn
-          ></ElTable
+          ></ArtTable
         >
       </ElCard>
     </template>
@@ -139,11 +148,16 @@
         ><div class="toolbar"
           ><div
             ><strong>角色清單</strong><span>共 {{ store.roles.length }} 個角色</span></div
-          ><ElButton type="primary" plain @click="ElMessage.info('演示版先以既有角色進行配置')"
-            >新增角色</ElButton
-          ></div
+          ><ElButton type="primary" plain disabled>新增角色（未開放）</ElButton></div
         >
-        <ElTable :data="store.roles" border row-key="id"
+        <ArtTable
+          :data="store.roles"
+          row-key="id"
+          height="auto"
+          empty-height="auto"
+          empty-text="暫無資料"
+          :show-table-header="false"
+          style="height: auto"
           ><ElTableColumn label="角色" min-width="230" fixed="left"
             ><template #default="scope"
               ><strong>{{ scope.row.name }}</strong
@@ -180,7 +194,7 @@
                 >配置角色</ElButton
               ></template
             ></ElTableColumn
-          ></ElTable
+          ></ArtTable
         >
       </ElCard>
     </template>
@@ -239,7 +253,14 @@
             ><strong>敏感權限申請</strong><span>共 {{ store.sensitiveGrants.length }} 筆</span></div
           ><span>核准後才會加入角色，並保留申請原因及期限</span></div
         >
-        <ElTable :data="store.sensitiveGrants" border row-key="id"
+        <ArtTable
+          :data="store.sensitiveGrants"
+          row-key="id"
+          height="auto"
+          empty-height="auto"
+          empty-text="暫無資料"
+          :show-table-header="false"
+          style="height: auto"
           ><ElTableColumn label="申請" min-width="170" fixed="left"
             ><template #default="scope"
               ><strong>{{ scope.row.id }}</strong
@@ -276,7 +297,7 @@
                 ></template
               ><span v-else>—</span></template
             ></ElTableColumn
-          ></ElTable
+          ></ArtTable
         >
       </ElCard>
     </template>
@@ -286,11 +307,16 @@
         ><div class="toolbar"
           ><div
             ><strong>資料範圍清單</strong><span>共 {{ store.dataScopes.length }} 組</span></div
-          ><ElButton type="primary" plain @click="ElMessage.info('演示版先編輯既有資料範圍')"
-            >新增資料範圍</ElButton
-          ></div
+          ><ElButton type="primary" plain disabled>新增資料範圍（未開放）</ElButton></div
         >
-        <ElTable :data="store.dataScopes" border row-key="id"
+        <ArtTable
+          :data="store.dataScopes"
+          row-key="id"
+          height="auto"
+          empty-height="auto"
+          empty-text="暫無資料"
+          :show-table-header="false"
+          style="height: auto"
           ><ElTableColumn label="資料範圍" min-width="220" fixed="left"
             ><template #default="scope"
               ><strong>{{ scope.row.name }}</strong
@@ -321,7 +347,7 @@
                 >編輯範圍</ElButton
               ></template
             ></ElTableColumn
-          ></ElTable
+          ></ArtTable
         >
       </ElCard>
     </template>
@@ -437,6 +463,7 @@
 </template>
 
 <script setup lang="ts">
+  import AppFilterForm from '@/components/business/game-provider/app-filter-form/index.vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import { useBusinessPartnerStore } from '@/store/modules/businessPartner'
@@ -758,6 +785,8 @@
 
 <style scoped lang="scss">
   .page {
+    min-width: 0;
+    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -775,7 +804,7 @@
       cursor: pointer;
       background: var(--art-main-bg-color);
       border: 1px solid var(--art-border-color);
-      border-radius: 10px;
+      border-radius: calc(var(--custom-radius) / 2 + 2px);
       transition: border-color 0.2s;
 
       &:hover {
@@ -802,10 +831,6 @@
 
   .warning {
     color: var(--el-color-warning);
-  }
-
-  .filter-card :deep(.el-card__body) {
-    padding-bottom: 2px;
   }
 
   .toolbar {

@@ -37,7 +37,15 @@
         ><span>最近異動優先顯示</span></div
       >
       <div class="table-region">
-        <ElTable :data="pageRows" border row-key="id" empty-text="查無符合條件的操作紀錄">
+        <ArtTable
+          :data="pageRows"
+          row-key="id"
+          empty-text="查無符合條件的操作紀錄"
+          height="auto"
+          empty-height="auto"
+          :show-table-header="false"
+          style="height: auto"
+        >
           <ElTableColumn prop="createdAt" label="操作時間" min-width="165" fixed="left" />
           <ElTableColumn label="資料類型" width="120"
             ><template #default="scope"
@@ -62,7 +70,7 @@
               ></template
             ></ElTableColumn
           >
-        </ElTable>
+        </ArtTable>
       </div>
       <ElPagination
         v-model:current-page="pageNumber"

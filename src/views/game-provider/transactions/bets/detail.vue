@@ -411,7 +411,14 @@
             <div class="section-title"
               ><div><h3>關聯交易</h3><p>同一局號下的投注扣款與派彩入帳。</p></div></div
             >
-            <ElTable :data="relatedTransactions" border empty-text="尚無關聯交易">
+            <ArtTable
+              :data="relatedTransactions"
+              empty-text="尚無關聯交易"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
+            >
               <ElTableColumn label="交易編號" width="135"
                 ><template #default="scope"
                   ><EntityLink
@@ -438,8 +445,8 @@
                 ></ElTableColumn
               >
               <ElTableColumn prop="externalReference" label="外部參考號" min-width="200" />
-              <ElTableColumn prop="time" label="交易時間" width="160" />
-            </ElTable>
+              <ElTableColumn prop="time" label="交易時間" width="160" /> </ArtTable
+            >>
           </div>
         </ElTabPane>
 
@@ -448,7 +455,14 @@
             <div class="section-title"
               ><div><h3>交易異常紀錄</h3><p>保留交易異常與歷史參照，供查詢及追蹤。</p></div></div
             >
-            <ElTable :data="anomalies" border empty-text="此注單尚無異常紀錄">
+            <ArtTable
+              :data="anomalies"
+              empty-text="此注單尚無異常紀錄"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
+            >
               <ElTableColumn prop="id" label="異常編號" width="120" />
               <ElTableColumn prop="type" label="異常類型" min-width="190" />
               <ElTableColumn label="風險等級" width="100"
@@ -479,8 +493,8 @@
                   anomalyStatusLabel(scope.row.status)
                 }}</template></ElTableColumn
               >
-              <ElTableColumn prop="occurredAt" label="發生時間" width="160" />
-            </ElTable>
+              <ElTableColumn prop="occurredAt" label="發生時間" width="160" /> </ArtTable
+            >>
           </div>
         </ElTabPane>
 
@@ -510,14 +524,21 @@
               <div class="section-title">
                 <div><h3>查看與匯出紀錄</h3><p>追蹤盤面、Replay 與原始資料操作。</p></div>
               </div>
-              <ElTable :data="accessLogs" border empty-text="尚無操作紀錄">
+              <ArtTable
+                :data="accessLogs"
+                empty-text="尚無操作紀錄"
+                height="auto"
+                empty-height="auto"
+                :show-table-header="false"
+                style="height: auto"
+              >
                 <ElTableColumn label="操作" min-width="130">
                   <template #default="scope">{{ accessActionLabel(scope.row.action) }}</template>
                 </ElTableColumn>
                 <ElTableColumn prop="detail" label="內容" min-width="190" />
                 <ElTableColumn prop="operator" label="操作人" width="120" />
-                <ElTableColumn prop="time" label="時間" width="160" />
-              </ElTable>
+                <ElTableColumn prop="time" label="時間" width="160" /> </ArtTable
+              >>
             </section>
           </div>
         </ElTabPane>
@@ -926,7 +947,7 @@
     margin: 0 auto;
     background: var(--art-gray-50);
     border: 1px solid var(--art-gray-200);
-    border-radius: 12px;
+    border-radius: var(--custom-radius);
   }
 
   .symbol-cell {
@@ -937,7 +958,7 @@
     text-align: center;
     background: var(--art-bg-color);
     border: 2px solid var(--art-gray-200);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
   }
 
   .symbol-cell.winning {
@@ -964,7 +985,7 @@
     text-align: center;
     background: linear-gradient(145deg, var(--art-gray-50), var(--art-bg-color));
     border: 1px solid var(--art-gray-200);
-    border-radius: 12px;
+    border-radius: var(--custom-radius);
   }
 
   .replay-stage > .art-svg-icon {
@@ -1037,7 +1058,7 @@
     align-items: center;
     padding: 12px 14px;
     border: 1px solid var(--art-gray-200);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
 
   .timeline-list button:hover,
@@ -1064,7 +1085,7 @@
     min-width: 0;
     padding: 18px;
     border: 1px solid var(--art-gray-200);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
   }
 
   .section-title {
@@ -1090,7 +1111,7 @@
     gap: 0;
     margin-bottom: 16px;
     border: 1px solid var(--art-gray-200);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
 
   .amount-list > div {
@@ -1121,7 +1142,7 @@
     line-height: 1.7;
     color: var(--art-gray-800);
     background: var(--art-gray-50);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
 
   @media (width <= 1000px) {

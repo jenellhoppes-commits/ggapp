@@ -6,8 +6,8 @@
       :description="copy.description"
     >
       <template #actions>
-        <ElButton @click="ElMessage.success('幣別設定已匯出')">匯出</ElButton>
-        <ElButton v-if="mode === 'data'" type="primary" @click="openEdit()">新增幣別</ElButton>
+        <ElButton disabled>匯出（未開放）</ElButton>
+        <ElButton v-if="mode === 'data'" type="primary" disabled>新增幣別（未開放）</ElButton>
       </template>
     </AppPageHeader>
 
@@ -54,7 +54,15 @@
           ><span>共 {{ rows.length }} 筆</span></div
         ><span>更新會同步影響後續可選項目</span></div
       >
-      <ElTable :data="rows" border row-key="code">
+      <ArtTable
+        :data="rows"
+        row-key="code"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
+      >
         <ElTableColumn label="幣別" min-width="180" fixed="left"
           ><template #default="scope"
             ><div class="currency"
@@ -118,7 +126,7 @@
             ><ElButton link type="primary" @click="openEdit(scope.row)">編輯</ElButton></template
           ></ElTableColumn
         >
-      </ElTable>
+      </ArtTable>
     </ElCard>
 
     <ElDialog v-model="dialogVisible" title="編輯幣別" width="min(520px, 92vw)">
@@ -272,7 +280,7 @@
       padding: 18px 20px;
       background: var(--art-main-bg-color);
       border: 1px solid var(--art-border-color);
-      border-radius: 10px;
+      border-radius: calc(var(--custom-radius) / 2 + 2px);
     }
 
     span,
@@ -323,7 +331,7 @@
       height: 36px;
       color: var(--el-color-primary);
       background: var(--el-color-primary-light-9);
-      border-radius: 8px;
+      border-radius: var(--el-border-radius-base);
     }
 
     span,

@@ -13,17 +13,12 @@
       </template>
     </AppPageHeader>
 
-    <div class="context-bar" aria-label="儀錶板資料資訊">
-      <span><ArtSvgIcon icon="ri:flask-line" />{{ dashboardStore.environment }}</span>
-      <span><ArtSvgIcon icon="ri:global-line" />{{ dashboardStore.timezone }}</span>
-      <span><ArtSvgIcon icon="ri:database-2-line" />{{ dashboardStore.version }}</span>
-      <span><ArtSvgIcon icon="ri:time-line" />資料截止 {{ dashboardStore.cutoffAt }}</span>
-    </div>
-
     <ElCard shadow="never" class="filter-card">
-      <ElForm class="filter-form" label-position="top" @submit.prevent="applyFilters">
-        <ElFormItem label="日期範圍" required>
+      <AppFilterForm class="filter-form" @submit.prevent="applyFilters">
+        <ElFormItem label="日期範圍">
           <ElDatePicker
+            :shortcuts="dateShortcuts"
+            popper-class="report-date-picker"
             v-model="draft.dateRange"
             type="daterange"
             range-separator="至"
@@ -33,7 +28,7 @@
             :clearable="false"
           />
         </ElFormItem>
-        <ElFormItem label="原幣別" required>
+        <ElFormItem label="原幣別">
           <ElSelect v-model="draft.currency" placeholder="選擇原幣別">
             <ElOption
               v-for="currency in dashboardStore.currencies"
@@ -43,37 +38,42 @@
             />
           </ElSelect>
         </ElFormItem>
-        <ElFormItem label="進階條件">
-          <ElButton class="more-button" @click="advancedOpen = !advancedOpen">
+        <ElFormItem :label-width="0">
+          <ElButton
+            class="more-button"
+            :aria-expanded="advancedOpen"
+            aria-controls="dashboard-advanced-filters"
+            @click="advancedOpen = !advancedOpen"
+          >
             <ArtSvgIcon icon="ri:filter-3-line" />更多條件{{
               advancedCount ? `（${advancedCount}）` : ''
             }}
             <ArtSvgIcon :icon="advancedOpen ? 'ri:arrow-up-s-line' : 'ri:arrow-down-s-line'" />
           </ElButton>
         </ElFormItem>
-        <ElFormItem label="操作" class="filter-actions"
+        <ElFormItem :label-width="0" class="filter-actions"
           ><ElButton type="primary" native-type="submit">查詢</ElButton
           ><ElButton @click="resetFilters">重置</ElButton></ElFormItem
         >
-      </ElForm>
-      <div v-if="advancedOpen" class="advanced-filters">
-        <ElFormItem label="商戶"
-          ><ElSelect v-model="draft.merchantId" clearable filterable placeholder="全部商戶"
-            ><ElOption
-              v-for="option in dashboardStore.merchantOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value" /></ElSelect
-        ></ElFormItem>
-        <ElFormItem label="供應商"
-          ><ElSelect v-model="draft.providerId" clearable filterable placeholder="全部供應商"
-            ><ElOption
-              v-for="option in dashboardStore.providerOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value" /></ElSelect
-        ></ElFormItem>
-      </div>
+        <div v-if="advancedOpen" id="dashboard-advanced-filters" class="advanced-filters">
+          <ElFormItem label="商戶"
+            ><ElSelect v-model="draft.merchantId" clearable filterable placeholder="全部商戶"
+              ><ElOption
+                v-for="option in dashboardStore.merchantOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value" /></ElSelect
+          ></ElFormItem>
+          <ElFormItem label="供應商"
+            ><ElSelect v-model="draft.providerId" clearable filterable placeholder="全部供應商"
+              ><ElOption
+                v-for="option in dashboardStore.providerOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value" /></ElSelect
+          ></ElFormItem>
+        </div>
+      </AppFilterForm>
     </ElCard>
 
     <section v-loading="refreshing" class="dashboard-content" aria-live="polite">
@@ -170,11 +170,14 @@
           ></template
         >
         <div class="table-region">
-          <ElTable
+          <ArtTable
             :data="dashboardStore.recentActions"
-            border
             row-key="id"
             empty-text="尚無可顯示的操作紀錄"
+            height="auto"
+            empty-height="auto"
+            :show-table-header="false"
+            style="height: auto"
           >
             <ElTableColumn prop="time" label="時間" min-width="170" /><ElTableColumn
               prop="target"
@@ -196,8 +199,8 @@
               ><template #default="scope"
                 ><ElButton link type="primary" @click="go(scope.row.path)">來源</ElButton></template
               ></ElTableColumn
-            >
-          </ElTable>
+            > </ArtTable
+          >>
         </div>
       </ElCard>
     </section>
@@ -205,16 +208,21 @@
 </template>
 
 <script setup lang="ts">
+  import AppFilterForm from '@/components/business/game-provider/app-filter-form/index.vue'
   import { ElMessage } from 'element-plus'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import { useAdminDashboardStore, type AdminDashboardQuery } from '@/store/modules/adminDashboard'
   import { useFinanceSettingsStore } from '@/store/modules/financeSettings'
+  import { usePlatformLocaleStore } from '@/store/modules/platformLocale'
+  import { createDateRangeShortcuts } from '@/utils/form/date-range-shortcuts'
 
   defineOptions({ name: 'GameProviderDashboard' })
   const route = useRoute()
   const router = useRouter()
   const dashboardStore = useAdminDashboardStore()
   const financeSettingsStore = useFinanceSettingsStore()
+  const localeStore = usePlatformLocaleStore()
+  const dateShortcuts = createDateRangeShortcuts(() => localeStore.defaultTimezone!.id)
   const advancedOpen = ref(false)
   const refreshing = ref(false)
   let refreshSequence = 0
@@ -258,6 +266,22 @@
     merchantId: initial.merchantId,
     providerId: initial.providerId
   })
+  watch(
+    () => route.fullPath,
+    () => {
+      if (route.path !== '/dashboard') return
+      const next = readRoute()
+      Object.assign(draft, next)
+      Object.assign(applied, {
+        from: next.from,
+        to: next.to,
+        currency: next.currency,
+        merchantId: next.merchantId,
+        providerId: next.providerId
+      })
+      advancedOpen.value = Boolean(next.merchantId || next.providerId)
+    }
+  )
   advancedOpen.value = Boolean(initial.merchantId || initial.providerId)
   const advancedCount = computed(
     () => Number(Boolean(draft.merchantId)) + Number(Boolean(draft.providerId))
@@ -399,25 +423,9 @@
   .resource-grid small {
     color: var(--art-gray-600);
   }
-  .context-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 18px;
-    padding: 10px 14px;
-    font-size: 13px;
-    color: var(--art-gray-600);
-    background: var(--art-main-bg-color);
-    border: 1px solid var(--art-border-color);
-    border-radius: 8px;
-  }
-  .context-bar span {
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-  }
   .filter-form {
     display: grid;
-    grid-template-columns: minmax(280px, 1.5fr) minmax(130px, 0.7fr) auto auto;
+    grid-template-columns: minmax(380px, 1.5fr) minmax(240px, 0.7fr) auto auto;
     gap: 12px;
     align-items: end;
   }
@@ -438,6 +446,7 @@
     width: 100%;
   }
   .advanced-filters {
+    grid-column: 1 / -1;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
@@ -458,7 +467,7 @@
     cursor: pointer;
     background: var(--art-main-bg-color);
     border: 1px solid var(--art-border-color);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
     transition:
       border-color 0.15s ease,
       transform 0.15s ease;
@@ -547,7 +556,7 @@
     width: 36px;
     height: 36px;
     background: var(--art-gray-100);
-    border-radius: 8px;
+    border-radius: var(--el-border-radius-base);
   }
   .task-copy strong,
   .task-copy small {
@@ -610,7 +619,7 @@
     cursor: pointer;
     background: var(--art-gray-100);
     border: 1px solid transparent;
-    border-radius: 9px;
+    border-radius: var(--el-border-radius-base);
   }
   .resource-grid span,
   .resource-grid strong,
@@ -655,6 +664,7 @@
     .filter-actions :deep(.el-form-item__content) {
       display: grid;
       grid-template-columns: 1fr 1fr;
+      gap: 8px;
     }
     .filter-actions :deep(.el-button) {
       width: 100%;

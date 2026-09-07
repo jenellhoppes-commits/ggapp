@@ -29,7 +29,6 @@
       :items="searchItems"
       :span="6"
       :label-position="isMobile ? 'top' : 'right'"
-      :label-width="isMobile ? 'auto' : '92px'"
       @search="applyFilters"
       @reset="resetFilters"
     />

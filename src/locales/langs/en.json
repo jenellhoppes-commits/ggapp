@@ -1,4 +1,19 @@
 {
+  "headerPreferences": {
+    "heading": "Display preferences",
+    "light": "Switch to light mode",
+    "dark": "Switch to dark mode",
+    "fullscreen": "Enter fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "language": "Interface language",
+    "menu": "Toggle main navigation",
+    "refresh": "Refresh page",
+    "quickAccess": "Quick access",
+    "notifications": "Notifications",
+    "chat": "Chat",
+    "settings": "Settings",
+    "account": "Open account menu"
+  },
   "httpMsg": {
     "unauthorized": "Unauthorized access, please login again",
     "forbidden": "Access to this resource is forbidden",

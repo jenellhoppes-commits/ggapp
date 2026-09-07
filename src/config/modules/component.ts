@@ -16,6 +16,7 @@
  */
 
 import { defineAsyncComponent } from 'vue'
+import { headerBarConfig } from './headerBar'
 
 /**
  * 全局组件配置列表
@@ -35,7 +36,9 @@ export const globalComponentsConfig: GlobalComponentConfig[] = [
     component: defineAsyncComponent(
       () => import('@/components/core/layouts/art-global-search/index.vue')
     ),
-    enabled: true
+    get enabled() {
+      return headerBarConfig.globalSearch.enabled
+    }
   },
   {
     name: '锁屏',
@@ -51,7 +54,9 @@ export const globalComponentsConfig: GlobalComponentConfig[] = [
     component: defineAsyncComponent(
       () => import('@/components/core/layouts/art-chat-window/index.vue')
     ),
-    enabled: true
+    get enabled() {
+      return headerBarConfig.chat.enabled
+    }
   },
   {
     name: '礼花效果',

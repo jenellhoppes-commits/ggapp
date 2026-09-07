@@ -90,7 +90,14 @@
               show-icon
               class="mb-4"
             />
-            <ElTable :data="terms" border>
+            <ArtTable
+              :data="terms"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
+              empty-text="暫無資料"
+            >
               <ElTableColumn label="版本" width="80"
                 ><template #default="scope">V{{ scope.row.version }}</template></ElTableColumn
               >
@@ -122,8 +129,8 @@
                     >設為生效</ElButton
                   ><span v-else>—</span></template
                 ></ElTableColumn
-              >
-            </ElTable>
+              > </ArtTable
+            >>
           </div>
         </ElTabPane>
 
@@ -146,7 +153,15 @@
               :closable="false"
               show-icon
             />
-            <ElTable :data="gameConfigurations" border class="mt-4">
+            <ArtTable
+              :data="gameConfigurations"
+              class="mt-4"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
+              empty-text="暫無資料"
+            >
               <ElTableColumn prop="gameId" label="遊戲 ID" width="110" />
               <ElTableColumn prop="gameName" label="遊戲名稱" min-width="160" />
               <ElTableColumn label="狀態" width="100">
@@ -173,14 +188,21 @@
                   </ElSelect>
                 </template>
               </ElTableColumn>
-              <ElTableColumn prop="updatedAt" label="更新時間" min-width="150" />
-            </ElTable>
+              <ElTableColumn prop="updatedAt" label="更新時間" min-width="150" /> </ArtTable
+            >>
           </div>
         </ElTabPane>
 
         <ElTabPane label="串接管理" name="integration">
           <div class="tab-panel">
-            <ElTable :data="lines" border>
+            <ArtTable
+              :data="lines"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
+              empty-text="暫無資料"
+            >
               <ElTableColumn prop="uid" label="線路 UID" min-width="210" />
               <ElTableColumn prop="currency" label="交易幣別" width="100" />
               <ElTableColumn prop="environment" label="最高環境" width="120" />
@@ -194,8 +216,8 @@
                 <template #default="scope">
                   <ElButton link type="primary" @click="openLine(scope.row)">管理串接</ElButton>
                 </template>
-              </ElTableColumn>
-            </ElTable>
+              </ElTableColumn> </ArtTable
+            >>
           </div>
         </ElTabPane>
 
@@ -213,7 +235,15 @@
                 <small>差異須於結算批次完成前處理</small>
               </ElCard>
             </div>
-            <ElTable :data="reconciliations" border class="mt-4">
+            <ArtTable
+              :data="reconciliations"
+              class="mt-4"
+              height="auto"
+              empty-height="auto"
+              :show-table-header="false"
+              style="height: auto"
+              empty-text="暫無資料"
+            >
               <ElTableColumn prop="period" label="期間" width="110" />
               <ElTableColumn label="有效投注" min-width="130"
                 ><template #default="scope">{{
@@ -235,8 +265,8 @@
                 ><template #default="scope">{{
                   reconciliationStatusLabel(scope.row.status)
                 }}</template></ElTableColumn
-              >
-            </ElTable>
+              > </ArtTable
+            >>
             <ElButton
               class="mt-4"
               type="primary"

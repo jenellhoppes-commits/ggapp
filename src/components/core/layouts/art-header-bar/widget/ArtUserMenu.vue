@@ -6,17 +6,19 @@
     :width="240"
     :hide-after="0"
     :offset="10"
-    trigger="hover"
+    trigger="click"
     :show-arrow="false"
     popper-class="user-menu-popover"
     popper-style="padding: 5px 16px;"
   >
     <template #reference>
-      <img
-        class="size-8.5 mr-5 c-p rounded-full max-sm:w-6.5 max-sm:h-6.5 max-sm:mr-[16px]"
-        src="@imgs/user/avatar.webp"
-        alt="avatar"
-      />
+      <button
+        type="button"
+        :aria-label="$t('headerPreferences.account')"
+        class="size-8.5 mr-5 inline-flex items-center justify-center rounded-full cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--el-color-primary)] max-sm:mr-4"
+      >
+        <img class="size-8.5 rounded-full" src="@imgs/user/avatar.webp" alt="" />
+      </button>
     </template>
     <template #default>
       <div class="pt-3">
@@ -40,6 +42,9 @@
           <li class="btn-item" @click="lockScreen()">
             <ArtSvgIcon icon="ri:lock-line" />
             <span>{{ $t('topBar.user.lockScreen') }}</span>
+          </li>
+          <li v-if="$slots.preferences" class="preference-group">
+            <slot name="preferences" />
           </li>
           <div class="w-full h-px my-2 bg-g-300/80"></div>
           <div class="log-out c-p" @click="loginOut">
@@ -112,6 +117,12 @@
 
 <style scoped>
   @reference '@styles/core/tailwind.css';
+
+  .preference-group {
+    padding: 12px 0;
+    margin-top: 8px;
+    border-top: 1px solid var(--art-gray-300);
+  }
 
   @layer components {
     .btn-item {

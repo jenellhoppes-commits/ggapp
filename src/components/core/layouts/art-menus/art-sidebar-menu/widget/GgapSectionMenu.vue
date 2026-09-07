@@ -3,6 +3,7 @@
     ref="navigation"
     class="ggap-sections"
     :class="{ collapsed }"
+    :style="menuStyle"
     aria-label="主要功能"
     @keydown.esc="emit('close')"
     @keydown.tab="trapMobileFocus"
@@ -95,15 +96,19 @@
 <script setup lang="ts">
   import { computed, nextTick, ref, watch } from 'vue'
   import type { AppRouteRecord } from '@/types/router'
+  import type { MenuThemeType } from '@/types/store'
+  import { sectionMenuStyle } from '@/utils/navigation/section-menu-theme'
   import { buildSectionMenu } from '@/utils/navigation/section-menu'
   const props = defineProps<{
     routes: AppRouteRecord[]
+    theme: MenuThemeType
     activePath: string
     collapsed: boolean
     mobile: boolean
     open: boolean
   }>()
   const emit = defineEmits<{ close: [] }>()
+  const menuStyle = computed(() => sectionMenuStyle(props.theme))
   const sections = computed(() => buildSectionMenu(props.routes))
   const navigation = ref<HTMLElement>()
   const expandedGroups = ref(new Set<string>())
@@ -117,7 +122,9 @@
   }
   const trapMobileFocus = (event: KeyboardEvent) => {
     if (!props.mobile || !props.open) return
-    const controls = navigation.value?.querySelectorAll<HTMLElement>('button, a[href]')
+    const controls = Array.from(
+      navigation.value?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]') || []
+    ).filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0)
     if (!controls?.length) return
     const first = controls[0],
       last = controls[controls.length - 1]
@@ -156,7 +163,7 @@
   }
   h2 {
     margin: 0 10px 6px;
-    color: var(--el-text-color-secondary);
+    color: var(--section-muted);
     font-size: 12px;
     line-height: 20px;
     font-weight: 500;
@@ -167,8 +174,8 @@
     gap: 10px;
     min-height: 44px;
     padding: 8px 12px;
-    border-radius: 7px;
-    color: var(--el-text-color-primary);
+    border-radius: var(--el-border-radius-base);
+    color: var(--section-text);
     font-size: 14px;
     text-decoration: none;
   }
@@ -194,7 +201,7 @@
     position: relative;
     margin: 2px 0 6px 20px;
     padding-left: 9px;
-    border-left: 1px solid var(--art-border-color);
+    border-left: 1px solid var(--section-border);
   }
   .child-link {
     min-height: 38px;
@@ -205,23 +212,23 @@
     font-size: 17px;
   }
   .function-link :deep(.art-svg-icon) {
+    color: var(--section-icon);
     flex-shrink: 0;
     font-size: 20px;
   }
   .function-link:hover {
-    background: var(--el-fill-color-light);
+    background: var(--section-hover);
   }
   .function-link.active {
-    color: var(--el-color-primary);
-    background: var(--el-color-primary-light-9);
+    color: var(--section-active-text);
+    background: var(--section-active-bg);
   }
-  :global(.dark .ggap-sections .function-link.active) {
-    background: #26272b;
-    color: #6e8eff;
+  .function-link.active :deep(.art-svg-icon) {
+    color: var(--section-active-text);
   }
   .function-link:focus-visible,
   .close-navigation:focus-visible {
-    outline: 2px solid var(--el-color-primary);
+    outline: 2px solid var(--section-focus);
     outline-offset: -2px;
   }
   .collapsed .function-link {
@@ -238,9 +245,9 @@
     width: 100%;
     padding: 12px;
     margin-bottom: 12px;
-    background: var(--el-fill-color-light);
-    color: var(--el-text-color-primary);
-    border-radius: 7px;
+    background: var(--section-hover);
+    color: var(--section-text);
+    border-radius: var(--el-border-radius-base);
     cursor: pointer;
   }
   .sr-only {

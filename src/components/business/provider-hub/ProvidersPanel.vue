@@ -369,21 +369,9 @@
               layout="total, prev, pager, next, sizes"
               @size-change="gamePageNumber = 1"
           /></ElTabPane>
-          <ElTabPane label="成本與結算" name="costs"
-            ><ElAlert
-              title="計費規則待設定：可查閱原幣資料，不能確認正式費用。"
-              type="warning"
-              :closable="false"
-            /><ElDescriptions class="notice" :column="1" border
-              ><ElDescriptionsItem label="條件與版本"
-                >待 D01 核准計費基礎、負 GGR 與捨入規則</ElDescriptionsItem
-              ><ElDescriptionsItem label="帳期與結算幣別"
-                >依合約指定，不固定日結、不允許任意換幣</ElDescriptionsItem
-              ><ElDescriptionsItem label="原有費率"
-                >不沿用舊遊戲商帳務公式</ElDescriptionsItem
-              ></ElDescriptions
-            ></ElTabPane
-          >
+          <ElTabPane label="成本與結算" name="costs">
+            <ProviderTerms :key="selected.id" :provider-id="selected.id" />
+          </ElTabPane>
           <ElTabPane label="對帳紀錄" name="reconciliation"
             ><ElEmpty description="尚無供應商對帳來源；不以試玩啟動冒充對帳"
           /></ElTabPane>
@@ -432,6 +420,7 @@
   import { useProviderDemoStore } from '@/store/modules/providerDemo'
   import { useUserStore } from '@/store/modules/user'
   import { modeLabel } from '@/domain/provider-demo'
+  import ProviderTerms from './ProviderTerms.vue'
   import { listPage } from '@/domain/list-query'
   import {
     canManageProviders,

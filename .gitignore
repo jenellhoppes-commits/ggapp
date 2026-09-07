@@ -17,3 +17,7 @@ dist-ssr
 
 # Auto-generated files
 .auto-import.json
+
+# Local preview logs and browser QA captures/downloads
+/.ggap-local-preview*.log
+/docs/qa/

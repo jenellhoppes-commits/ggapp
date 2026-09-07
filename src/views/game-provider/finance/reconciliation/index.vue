@@ -13,7 +13,7 @@
     >
       <template #actions>
         <ElButton @click="refresh">重新整理</ElButton>
-        <ElButton @click="ElMessage.success('已建立匯出工作')">匯出</ElButton>
+        <ElButton @click="exportRows">匯出 CSV</ElButton>
       </template>
     </AppPageHeader>
 
@@ -37,7 +37,7 @@
     </div>
 
     <ElCard class="filter-card" shadow="never">
-      <ElForm :model="filters" inline>
+      <AppFilterForm :model="filters">
         <ElFormItem label="關鍵字">
           <ElInput v-model="filters.keyword" clearable :placeholder="keywordPlaceholder" />
         </ElFormItem>
@@ -57,22 +57,30 @@
             />
           </ElSelect>
         </ElFormItem>
-        <ElFormItem
-          ><ElButton type="primary" @click="pagination.current = 1">查詢</ElButton></ElFormItem
-        >
-        <ElFormItem><ElButton @click="reset">重置</ElButton></ElFormItem>
-      </ElForm>
+        <div class="filter-actions">
+          <ElButton type="primary" @click="pagination.current = 1">查詢</ElButton>
+          <ElButton @click="reset">重置</ElButton>
+        </div>
+      </AppFilterForm>
     </ElCard>
 
     <ElCard class="table-card" shadow="never">
-      <div class="table-toolbar">
-        <div
-          ><strong>{{ pageTitle }}清單</strong><span>共 {{ filteredRows.length }} 筆</span></div
-        >
-        <span class="hint">金額依各筆結算幣別顯示</span>
-      </div>
-      <ElTable :data="pagedRows" border row-key="id">
-        <ElTableColumn label="對帳資料" min-width="230" fixed="left">
+      <ArtTableHeader class="table-toolbar" layout="refresh,size,settings" @refresh="refresh">
+        <template #left>
+          <div
+            ><strong>{{ pageTitle }}清單</strong><span>共 {{ filteredRows.length }} 筆</span></div
+          >
+        </template>
+      </ArtTableHeader>
+      <ArtTable
+        :data="pagedRows"
+        row-key="id"
+        height="auto"
+        empty-height="auto"
+        :show-table-header="false"
+        style="height: auto"
+      >
+        <ElTableColumn label="對帳資料" min-width="230" :fixed="wideTable ? 'left' : false">
           <template #default="scope">
             <button class="primary-link" type="button" @click="openDetail(scope.row.id)">
               <strong>{{ subjectName(scope.row) }}</strong>
@@ -87,15 +95,23 @@
         <ElTableColumn v-else label="商戶數" prop="merchantCount" width="90" align="right" />
         <ElTableColumn label="投注筆數" prop="betCount" width="110" align="right" />
         <ElTableColumn label="有效投注" min-width="145" align="right">
-          <template #default="scope">{{ money(scope.row.validBet, scope.row.currency) }}</template>
+          <template #default="scope">{{
+            money(scope.row.validBet, scope.row.currency, scope.row.snapshot.amountPrecision)
+          }}</template>
         </ElTableColumn>
         <ElTableColumn label="GGR" min-width="135" align="right">
-          <template #default="scope">{{ money(scope.row.ggr, scope.row.currency) }}</template>
+          <template #default="scope">{{
+            money(scope.row.ggr, scope.row.currency, scope.row.snapshot.amountPrecision)
+          }}</template>
         </ElTableColumn>
         <ElTableColumn label="最終應結" min-width="155" align="right">
           <template #default="scope"
             ><strong>{{
-              money(scope.row.finalSettlementAmount, scope.row.snapshot.settlementCurrency)
+              money(
+                scope.row.finalSettlementAmount,
+                scope.row.snapshot.settlementCurrency,
+                scope.row.snapshot.amountPrecision
+              )
             }}</strong></template
           >
         </ElTableColumn>
@@ -119,14 +135,14 @@
           >
         </ElTableColumn>
         <ElTableColumn label="更新時間" prop="updatedAt" width="155" />
-        <ElTableColumn label="操作" width="90" fixed="right">
+        <ElTableColumn label="操作" width="90" :fixed="wideTable ? 'right' : false">
           <template #default="scope"
             ><ElButton link type="primary" @click="openDetail(scope.row.id)"
               >查看</ElButton
             ></template
           >
         </ElTableColumn>
-      </ElTable>
+      </ArtTable>
       <div class="pagination-wrap">
         <ElPagination
           v-model:current-page="pagination.current"
@@ -141,6 +157,10 @@
 </template>
 
 <script setup lang="ts">
+  import AppFilterForm from '@/components/business/game-provider/app-filter-form/index.vue'
+  import { useWindowSize } from '@vueuse/core'
+  import { useCsvExport } from '@/hooks/business/useCsvExport'
+  import { useFinanceMoney } from '@/hooks/business/useFinanceMoney'
   import { ElMessage } from 'element-plus'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import { useFinanceCenterStore } from '@/store/modules/financeCenter'
@@ -152,6 +172,8 @@
   } from '@/types/game-provider'
 
   defineOptions({ name: 'FinanceReconciliationList' })
+  const { width } = useWindowSize()
+  const wideTable = computed(() => width.value >= 768)
   const route = useRoute()
   const router = useRouter()
   const store = useFinanceCenterStore()
@@ -238,8 +260,50 @@
   const openDetail = (id: string) => router.push(`/finance/reconciliation/${kind.value}s/${id}`)
   const openDifferences = (id: string) =>
     router.push({ path: '/finance/reconciliation/differences', query: { reconciliationId: id } })
-  const money = (value: number, currency: string) =>
-    `${currency} ${new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 2 }).format(value)}`
+  const { money } = useFinanceMoney()
+  const { exportCsv } = useCsvExport()
+  const exportRows = () =>
+    exportCsv(
+      pageTitle.value,
+      [
+        '對帳編號',
+        '期間',
+        '名稱',
+        kind.value === 'merchant'
+          ? '商戶線路'
+          : kind.value === 'provider'
+            ? '供應商代碼'
+            : '商戶數',
+        '投注筆數',
+        '有效投注',
+        'GGR',
+        '最終應結',
+        '未解差異',
+        '狀態',
+        '更新時間'
+      ],
+      filteredRows.value.map((row) => [
+        row.id,
+        row.period,
+        subjectName(row),
+        'lineUid' in row
+          ? row.lineUid
+          : 'providerCode' in row
+            ? row.providerCode
+            : row.merchantCount,
+        row.betCount,
+        money(row.validBet, row.currency, row.snapshot.amountPrecision),
+        money(row.ggr, row.currency, row.snapshot.amountPrecision),
+        money(
+          row.finalSettlementAmount,
+          row.snapshot.settlementCurrency,
+          row.snapshot.amountPrecision
+        ),
+        row.unresolvedDifferenceCount,
+        statusLabel(row.status),
+        row.updatedAt
+      ])
+    )
   const statusLabel = (status: string) =>
     ({
       Draft: '草稿',
@@ -281,7 +345,7 @@
     cursor: pointer;
     background: var(--art-main-bg-color);
     border: 1px solid var(--art-border-color);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
   }
 
   .summary-grid span,
@@ -298,10 +362,6 @@
 
   .summary-grid .danger {
     color: var(--el-color-danger);
-  }
-
-  .filter-card :deep(.el-card__body) {
-    padding-bottom: 2px;
   }
 
   .filter-card :deep(.el-input),

@@ -8,6 +8,7 @@ import type { GameSyncRun } from './game-sync'
 export type DemoMode = 'native' | 'sandbox'
 export type DemoActor = { role: 'admin' | 'merchant' | 'denied'; name: string; merchantId?: string }
 export interface DemoProvider {
+  terms?: import('./provider-terms').ProviderTermsVersion[]
   integration?: { currencies: string[]; wallets: string[] }
   profile?: ProviderProfile
   id: string

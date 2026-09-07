@@ -89,6 +89,7 @@
 </template>
 
 <script setup lang="ts">
+  import { headerBarConfig } from '@/config/modules/headerBar'
   import { Picture, Paperclip, Close } from '@element-plus/icons-vue'
   import { mittBus } from '@/utils/sys'
   import meAvatar from '@/assets/images/avatar/avatar5.webp'
@@ -242,6 +243,7 @@
 
   // 聊天窗口控制方法
   const openChat = (): void => {
+    if (!headerBarConfig.chat.enabled) return
     isDrawerVisible.value = true
     scrollToBottom()
   }

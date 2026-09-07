@@ -1,4 +1,19 @@
 {
+  "headerPreferences": {
+    "heading": "顯示偏好",
+    "light": "切換淺色模式",
+    "dark": "切換深色模式",
+    "fullscreen": "全螢幕顯示",
+    "exitFullscreen": "離開全螢幕",
+    "language": "介面語言",
+    "menu": "開啟或收合主要選單",
+    "refresh": "重新整理頁面",
+    "quickAccess": "快速入口",
+    "notifications": "通知",
+    "chat": "聊天",
+    "settings": "設定",
+    "account": "開啟帳號選單"
+  },
   "httpMsg": {
     "unauthorized": "未授權訪問，請重新登入",
     "forbidden": "禁止訪問該資源",

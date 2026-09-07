@@ -19,17 +19,17 @@
     <ElTableColumn prop="batchId" label="結算批次" min-width="150" />
     <ElTableColumn label="原始應結" min-width="145" align="right"
       ><template #default="scope">{{
-        money(scope.row.grossAmount, scope.row.settlementCurrency)
+        statementMoney(scope.row.grossAmount, scope.row)
       }}</template></ElTableColumn
     >
     <ElTableColumn label="調整" min-width="125" align="right"
       ><template #default="scope">{{
-        money(scope.row.adjustmentAmount, scope.row.settlementCurrency)
+        statementMoney(scope.row.adjustmentAmount, scope.row)
       }}</template></ElTableColumn
     >
     <ElTableColumn label="最終應結" min-width="150" align="right"
       ><template #default="scope"
-        ><strong>{{ money(scope.row.finalAmount, scope.row.settlementCurrency) }}</strong></template
+        ><strong>{{ statementMoney(scope.row.finalAmount, scope.row) }}</strong></template
       ></ElTableColumn
     >
     <ElTableColumn label="狀態" width="110"
@@ -51,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useFinanceMoney } from '@/hooks/business/useFinanceMoney'
   import type { AgentSettlementStatement, MerchantSettlementStatement } from '@/types/game-provider'
 
   defineOptions({ name: 'SettlementTable' })
@@ -60,8 +61,7 @@
     showActions?: boolean
   }>()
   defineEmits<{ open: [id: string] }>()
-  const money = (value: number, currency: string) =>
-    `${currency} ${new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 2 }).format(value)}`
+  const { statementMoney } = useFinanceMoney()
   const statusLabel = (status: string) =>
     ({
       Draft: '草稿',

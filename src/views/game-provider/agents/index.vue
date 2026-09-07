@@ -25,7 +25,6 @@
       :items="searchItems"
       :span="6"
       :label-position="isMobile ? 'top' : 'right'"
-      :label-width="isMobile ? 'auto' : '100px'"
       @search="applyFilters"
       @reset="resetFilters"
     />

@@ -2,7 +2,7 @@
   <div class="page">
     <AppPageHeader :title="copy.title" eyebrow="平台管理 · 系統紀錄" :description="copy.description"
       ><template #actions
-        ><ElButton @click="ElMessage.success('紀錄已匯出')">匯出</ElButton
+        ><ElButton disabled>匯出（未開放）</ElButton
         ><ElButton @click="ElMessage.success('資料已重新整理')">重新整理</ElButton></template
       ></AppPageHeader
     >
@@ -58,7 +58,14 @@
         ><div
           ><strong>登入與工作階段紀錄</strong><span>共 {{ loginRows.length }} 筆</span></div
         ><span>失敗登入與未知來源優先檢視</span></div
-      ><ElTable :data="loginRows" border row-key="id"
+      ><ArtTable
+        :data="loginRows"
+        row-key="id"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
         ><ElTableColumn label="時間" prop="occurredAt" min-width="165" fixed="left" /><ElTableColumn
           label="帳號"
           min-width="210"
@@ -96,7 +103,7 @@
               >查看</ElButton
             ></template
           ></ElTableColumn
-        ></ElTable
+        ></ArtTable
       ></ElCard
     >
 
@@ -105,7 +112,14 @@
         ><div
           ><strong>全平台審核軌跡</strong><span>共 {{ approvalRows.length }} 筆</span></div
         ><span>來源資料與每次狀態異動皆可追溯</span></div
-      ><ElTable :data="approvalRows" border row-key="id"
+      ><ArtTable
+        :data="approvalRows"
+        row-key="id"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
         ><ElTableColumn label="時間" prop="time" min-width="165" fixed="left" /><ElTableColumn
           label="審核單"
           min-width="180"
@@ -132,7 +146,7 @@
           show-overflow-tooltip /><ElTableColumn
           prop="id"
           label="紀錄編號"
-          min-width="160" /></ElTable
+          min-width="160" /></ArtTable
     ></ElCard>
 
     <ElCard v-else shadow="never" class="table-card"
@@ -140,7 +154,14 @@
         ><div
           ><strong>系統異常紀錄</strong><span>共 {{ errorRows.length }} 筆</span></div
         ><span>正式環境重大異常應同步建立通知</span></div
-      ><ElTable :data="errorRows" border row-key="id"
+      ><ArtTable
+        :data="errorRows"
+        row-key="id"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
         ><ElTableColumn label="異常" min-width="270" fixed="left"
           ><template #default="scope"
             ><button class="link" type="button" @click="openError(scope.row.id)"
@@ -185,7 +206,7 @@
               >查看處理</ElButton
             ></template
           ></ElTableColumn
-        ></ElTable
+        ></ArtTable
       ></ElCard
     >
 
@@ -543,7 +564,7 @@
     text-align: left;
     background: var(--art-main-bg-color);
     border: 1px solid var(--art-border-color);
-    border-radius: 10px;
+    border-radius: calc(var(--custom-radius) / 2 + 2px);
   }
 
   .summary-grid button {

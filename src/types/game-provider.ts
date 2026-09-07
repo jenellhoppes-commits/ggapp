@@ -445,6 +445,8 @@ export type SettlementAdjustmentStatus =
   | 'Applied'
 
 export interface SettlementBatchRecord {
+  /** Precision captured when this record is created; optional for legacy records. */
+  amountPrecision?: number
   id: string
   name: string
   period: string
@@ -469,6 +471,7 @@ export interface SettlementBatchRecord {
 }
 
 export interface MerchantSettlementStatement {
+  amountPrecision?: number
   id: string
   batchId: string
   reconciliationId: string
@@ -492,6 +495,7 @@ export interface MerchantSettlementStatement {
 }
 
 export interface AgentSettlementStatement {
+  amountPrecision?: number
   id: string
   batchId: string
   reconciliationId: string
@@ -524,6 +528,7 @@ export interface SettlementExchangeSnapshot {
 }
 
 export interface SettlementAdjustmentRecord {
+  amountPrecision?: number
   id: string
   batchId: string
   targetType: 'Merchant' | 'Agent'

@@ -80,7 +80,14 @@
         ><div
           ><strong>規則清單</strong><span>共 {{ ruleRows.length }} 筆</span></div
         ><span>重大風控與帳號安全事件不受靜默時段限制</span></div
-      ><ElTable :data="ruleRows" border row-key="id"
+      ><ArtTable
+        :data="ruleRows"
+        row-key="id"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
         ><ElTableColumn label="規則" min-width="230" fixed="left"
           ><template #default="scope"
             ><button class="link" type="button" @click="openRule(scope.row)"
@@ -142,7 +149,7 @@
             ><ElButton link type="primary" @click="openRule(scope.row)">編輯</ElButton
             ><ElButton link @click="testRule(scope.row.id)">測試</ElButton></template
           ></ElTableColumn
-        ></ElTable
+        ></ArtTable
       ></ElCard
     >
 
@@ -151,7 +158,14 @@
         ><div
           ><strong>發送紀錄</strong><span>共 {{ logRows.length }} 筆</span></div
         ><span>每個管道皆保留獨立結果</span></div
-      ><ElTable :data="logRows" border row-key="id"
+      ><ArtTable
+        :data="logRows"
+        row-key="id"
+        height="auto"
+        empty-height="auto"
+        empty-text="暫無資料"
+        :show-table-header="false"
+        style="height: auto"
         ><ElTableColumn label="通知" min-width="260" fixed="left"
           ><template #default="scope"
             ><button class="link" type="button" @click="openLog(scope.row.id)"
@@ -200,7 +214,7 @@
               >重送</ElButton
             ></template
           ></ElTableColumn
-        ></ElTable
+        ></ArtTable
       ></ElCard
     >
 
@@ -544,7 +558,7 @@
       cursor: pointer;
       background: var(--art-main-bg-color);
       border: 1px solid var(--art-border-color);
-      border-radius: 10px;
+      border-radius: calc(var(--custom-radius) / 2 + 2px);
 
       &:hover {
         border-color: var(--el-color-primary);
@@ -678,7 +692,7 @@
       justify-content: space-between;
       padding: 14px;
       border: 1px solid var(--art-border-color);
-      border-radius: 8px;
+      border-radius: var(--el-border-radius-base);
     }
 
     span {

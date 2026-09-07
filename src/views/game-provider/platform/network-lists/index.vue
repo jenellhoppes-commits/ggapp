@@ -74,7 +74,14 @@
           ><strong>{{ tab === 'block' ? '黑名單' : '白名單' }}規則</strong
           ><span>共 {{ filtered.length }} 筆</span></div
         ><div class="table-region"
-          ><ElTable :data="pageItems" border row-key="id" empty-text="沒有符合條件的規則"
+          ><ArtTable
+            :data="pageItems"
+            row-key="id"
+            empty-text="沒有符合條件的規則"
+            height="auto"
+            empty-height="auto"
+            :show-table-header="false"
+            style="height: auto"
             ><ElTableColumn prop="id" label="規則編號" min-width="130" /><ElTableColumn
               label="規則值"
               min-width="210"
@@ -123,7 +130,7 @@
                   >{{ row.status === 'Enabled' ? '停用' : '啟用' }}</ElButton
                 ></template
               ></ElTableColumn
-            ></ElTable
+            ></ArtTable
           ></div
         ><ElPagination
           v-model:current-page="pageNumber"
@@ -139,7 +146,14 @@
       ><div class="table-heading"
         ><strong>名單異動紀錄</strong><span>共 {{ networkLogs.length }} 筆</span></div
       ><div class="table-region"
-        ><ElTable :data="networkLogs" border row-key="id"
+        ><ArtTable
+          :data="networkLogs"
+          row-key="id"
+          height="auto"
+          empty-height="auto"
+          :show-table-header="false"
+          style="height: auto"
+          empty-text="暫無資料"
           ><ElTableColumn prop="createdAt" label="時間" min-width="170" /><ElTableColumn
             prop="action"
             label="操作"
@@ -152,7 +166,7 @@
             min-width="230" /><ElTableColumn
             prop="operator"
             label="操作人"
-            min-width="140" /></ElTable></div
+            min-width="140" /></ArtTable></div
     ></ElCard>
 
     <ElDrawer

@@ -27,20 +27,21 @@
         />
 
         <!-- 菜单按钮 -->
-        <button
+        <ArtIconButton
           v-if="isLeftMenu && shouldShowMenuButton"
           id="main-navigation-toggle"
-          type="button"
-          aria-label="開啟或收合主要選單"
-          class="ml-3 max-sm:ml-[7px] size-10 rounded cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--el-color-primary)]"
+          icon="ri:menu-2-fill"
+          :aria-label="$t('headerPreferences.menu')"
+          :aria-expanded="menuOpen"
+          class="ml-3 max-sm:ml-[7px]"
           @click="visibleMenu"
-          ><ArtSvgIcon icon="ri:menu-2-fill" aria-hidden="true"
-        /></button>
+        />
 
         <!-- 刷新按钮 -->
         <ArtIconButton
           v-if="shouldShowRefreshButton"
           icon="ri:refresh-line"
+          :aria-label="$t('headerPreferences.refresh')"
           class="!ml-3 refresh-btn max-sm:!hidden"
           :style="{ marginLeft: !isLeftMenu ? '10px' : '0' }"
           @click="reload"
@@ -48,7 +49,11 @@
 
         <!-- 快速入口 -->
         <ArtFastEnter v-if="shouldShowFastEnter && width >= headerBarFastEnterMinWidth">
-          <ArtIconButton icon="ri:function-line" class="ml-3" />
+          <ArtIconButton
+            icon="ri:function-line"
+            class="ml-3"
+            :aria-label="$t('headerPreferences.quickAccess')"
+          />
         </ArtFastEnter>
 
         <!-- 面包屑 -->
@@ -64,14 +69,6 @@
       </div>
 
       <div class="flex-c gap-2.5">
-        <div class="provider-context">
-          <ElTag type="warning" effect="plain" round>
-            <span class="context-item" title="目前為模擬資料，非正式串接或驗收結果"
-              ><ArtSvgIcon icon="ri:server-line" />開發演示</span
-            >
-          </ElTag>
-        </div>
-
         <!-- 搜索 -->
         <div
           v-if="shouldShowGlobalSearch"
@@ -89,41 +86,11 @@
           </div>
         </div>
 
-        <!-- 全屏按钮 -->
-        <ArtIconButton
-          v-if="shouldShowFullscreen"
-          :icon="isFullscreen ? 'ri:fullscreen-exit-line' : 'ri:fullscreen-fill'"
-          :class="[!isFullscreen ? 'full-screen-btn' : 'exit-full-screen-btn', 'ml-3']"
-          class="max-md:!hidden"
-          @click="toggleFullScreen"
-        />
-
-        <!-- 国际化按钮 -->
-        <ElDropdown
-          @command="changeLanguage"
-          popper-class="langDropDownStyle"
-          v-if="shouldShowLanguage"
-        >
-          <ArtIconButton icon="ri:translate-2" class="language-btn text-[19px]" />
-          <template #dropdown>
-            <ElDropdownMenu>
-              <div v-for="item in languageOptions" :key="item.value" class="lang-btn-item">
-                <ElDropdownItem
-                  :command="item.value"
-                  :class="{ 'is-selected': locale === item.value }"
-                >
-                  <span class="menu-txt">{{ item.label }}</span>
-                  <ArtSvgIcon icon="ri:check-fill" v-if="locale === item.value" />
-                </ElDropdownItem>
-              </div>
-            </ElDropdownMenu>
-          </template>
-        </ElDropdown>
-
         <!-- 通知按钮 -->
         <ArtIconButton
           v-if="shouldShowNotification"
           icon="ri:notification-2-line"
+          :aria-label="$t('headerPreferences.notifications')"
           class="notice-button relative"
           @click="visibleNotice"
         >
@@ -134,6 +101,7 @@
         <ArtIconButton
           v-if="shouldShowChat"
           icon="ri:message-3-line"
+          :aria-label="$t('headerPreferences.chat')"
           class="chat-button relative"
           @click="openChat"
         >
@@ -145,7 +113,12 @@
           <ElPopover :visible="showSettingGuide" placement="bottom-start" :width="190" :offset="0">
             <template #reference>
               <div class="flex-cc">
-                <ArtIconButton icon="ri:settings-line" class="setting-btn" @click="openSetting" />
+                <ArtIconButton
+                  icon="ri:settings-line"
+                  class="setting-btn"
+                  :aria-label="$t('headerPreferences.settings')"
+                  @click="openSetting"
+                />
               </div>
             </template>
             <template #default>
@@ -159,19 +132,53 @@
           </ElPopover>
         </div>
 
-        <!-- 主题切换按钮 -->
-        <ArtIconButton
-          v-if="shouldShowThemeToggle"
-          @click="themeAnimation"
-          :icon="isDark ? 'ri:sun-fill' : 'ri:moon-line'"
-        />
-
         <!-- 用户头像、菜单 -->
-        <ArtUserMenu />
+        <ArtUserMenu>
+          <template
+            v-if="shouldShowThemeToggle || shouldShowFullscreen || shouldShowLanguage"
+            #preferences
+          >
+            <p class="preference-heading">{{ $t('headerPreferences.heading') }}</p>
+            <button
+              v-if="shouldShowThemeToggle"
+              type="button"
+              class="preference-action"
+              @click="themeAnimation"
+            >
+              <ArtSvgIcon :icon="isDark ? 'ri:sun-line' : 'ri:moon-line'" />
+              <span>{{ $t(isDark ? 'headerPreferences.light' : 'headerPreferences.dark') }}</span>
+            </button>
+            <button
+              v-if="shouldShowFullscreen"
+              type="button"
+              class="preference-action"
+              @click="toggleFullScreen"
+            >
+              <ArtSvgIcon :icon="isFullscreen ? 'ri:fullscreen-exit-line' : 'ri:fullscreen-line'" />
+              <span>{{
+                $t(
+                  isFullscreen ? 'headerPreferences.exitFullscreen' : 'headerPreferences.fullscreen'
+                )
+              }}</span>
+            </button>
+            <label v-if="shouldShowLanguage" class="preference-action">
+              <ArtSvgIcon icon="ri:translate-2" />
+              <span>{{ $t('headerPreferences.language') }}</span>
+              <select
+                :value="locale"
+                :aria-label="$t('headerPreferences.language')"
+                @change="changeLanguage(($event.target as HTMLSelectElement).value as LanguageEnum)"
+              >
+                <option v-for="item in languageOptions" :key="item.value" :value="item.value">{{
+                  item.label
+                }}</option>
+              </select>
+            </label>
+          </template>
+        </ArtUserMenu>
       </div>
     </div>
 
-    <div class="demo-notice" role="status">開發演示｜模擬資料，非正式串接或驗收結果</div>
     <!-- 标签页 -->
     <ArtWorkTab />
 
@@ -356,6 +363,44 @@
 </script>
 
 <style lang="scss" scoped>
+  .preference-heading {
+    margin: 0 0 4px;
+    padding: 0 8px;
+    font-size: 12px;
+    color: var(--art-gray-600);
+  }
+
+  .preference-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 36px;
+    padding: 6px 8px;
+    border-radius: var(--el-border-radius-base);
+    font-size: 14px;
+    line-height: 1.4;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--art-gray-200);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--el-color-primary);
+    }
+
+    select {
+      flex: 1;
+      min-width: 0;
+      padding: 4px;
+      border: 1px solid var(--art-gray-300);
+      border-radius: var(--el-border-radius-small);
+      background: var(--default-bg-color);
+      color: inherit;
+      font: inherit;
+    }
+  }
   /* Custom animations */
   @keyframes rotate180 {
     0% {
