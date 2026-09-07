@@ -1,72 +1,86 @@
 import { mockApiResponse } from '../apiClient'
-import { adminDashboardDemo } from '../demo/adminDashboard'
+import { createAdminDashboardDemo } from '../demo/adminDashboard'
 
 export type DashboardTone = 'success' | 'warning' | 'error' | 'info' | 'default'
+export type DashboardSectionState = 'ok' | 'incomplete' | 'unavailable'
+
+export interface AdminDashboardQuery {
+  from: string
+  to: string
+  currency: string
+  merchantId?: string
+  providerId?: string
+}
 
 export interface DashboardKpi {
+  key: 'bet_count' | 'player_count' | 'bet_amount' | 'payout_amount'
   label: string
-  value: number | string
+  value: number | null
   note: string
-  tone: DashboardTone
-  tag?: string
+  route: string
   money?: boolean
+  sectionState: DashboardSectionState
 }
 
-export interface DashboardTrendPoint {
-  date: string
-  agent_receivable: number
-  provider_payable: number
-  platform_margin: number
-}
-
-export interface DashboardPieItem {
-  name: string
-  value: number
-}
-
-export interface DashboardActionItem {
+export interface DashboardPendingItem {
   id: string
-  source: string
-  type: string
-  impact: string
-  owner: string
-  status: string
+  label: string
+  count: number | null
+  reason: string
+  urgency: 'high' | 'medium' | 'normal'
   route: string
 }
 
-export interface DashboardProviderHealth {
-  provider: string
-  status: 'healthy' | 'warning' | 'error'
-  latency_ms: number
-  success_rate: number
+export interface DashboardPlatformStatus {
+  key: string
+  label: string
+  value: string
+  note: string
+  tone: DashboardTone
 }
 
-export interface DashboardAccountingProgress {
-  module: string
-  pending: number
-  difference: number
-  locked: number
-  done: number
+export interface DashboardResourceItem {
+  key: string
+  label: string
+  value: number | null
+  note: string
+  route: string
+}
+
+export interface DashboardRecentAction {
+  id: string
+  operatedAt: string
+  target: string
+  action: string
+  result: string
+  operator: string
+  route: string
+}
+
+export interface DashboardSectionStatus {
+  key: 'operation' | 'pending' | 'platform' | 'resources' | 'actions'
+  state: DashboardSectionState
+  reason?: string
+  traceId?: string
 }
 
 export interface AdminDashboardData {
-  updated_at: string
-  operation_kpis: DashboardKpi[]
-  finance_kpis: DashboardKpi[]
-  trend_7d: DashboardTrendPoint[]
-  margin_breakdown: DashboardPieItem[]
-  action_items: DashboardActionItem[]
-  provider_health: DashboardProviderHealth[]
-  accounting_progress: DashboardAccountingProgress[]
-  quality_summary: {
-    risk_events: number
-    monitoring_alerts: number
-    operation_anomalies: number
-  }
+  version: string
+  cutoffAt: string
+  updatedAt: string
+  timezone: 'Asia/Taipei'
+  environment: 'demo' | 'production'
+  currency: string
+  operationSummary: DashboardKpi[]
+  pendingItems: DashboardPendingItem[]
+  platformStatus: DashboardPlatformStatus[]
+  resourceSummary: DashboardResourceItem[]
+  recentActions: DashboardRecentAction[]
+  sectionStatuses: DashboardSectionStatus[]
 }
 
 export const adminDashboardService = {
-  async getOverview() {
-    return mockApiResponse<AdminDashboardData>(adminDashboardDemo)
+  async getOverview(query: AdminDashboardQuery) {
+    return mockApiResponse<AdminDashboardData>(createAdminDashboardDemo(query))
   }
 }

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { darkTheme } from 'naive-ui'
 import { NConfigProvider, NDialogProvider, NMessageProvider, NGlobalStyle, zhTW, dateZhTW, enUS, dateEnUS } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { computed } from 'vue'
@@ -34,11 +33,11 @@ const naiveDateLocale = computed(() => {
 </script>
 
 <template>
-  <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides" :locale="naiveLocale" :date-locale="naiveDateLocale">
+  <n-config-provider :theme-overrides="themeOverrides" :locale="naiveLocale" :date-locale="naiveDateLocale">
     <n-global-style />
     <n-message-provider>
       <n-dialog-provider>
-        <div class="min-h-screen bg-[#18181c] text-white">
+        <div class="min-h-screen">
           <router-view />
         </div>
       </n-dialog-provider>

@@ -1,352 +1,387 @@
 <script setup lang="ts">
 import { computed, h, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
+  NAlert,
   NButton,
   NCard,
-  NDataTable,
-  NGrid,
-  NGridItem,
+  NDatePicker,
   NIcon,
-  NList,
-  NListItem,
-  NProgress,
+  NSelect,
   NSkeleton,
-  NStatistic,
   NTag,
   useMessage
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import {
-  AssessmentOutlined,
-  ContentCopyOutlined,
-  ReceiptLongOutlined,
-  SearchOutlined
+  ArrowForwardRound,
+  CheckCircleOutlined,
+  RefreshRound,
+  WarningAmberOutlined
 } from '@vicons/material'
-import VChart from 'vue-echarts'
-import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart, PieChart } from 'echarts/charts'
-import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
-import MoneyText from '../../../components/Common/MoneyText.vue'
-import { DEFAULT_TABLE_PAGINATION, withTableSorters } from '../../../utils/tableSort'
+import PageFilterBar from '../../../components/Common/PageFilterBar.vue'
+import PageState from '../../../components/Common/PageState.vue'
+import ResponsiveDataTable from '../../../components/Common/ResponsiveDataTable.vue'
 import { adminDashboardService } from '../../../services/admin/dashboard'
 import type {
   AdminDashboardData,
-  DashboardActionItem,
-  DashboardProviderHealth,
+  AdminDashboardQuery,
+  DashboardRecentAction,
+  DashboardSectionState,
   DashboardTone
 } from '../../../services/admin/dashboard'
 
-use([CanvasRenderer, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
-
+const DEMO_DATE = '2026-09-04'
+const route = useRoute()
+const router = useRouter()
 const message = useMessage()
+
+const dateToTimestamp = (date: string) => Date.parse(`${date}T00:00:00+08:00`)
+const timestampToDate = (timestamp: number) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Taipei' }).format(new Date(timestamp))
+const validDate = (value: unknown) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+
+const initialFrom = validDate(route.query.from) ? String(route.query.from) : DEMO_DATE
+const initialTo = validDate(route.query.to) ? String(route.query.to) : DEMO_DATE
+
+const draftRange = ref<[number, number]>([dateToTimestamp(initialFrom), dateToTimestamp(initialTo)])
+const draftCurrency = ref(typeof route.query.currency === 'string' ? route.query.currency : 'TWD')
+const draftMerchant = ref(typeof route.query.merchantId === 'string' ? route.query.merchantId : null)
+const draftProvider = ref(typeof route.query.providerId === 'string' ? route.query.providerId : null)
+const appliedQuery = ref<AdminDashboardQuery>({
+  from: initialFrom,
+  to: initialTo,
+  currency: draftCurrency.value,
+  merchantId: draftMerchant.value || undefined,
+  providerId: draftProvider.value || undefined
+})
+
+const moreExpanded = ref(Boolean(draftMerchant.value || draftProvider.value))
 const loading = ref(true)
 const dashboard = ref<AdminDashboardData | null>(null)
+const error = ref<{ message: string; traceId: string } | null>(null)
+let requestSequence = 0
 
-const toneClass = (tone: DashboardTone) => {
-  const map: Record<DashboardTone, string> = {
-    success: 'border-emerald-400/30 bg-emerald-500/5',
-    warning: 'border-amber-400/30 bg-amber-500/5',
-    error: 'border-rose-400/30 bg-rose-500/5',
-    info: 'border-cyan-400/30 bg-cyan-500/5',
-    default: 'border-white/10 bg-[#202026]'
-  }
-  return map[tone]
+const currencyOptions = [{ label: 'TWD－新臺幣', value: 'TWD' }]
+const merchantOptions = [
+  { label: '全部商戶', value: '' },
+  { label: 'Blue Whale（OP-1001）', value: 'OP-1001' },
+  { label: 'Royal Ace（OP-1002）', value: 'OP-1002' }
+]
+const providerOptions = [
+  { label: '全部供應商', value: '' },
+  { label: 'Pragmatic Play（PV00001）', value: 'PV00001' },
+  { label: 'Evolution（PV00002）', value: 'PV00002' }
+]
+
+const activeFilterSummary = computed(() => {
+  const parts = [
+    `${appliedQuery.value.from}～${appliedQuery.value.to}`,
+    appliedQuery.value.currency
+  ]
+  if (appliedQuery.value.merchantId) parts.push(`商戶 ${appliedQuery.value.merchantId}`)
+  if (appliedQuery.value.providerId) parts.push(`供應商 ${appliedQuery.value.providerId}`)
+  return parts.join('、')
+})
+
+const sectionState = (key: string): DashboardSectionState => (
+  dashboard.value?.sectionStatuses.find(item => item.key === key)?.state || 'unavailable'
+)
+
+const sectionReason = (key: string) => dashboard.value?.sectionStatuses.find(item => item.key === key)?.reason || ''
+
+const formatMetric = (value: number | null, money = false) => {
+  if (value == null) return '資料待確認'
+  const formatted = new Intl.NumberFormat('zh-TW', { maximumFractionDigits: money ? 2 : 0 }).format(value)
+  return money ? `${formatted} ${appliedQuery.value.currency}` : formatted
 }
 
-const providerTagType = (status: DashboardProviderHealth['status']) => {
-  if (status === 'healthy') return 'success'
-  if (status === 'warning') return 'warning'
-  return 'error'
+const toneTagType = (tone: DashboardTone) => {
+  if (tone === 'default') return 'default'
+  return tone
 }
 
-const providerProgressStatus = providerTagType
+const urgencyLabel = (urgency: 'high' | 'medium' | 'normal') => {
+  if (urgency === 'high') return '優先'
+  if (urgency === 'medium') return '注意'
+  return '一般'
+}
 
-const trendOption = computed(() => ({
-  tooltip: { trigger: 'axis' },
-  legend: {
-    data: ['代理應收', '供應商應付', '平台毛利'],
-    bottom: 0,
-    textStyle: { color: '#cbd5e1' }
-  },
-  grid: { left: '3%', right: '4%', bottom: '14%', top: '6%', containLabel: true },
-  xAxis: {
-    type: 'category',
-    data: dashboard.value?.trend_7d.map(item => item.date) || [],
-    axisLine: { lineStyle: { color: '#475569' } },
-    axisLabel: { color: '#94a3b8' }
-  },
-  yAxis: {
-    type: 'value',
-    axisLine: { lineStyle: { color: '#475569' } },
-    axisLabel: { color: '#94a3b8' },
-    splitLine: { lineStyle: { color: '#262932' } }
-  },
-  series: [
-    {
-      name: '代理應收',
-      type: 'line',
-      smooth: true,
-      data: dashboard.value?.trend_7d.map(item => item.agent_receivable) || [],
-      itemStyle: { color: '#63e2b7' },
-      areaStyle: { opacity: 0.12, color: '#63e2b7' }
-    },
-    {
-      name: '供應商應付',
-      type: 'line',
-      smooth: true,
-      data: dashboard.value?.trend_7d.map(item => item.provider_payable) || [],
-      itemStyle: { color: '#f2c97d' }
-    },
-    {
-      name: '平台毛利',
-      type: 'line',
-      smooth: true,
-      data: dashboard.value?.trend_7d.map(item => item.platform_margin) || [],
-      itemStyle: { color: '#70c0e8' },
-      areaStyle: { opacity: 0.08, color: '#70c0e8' }
-    }
-  ]
-}))
+const urgencyType = (urgency: 'high' | 'medium' | 'normal') => {
+  if (urgency === 'high') return 'error'
+  if (urgency === 'medium') return 'warning'
+  return 'info'
+}
 
-const marginOption = computed(() => ({
-  tooltip: { trigger: 'item' },
-  legend: {
-    orient: 'horizontal',
-    bottom: 0,
-    textStyle: { color: '#cbd5e1' }
-  },
-  series: [
-    {
-      name: '平台毛利組成',
-      type: 'pie',
-      radius: ['46%', '72%'],
-      center: ['50%', '45%'],
-      avoidLabelOverlap: true,
-      itemStyle: {
-        borderRadius: 6,
-        borderColor: '#1c1c21',
-        borderWidth: 2
-      },
-      label: { color: '#e5e7eb' },
-      data: dashboard.value?.margin_breakdown || []
-    }
-  ]
-}))
+const commonTargetQuery = () => ({
+  from: appliedQuery.value.from,
+  to: appliedQuery.value.to,
+  currency: appliedQuery.value.currency,
+  ...(appliedQuery.value.merchantId ? { merchantId: appliedQuery.value.merchantId } : {}),
+  ...(appliedQuery.value.providerId ? { providerId: appliedQuery.value.providerId } : {})
+})
 
-const actionColumns: DataTableColumns<DashboardActionItem> = [
+const openTarget = (target: string) => {
+  const resolved = router.resolve(target)
+  void router.push({ path: resolved.path, query: { ...resolved.query, ...commonTargetQuery() } })
+}
+
+const recentColumns: DataTableColumns<DashboardRecentAction> = [
+  { title: '時間', key: 'operatedAt', width: 155 },
+  { title: '對象', key: 'target', minWidth: 210 },
+  { title: '操作', key: 'action', minWidth: 150 },
   {
-    title: '任務 ID',
-    key: 'id',
-    width: 170,
-    render: row => h('span', { class: 'font-mono text-xs text-cyan-300' }, row.id)
-  },
-  { title: '來源', key: 'source', width: 110 },
-  { title: '類型', key: 'type', width: 150 },
-  { title: '影響', key: 'impact', minWidth: 150 },
-  { title: '負責人', key: 'owner', width: 110 },
-  {
-    title: '狀態',
-    key: 'status',
+    title: '結果',
+    key: 'result',
     width: 110,
-    render: row => h(NTag, { bordered: false, type: row.status.includes('待') ? 'warning' : 'info' }, { default: () => row.status })
+    render: row => h(NTag, { size: 'small', bordered: false, type: row.result === '完成' ? 'success' : 'warning' }, { default: () => row.result })
   },
+  { title: '操作人', key: 'operator', width: 145 },
   {
     title: '操作',
     key: 'actions',
-    width: 105,
+    width: 92,
     fixed: 'right',
-    render: row => h(NButton, { size: 'small', secondary: true, onClick: () => actionMessage(`前往 ${row.route}`) }, {
-      icon: () => h(NIcon, null, { default: () => h(SearchOutlined) }),
-      default: () => '查看'
-    })
+    render: row => h(NButton, {
+      size: 'small',
+      secondary: true,
+      'aria-label': `查看 ${row.target} 的操作來源`,
+      onClick: () => openTarget(row.route)
+    }, { default: () => '查看' })
   }
 ]
 
-const actionMessage = (text: string) => {
-  message.info(`${text}，正式串接時會帶入對應查詢條件。`)
-}
+const syncUrl = () => router.replace({
+  query: {
+    ...route.query,
+    from: appliedQuery.value.from,
+    to: appliedQuery.value.to,
+    currency: appliedQuery.value.currency,
+    merchantId: appliedQuery.value.merchantId || undefined,
+    providerId: appliedQuery.value.providerId || undefined
+  }
+})
 
-const copySummary = () => {
-  message.success('總覽摘要已複製')
-}
-
-const loadDashboard = async () => {
+const loadDashboard = async (announce = false) => {
+  const requestId = ++requestSequence
   loading.value = true
+  error.value = null
+
   try {
-    const response = await adminDashboardService.getOverview()
+    if (route.query.ui === 'error') throw new Error('DEMO-DASHBOARD-ERROR')
+    const response = await adminDashboardService.getOverview(appliedQuery.value)
+    if (requestId !== requestSequence) return
     dashboard.value = response.data
+    if (announce) message.success('儀錶板已更新')
   } catch {
-    message.error('總覽資料載入失敗')
+    if (requestId !== requestSequence) return
+    dashboard.value = null
+    error.value = { message: '無法取得儀錶板資料，已保留目前查詢條件。', traceId: `DASH-${Date.now()}` }
   } finally {
-    loading.value = false
+    if (requestId === requestSequence) loading.value = false
   }
 }
 
-onMounted(loadDashboard)
+const applyFilters = async () => {
+  const [from, to] = draftRange.value
+  appliedQuery.value = {
+    from: timestampToDate(from),
+    to: timestampToDate(to),
+    currency: draftCurrency.value,
+    merchantId: draftMerchant.value || undefined,
+    providerId: draftProvider.value || undefined
+  }
+  await syncUrl()
+  await loadDashboard()
+}
+
+const resetFilters = async () => {
+  draftRange.value = [dateToTimestamp(DEMO_DATE), dateToTimestamp(DEMO_DATE)]
+  draftCurrency.value = 'TWD'
+  draftMerchant.value = null
+  draftProvider.value = null
+  moreExpanded.value = false
+  await applyFilters()
+}
+
+onMounted(async () => {
+  await syncUrl()
+  await loadDashboard()
+})
 </script>
 
 <template>
-  <div class="space-y-6 p-6">
-    <div class="flex flex-wrap items-center justify-between gap-4">
+  <div class="admin-dashboard page-stack">
+    <header class="page-heading">
       <div>
-        <h1 class="text-2xl font-bold">儀錶板</h1>
-        <p class="mt-1 text-sm text-gray-500">
-          GGAP 營運總覽，集中查看交易、帳務、匯率、錢包路由與品質告警。
-        </p>
+        <p class="page-eyebrow">總覽</p>
+        <h1>營運儀錶板</h1>
+        <p>查看平台營運、串接狀態與待處理工作。</p>
       </div>
-      <div class="flex flex-wrap gap-2">
-        <n-tag type="success" size="small" :bordered="false">
-          {{ dashboard?.updated_at ? `更新 ${new Date(dashboard.updated_at).toLocaleString()}` : '載入中' }}
-        </n-tag>
-        <n-button secondary @click="copySummary">
-          <template #icon><n-icon :component="ContentCopyOutlined" /></template>
-          複製摘要
-        </n-button>
-        <n-button type="primary" secondary @click="actionMessage('產生日報')">
-          <template #icon><n-icon :component="AssessmentOutlined" /></template>
-          產生日報
-        </n-button>
-      </div>
+      <n-button type="primary" :loading="loading" aria-label="重新整理儀錶板" @click="loadDashboard(true)">
+        <template #icon><n-icon :component="RefreshRound" /></template>
+        重新整理
+      </n-button>
+    </header>
+
+    <div class="dashboard-context" aria-label="儀錶板資料資訊">
+      <n-tag type="warning" size="small" :bordered="false">開發演示</n-tag>
+      <span>Asia/Taipei（UTC+8）</span>
+      <span v-if="dashboard">資料版本 {{ dashboard.version }}</span>
+      <span v-if="dashboard">截止 {{ new Date(dashboard.cutoffAt).toLocaleString('zh-TW') }}</span>
     </div>
 
-    <n-grid x-gap="12" y-gap="12" cols="1 s:2 m:4" responsive="screen">
-      <n-grid-item v-for="item in dashboard?.operation_kpis || []" :key="item.label">
-        <n-card size="small" :class="['h-full border', toneClass(item.tone)]">
-          <div class="flex items-start justify-between gap-2">
-            <div class="text-sm text-gray-400">{{ item.label }}</div>
-            <n-tag v-if="item.tag" size="small" :type="item.tone" :bordered="false">{{ item.tag }}</n-tag>
-          </div>
-          <div v-if="loading" class="mt-3 h-8">
-            <n-skeleton text width="60%" />
-          </div>
-          <div v-else class="mt-3 text-2xl font-bold tabular-nums">{{ item.value }}</div>
-          <div class="mt-2 text-xs text-gray-500">{{ item.note }}</div>
-        </n-card>
-      </n-grid-item>
-    </n-grid>
+    <PageFilterBar
+      :show-search="false"
+      show-more
+      :more-expanded="moreExpanded"
+      :active-filter-summary="activeFilterSummary"
+      :loading="loading"
+      @update:more-expanded="moreExpanded = $event"
+      @search="applyFilters"
+      @reset="resetFilters"
+    >
+      <template #filters>
+        <label class="filter-field filter-field--wide">
+          <span>日期範圍</span>
+          <n-date-picker v-model:value="draftRange" type="daterange" :clearable="false" aria-label="日期範圍" />
+        </label>
+        <label class="filter-field">
+          <span>原幣別</span>
+          <n-select v-model:value="draftCurrency" :options="currencyOptions" aria-label="原幣別" />
+        </label>
+      </template>
+      <template #more>
+        <label class="filter-field">
+          <span>商戶</span>
+          <n-select v-model:value="draftMerchant" :options="merchantOptions" clearable aria-label="商戶" />
+        </label>
+        <label class="filter-field">
+          <span>供應商</span>
+          <n-select v-model:value="draftProvider" :options="providerOptions" clearable aria-label="供應商" />
+        </label>
+      </template>
+    </PageFilterBar>
 
-    <n-grid x-gap="12" y-gap="12" cols="1 s:2 m:4" responsive="screen">
-      <n-grid-item v-for="item in dashboard?.finance_kpis || []" :key="item.label">
-        <n-card size="small" :class="['h-full border', toneClass(item.tone)]">
-          <div class="text-sm text-gray-400">{{ item.label }}</div>
-          <div v-if="loading" class="mt-3 h-8">
-            <n-skeleton text width="70%" />
-          </div>
-          <div v-else class="mt-3 text-2xl font-bold">
-            <MoneyText v-if="item.money && typeof item.value === 'number'" :value="item.value" currency="USDT" compact color="text-slate-100" />
-            <span v-else>{{ item.value }}</span>
-          </div>
-          <div class="mt-2 text-xs text-gray-500">{{ item.note }}</div>
-        </n-card>
-      </n-grid-item>
-    </n-grid>
+    <PageState
+      v-if="error"
+      kind="error"
+      title="儀錶板載入失敗"
+      :description="error.message"
+      :trace-id="error.traceId"
+      @retry="loadDashboard"
+    />
 
-    <n-grid x-gap="12" y-gap="12" cols="1 m:3" responsive="screen">
-      <n-grid-item span="2">
-        <n-card size="small" title="近 7 日帳務趨勢">
-          <div class="h-[310px] w-full">
-            <n-skeleton v-if="loading" text :repeat="8" />
-            <v-chart v-else :option="trendOption" autoresize style="height: 310px; width: 100%;" />
+    <template v-else>
+      <section aria-labelledby="operation-heading">
+        <div class="section-heading">
+          <div><h2 id="operation-heading">營運指標</h2><p>同一資料版本、單一原幣別。</p></div>
+        </div>
+        <div class="dashboard-kpi-grid">
+          <template v-if="loading && !dashboard">
+            <n-card v-for="index in 4" :key="index" size="small"><n-skeleton text :repeat="3" /></n-card>
+          </template>
+          <button
+            v-for="item in dashboard?.operationSummary || []"
+            v-else
+            :key="item.key"
+            type="button"
+            class="metric-card"
+            :aria-label="`${item.label}：${formatMetric(item.value, item.money)}，前往查看`"
+            @click="openTarget(item.route)"
+          >
+            <span class="metric-card__label">{{ item.label }}</span>
+            <strong :class="{ 'metric-card__pending': item.value == null }">{{ formatMetric(item.value, item.money) }}</strong>
+            <span>{{ item.note }}</span>
+            <n-icon class="metric-card__arrow" :component="ArrowForwardRound" aria-hidden="true" />
+          </button>
+        </div>
+      </section>
+
+      <div class="dashboard-primary-grid">
+        <section class="dashboard-section" aria-labelledby="pending-heading">
+          <div class="section-heading">
+            <div><h2 id="pending-heading">待處理工作</h2><p>依影響程度集中作業。</p></div>
           </div>
-        </n-card>
-      </n-grid-item>
-      <n-grid-item>
-        <n-card size="small" title="平台毛利組成">
-          <div class="h-[310px] w-full">
-            <n-skeleton v-if="loading" circle size="medium" />
-            <v-chart v-else :option="marginOption" autoresize style="height: 310px; width: 100%;" />
+          <PageState v-if="loading && !dashboard" kind="loading" />
+          <PageState v-else-if="!dashboard?.pendingItems.length" kind="empty" description="目前沒有待處理工作" compact />
+          <div v-else class="task-list">
+            <button
+              v-for="item in dashboard.pendingItems"
+              :key="item.id"
+              type="button"
+              class="task-row"
+              :aria-label="`${item.label}，${item.count == null ? '尚未接入' : `${item.count} 項`}，${item.reason}`"
+              @click="openTarget(item.route)"
+            >
+              <n-icon :component="item.urgency === 'normal' ? CheckCircleOutlined : WarningAmberOutlined" aria-hidden="true" />
+              <span class="task-row__copy"><strong>{{ item.label }}</strong><small>{{ item.reason }}</small></span>
+              <n-tag :type="urgencyType(item.urgency)" size="small" :bordered="false">{{ urgencyLabel(item.urgency) }}</n-tag>
+              <span class="task-row__count">{{ item.count == null ? '尚未接入' : item.count }}</span>
+              <n-icon :component="ArrowForwardRound" aria-hidden="true" />
+            </button>
           </div>
-        </n-card>
-      </n-grid-item>
-    </n-grid>
+        </section>
 
-    <n-grid x-gap="12" y-gap="12" cols="1 m:3" responsive="screen">
-      <n-grid-item>
-        <n-card size="small" title="Provider 健康度">
-          <n-list>
-            <n-list-item v-for="item in dashboard?.provider_health || []" :key="item.provider">
-              <div class="mb-2 flex items-center justify-between">
-                <span class="font-bold">{{ item.provider }}</span>
-                <n-tag :type="providerTagType(item.status)" size="small" round>
-                  {{ item.latency_ms }} ms
-                </n-tag>
-              </div>
-              <div class="mb-2 flex justify-between text-xs text-gray-500">
-                <span>成功率</span>
-                <span class="font-mono">{{ item.success_rate }}%</span>
-              </div>
-              <n-progress
-                type="line"
-                :percentage="item.success_rate"
-                :status="providerProgressStatus(item.status)"
-                :show-indicator="false"
-                processing
-              />
-            </n-list-item>
-          </n-list>
-        </n-card>
-      </n-grid-item>
-
-      <n-grid-item>
-        <n-card size="small" title="帳務進度">
-          <n-list>
-            <n-list-item v-for="item in dashboard?.accounting_progress || []" :key="item.module">
-              <div class="mb-3 flex items-center justify-between">
-                <span class="font-bold">{{ item.module }}</span>
-                <n-icon class="text-emerald-300"><ReceiptLongOutlined /></n-icon>
-              </div>
-              <div class="grid grid-cols-4 gap-2 text-center text-xs">
-                <div>
-                  <div class="font-mono text-base text-amber-300">{{ item.pending }}</div>
-                  <div class="text-gray-500">待處理</div>
-                </div>
-                <div>
-                  <div class="font-mono text-base text-rose-300">{{ item.difference }}</div>
-                  <div class="text-gray-500">差異</div>
-                </div>
-                <div>
-                  <div class="font-mono text-base text-cyan-300">{{ item.locked }}</div>
-                  <div class="text-gray-500">已鎖定</div>
-                </div>
-                <div>
-                  <div class="font-mono text-base text-emerald-300">{{ item.done }}</div>
-                  <div class="text-gray-500">完成</div>
-                </div>
-              </div>
-            </n-list-item>
-          </n-list>
-        </n-card>
-      </n-grid-item>
-
-      <n-grid-item>
-        <n-card size="small" title="品質中心">
-          <div class="grid grid-cols-3 gap-3">
-            <div class="rounded border border-white/10 bg-[#18181c] p-3 text-center">
-              <n-statistic label="風控事件" :value="dashboard?.quality_summary.risk_events || 0" />
+        <section class="dashboard-section" aria-labelledby="platform-heading">
+          <div class="section-heading">
+            <div><h2 id="platform-heading">平台狀態</h2><p>影響營運判斷的最新狀態。</p></div>
+          </div>
+          <n-alert v-if="sectionState('platform') === 'incomplete'" type="warning" :show-icon="true" class="mb-3">
+            部分資料待確認：{{ sectionReason('platform') }}
+          </n-alert>
+          <PageState v-if="loading && !dashboard" kind="loading" />
+          <dl v-else class="status-list">
+            <div v-for="item in dashboard?.platformStatus || []" :key="item.key">
+              <dt>{{ item.label }}</dt>
+              <dd><n-tag :type="toneTagType(item.tone)" size="small" :bordered="false">{{ item.value }}</n-tag></dd>
+              <small>{{ item.note }}</small>
             </div>
-            <div class="rounded border border-white/10 bg-[#18181c] p-3 text-center">
-              <n-statistic label="監控告警" :value="dashboard?.quality_summary.monitoring_alerts || 0" />
-            </div>
-            <div class="rounded border border-white/10 bg-[#18181c] p-3 text-center">
-              <n-statistic label="操作異常" :value="dashboard?.quality_summary.operation_anomalies || 0" />
-            </div>
-          </div>
-          <div class="mt-4 rounded border border-amber-400/20 bg-amber-500/5 p-3 text-sm text-amber-100">
-            API Gateway、Wallet Router、Provider Adapter 的串接品質會彙整到品質中心告警。
-          </div>
-        </n-card>
-      </n-grid-item>
-    </n-grid>
+          </dl>
+        </section>
+      </div>
 
-    <n-card size="small" title="待處理事項">
-      <n-data-table
-        :columns="withTableSorters(actionColumns)"
-        :data="dashboard?.action_items || []"
-        :pagination="DEFAULT_TABLE_PAGINATION"
-        :bordered="false"
-        :scroll-x="880"
-      />
-    </n-card>
+      <section aria-labelledby="resource-heading">
+        <div class="section-heading">
+          <div><h2 id="resource-heading">聚合器資源摘要</h2><p>目前狀態，不受日期範圍影響。</p></div>
+        </div>
+        <div class="resource-grid">
+          <button
+            v-for="item in dashboard?.resourceSummary || []"
+            :key="item.key"
+            type="button"
+            class="resource-card"
+            :aria-label="`${item.label}：${item.value == null ? '尚未接入' : item.value}，前往查看`"
+            @click="openTarget(item.route)"
+          >
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value == null ? '尚未接入' : item.value }}</strong>
+            <small>{{ item.note }}</small>
+          </button>
+        </div>
+      </section>
+
+      <section class="dashboard-section" aria-labelledby="recent-heading">
+        <div class="section-heading">
+          <div><h2 id="recent-heading">最近資料更新與操作</h2><p>最多五筆；敏感內容不在儀錶板呈現。</p></div>
+          <n-button text type="primary" @click="openTarget('/admin/system/audit-logs')">查看全部操作紀錄</n-button>
+        </div>
+        <PageState v-if="loading && !dashboard" kind="loading" />
+        <template v-else>
+          <ResponsiveDataTable
+            class="recent-table"
+            :columns="recentColumns"
+            :data="dashboard?.recentActions || []"
+            :scroll-x="900"
+            :row-key="row => row.id"
+          />
+          <div class="recent-list">
+            <button v-for="item in dashboard?.recentActions || []" :key="item.id" type="button" @click="openTarget(item.route)">
+              <span><strong>{{ item.action }}</strong><small>{{ item.target }}</small></span>
+              <span><n-tag size="small" :type="item.result === '完成' ? 'success' : 'warning'" :bordered="false">{{ item.result }}</n-tag><small>{{ item.operatedAt }}</small></span>
+            </button>
+          </div>
+        </template>
+      </section>
+    </template>
   </div>
 </template>

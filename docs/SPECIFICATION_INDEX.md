@@ -11,6 +11,8 @@
 最新使用者決議優先於舊文件。本輪報表以正式單頁四報表規格優先，再讀五大區塊 MVP 與 v2.2 不衝突細節。保留商務管理下唯一報表查詢頁，取消頂層總覽／多層報表樹及分散式完整報表。移除獎池與活動、補單送單、品質中心。舊文件不能繼續作為每日 T-1 日結、Root Agent 收款、限紅或品質中心的需求依據。草案與 v2.1 未核准提案不是定案。
 
 1. [`GGAP_APPROVED_MVP_DECISIONS_20260905.md`](./GGAP_APPROVED_MVP_DECISIONS_20260905.md)：2026-09-05 已確認覆蓋決議，包含五項 MVP 範圍與 UI／UX／共用組件驗收要求。
+2. [`GGAP_ROUTE_SHELL_CORRECTION_20260907.md`](./GGAP_ROUTE_SHELL_CORRECTION_20260907.md)：使用者直接指定 Hash 路由與新版殼層，操作紀錄正式原型入口為 `/#/platform/access/logs`。
+3. [`GGAP_AGENT_MERCHANT_PORTAL_PROTOTYPE_SPEC.md`](./GGAP_AGENT_MERCHANT_PORTAL_PROTOTYPE_SPEC.md)：代理後台與商戶後台原型執行稿；先完成原型與內部核實，再由使用者確認正式規格。
 2. [`GGAP_REPORTS_FOUR_TABS_DEV_SPEC.md`](./GGAP_REPORTS_FOUR_TABS_DEV_SPEC.md)：唯一當前報表執行規格，使用者已定案，優先完成；DRAFT 僅歷史。
 2. [`GGAP_MVP_FIVE_SECTIONS.md`](./GGAP_MVP_FIVE_SECTIONS.md)：五區塊與最小功能範圍。執行狀態見 [`GGAP_DELIVERY_TRACKER.md`](./GGAP_DELIVERY_TRACKER.md)；交易整併見 [`GGAP_V22_CHANGE_TRANSACTION_SIMPLIFICATION.md`](./GGAP_V22_CHANGE_TRANSACTION_SIMPLIFICATION.md)。
 3. [`GGAP_PRD_v2.2_THREE_PORTALS.md`](./GGAP_PRD_v2.2_THREE_PORTALS.md)／[HTML 閱讀版](./GGAP_PRD_v2.2_THREE_PORTALS.html)：沿用不衝突的三入口 PRD、UI、契約與驗收。HTML 未核對是否同步最新覆蓋文字，不作優先基準。

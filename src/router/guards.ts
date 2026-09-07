@@ -5,10 +5,8 @@ import { defaultPathByPortal, loginPathByPortal, useAuthStore } from '../stores/
 
 const resolveAppPath = (path: string) => {
     const base = import.meta.env.BASE_URL || '/'
-    const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base
     const normalizedPath = path.startsWith('/') ? path : `/${path}`
-
-    return `${normalizedBase}${normalizedPath}` || normalizedPath
+    return `${base}#${normalizedPath}`
 }
 
 export const installRouterGuards = (router: Router) => {

@@ -1,11 +1,11 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import type { Portal, UserRole } from '../stores/auth'
 import { defaultPathByPortal, rolePortalMap } from '../config/permissions'
 import { installRouterGuards } from './guards'
-import { adminRoutes } from './routes/admin'
+import { adminRoutes, platformRoutes } from './routes/admin'
 import { agentRoutes } from './routes/agent'
 import { authRoutes } from './routes/auth'
 import { merchantRoutes } from './routes/merchant'
@@ -42,6 +42,7 @@ const routes: RouteRecordRaw[] = [
   },
   ...authRoutes,
   adminRoutes,
+  platformRoutes,
   agentRoutes,
   merchantRoutes,
   {
@@ -59,7 +60,7 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes
 })
 

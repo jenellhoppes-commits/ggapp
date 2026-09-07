@@ -75,7 +75,8 @@ watchEffect(() => {
 
 const getSafeRedirect = (portal: Portal) => {
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
-  return redirect.startsWith(`/${portal}/`) ? redirect : defaultPathByPortal[portal]
+  const allowedAdminPath = portal === 'admin' && redirect.startsWith('/platform/')
+  return redirect.startsWith(`/${portal}/`) || allowedAdminPath ? redirect : defaultPathByPortal[portal]
 }
 
 const handleLogin = async () => {
