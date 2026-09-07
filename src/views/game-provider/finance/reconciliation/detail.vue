@@ -304,6 +304,60 @@
         </ElTabPane>
 
         <ElTabPane label="計算快照" name="snapshot">
+          <ElAlert
+            v-if="!record.snapshot.contractReferences?.length"
+            title="此為舊版演示快照，未保存合約版本引用。不可把目前合約補標為歷史計算依據。"
+            type="warning"
+            :closable="false"
+          />
+          <template v-if="kind !== 'provider'">
+            <ElButton class="my-4" @click="inspectContracts">檢查期間合約與注單引用</ElButton>
+            <template v-if="betReferences">
+              <ElAlert
+                :closable="false"
+                type="warning"
+                :title="`依下注時間選版（${betReferences.timezone}）：目前 ${betReferences.matchedCount} 筆／對帳記載 ${betReferences.expectedBetCount} 筆；尚未進行金額計算。`"
+              />
+              <p v-if="!betReferences.complete">明細不完整或引用有誤，禁止以彙總金額分攤補算。</p>
+              <ArtTable :data="betReferences.references" height="auto" style="height: auto">
+                <ElTableColumn prop="transactionId" label="注單 ID" min-width="160" />
+                <ElTableColumn prop="timestamp" label="下注時間" min-width="220" />
+                <ElTableColumn label="合約版本／費率" min-width="200"
+                  ><template #default="{ row }"
+                    >{{ row.contract.contractKey }} · V{{ row.contract.version }} ·
+                    {{ row.contract.rate }}%</template
+                  ></ElTableColumn
+                >
+              </ArtTable>
+              <p
+                v-for="(issue, index) in [...betReferences.issues, ...betReferences.excluded]"
+                :key="index"
+                >{{ issue.betId }}：{{ issue.reason }}</p
+              >
+            </template>
+            <ElAlert v-if="contractError" :title="contractError" type="error" :closable="false" />
+            <template v-if="contractCoverage.length">
+              <p
+                >以下依目前合約紀錄檢查日期覆蓋，僅供核對，不是此對帳單的歷史快照，也未重算金額。期間為起日含、迄日不含。</p
+              >
+              <ArtTable :data="contractCoverage" height="auto" style="height: auto">
+                <ElTableColumn prop="from" label="起日" width="120" />
+                <ElTableColumn prop="toExclusive" label="迄日（不含）" width="140" />
+                <ElTableColumn label="合約引用" min-width="230"
+                  ><template #default="{ row }">{{
+                    row.reference
+                      ? `${row.reference.contractKey} · V${row.reference.version}`
+                      : row.error
+                  }}</template></ElTableColumn
+                >
+                <ElTableColumn label="費率／基礎" min-width="150"
+                  ><template #default="{ row }">{{
+                    row.reference ? `${row.reference.rate}% · ${row.reference.basis}` : '不可計算'
+                  }}</template></ElTableColumn
+                >
+              </ArtTable>
+            </template>
+          </template>
           <div class="section-heading"
             ><div
               ><h2>結算計算快照</h2
@@ -468,6 +522,30 @@
       : `${record.value?.memberCount.toLocaleString() || 0} 位會員`
   )
   const activeTab = ref('summary')
+  const contractCoverage = ref<ReturnType<typeof store.previewContractCoverage>>([])
+  const contractError = ref('')
+  const betReferences = ref<ReturnType<typeof store.previewMerchantBetReferences>>()
+  watch(
+    () => route.fullPath,
+    () => {
+      contractCoverage.value = []
+      contractError.value = ''
+      betReferences.value = undefined
+    }
+  )
+  const inspectContracts = () => {
+    contractCoverage.value = []
+    contractError.value = ''
+    betReferences.value = undefined
+    try {
+      if (kind.value !== 'provider' && record.value)
+        contractCoverage.value = store.previewContractCoverage(kind.value, record.value.id)
+      if (kind.value === 'merchant' && record.value)
+        betReferences.value = store.previewMerchantBetReferences(record.value.id)
+    } catch (e) {
+      contractError.value = e instanceof Error ? e.message : '無法檢查合約'
+    }
+  }
   const descriptionColumns = computed(() => (width.value < 720 ? 1 : 2))
   const dailyRows = computed(() =>
     merchantRecord.value ? store.getDailyRows(merchantRecord.value) : []

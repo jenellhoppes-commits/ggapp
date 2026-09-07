@@ -26,13 +26,17 @@ export const portalRoutes: AppRouteRecord[] = [
           keepAlive: false
         }
       },
-      plannedPage(
-        'merchants',
-        'AgentPortalMerchants',
-        '推廣商戶',
-        '查看自身歸屬商戶；商戶正式啟用仍需管理者審核。',
-        ['R_AGENT']
-      ),
+      {
+        path: 'merchants',
+        name: 'AgentPortalMerchants',
+        component: '/portals/agent-partners',
+        meta: {
+          title: '下級代理與商戶',
+          icon: 'ri:node-tree',
+          roles: ['R_AGENT'],
+          keepAlive: false
+        }
+      },
       plannedPage(
         'integration',
         'AgentPortalIntegration',
@@ -119,27 +123,16 @@ export const portalRoutes: AppRouteRecord[] = [
           keepAlive: false
         }
       },
-      plannedPage(
-        'members',
-        'MerchantPortalMembers',
-        '會員與錢包',
-        '查詢自身會員、各幣別錢包與遊戲連線。',
-        ['R_MERCHANT']
-      ),
-      plannedPage(
-        'bets',
-        'MerchantPortalBets',
-        '注單查詢',
-        '查詢自身會員的每筆注單與遊戲局號關聯。',
-        ['R_MERCHANT']
-      ),
-      plannedPage(
-        'transactions',
-        'MerchantPortalTransactions',
-        '交易流水',
-        '查詢自身注單、派彩、退款、回滾與轉點事件。',
-        ['R_MERCHANT']
-      ),
+      ...(['members', 'bets', 'transactions'] as const).map((path, index) => ({
+        path,
+        name: ['MerchantPortalMembers', 'MerchantPortalBets', 'MerchantPortalTransactions'][index],
+        component: '/portals/merchant-query',
+        meta: {
+          title: ['會員與錢包', '注單查詢', '交易流水'][index],
+          roles: ['R_MERCHANT'],
+          keepAlive: false
+        }
+      })),
       plannedPage(
         'settlements',
         'MerchantPortalSettlements',

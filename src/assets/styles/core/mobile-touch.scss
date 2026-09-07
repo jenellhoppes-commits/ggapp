@@ -1,0 +1,17 @@
+// Prevent accidental double-tap zoom without disabling deliberate pinch zoom.
+html {
+  touch-action: manipulation;
+}
+
+// iOS zooms focused text controls smaller than 16px. Include teleported dialogs
+// and picker inputs, but do not resize icons, checkboxes or desktop typography.
+@media (any-pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not(
+      [type='button']
+    ):not([type='submit']):not([type='reset']):not([type='hidden']),
+  textarea,
+  select,
+  [contenteditable='true'] {
+    font-size: max(16px, 1em) !important;
+  }
+}

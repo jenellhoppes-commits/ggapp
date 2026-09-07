@@ -5,6 +5,11 @@ import { useGameCatalogStore } from './gameCatalog'
 import { useTransactionCenterStore } from './transactionCenter'
 import { defaultExchangeRate, useFinanceSettingsStore } from './financeSettings'
 import { providerMockData } from '@/mock/game-provider'
+import {
+  settlementContractCoverage,
+  prepareMerchantBetReferences
+} from '@/domain/settlement-contracts'
+import { usePlatformLocaleStore } from './platformLocale'
 import type {
   AgentReconciliationRecord,
   AgentSettlementStatement,
@@ -68,6 +73,7 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
   const gameStore = useGameCatalogStore()
   const transactionStore = useTransactionCenterStore()
   const financeSettingsStore = useFinanceSettingsStore()
+  const platformLocale = usePlatformLocaleStore()
   getExchangeRate = financeSettingsStore.getExchangeRate
   roundMoney = financeSettingsStore.roundSettlementAmount
   getExchangeRateSource = () =>
@@ -81,7 +87,10 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
     partnerStore.merchants.flatMap((merchant, merchantIndex) =>
       merchant.lines.slice(0, Math.min(2, merchant.lines.length)).flatMap((line, lineIndex) =>
         ['2026-08', '2026-07'].map((period, periodIndex) => {
-          const term = partnerStore.getCurrentMerchantTerm(merchant.id)
+          // Legacy illustrative data must not silently change when today's contracts change.
+          const term = partnerStore.merchantCommercialTerms.find(
+            (t) => t.merchantId === merchant.id && t.version === 1
+          )
           const seed = merchantIndex * 3 + lineIndex * 2 + periodIndex
           const betAmount = 880000 + seed * 53400
           const validBet = roundMoney(betAmount * (0.9 + (seed % 3) * 0.012))
@@ -310,7 +319,9 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
         const included = merchantReconciliations.value.filter(
           (record) => record.agentId === agent.id && record.period === period
         )
-        const term = partnerStore.getCurrentTerm(agent.id)
+        const term = partnerStore.commercialTerms.find(
+          (t) => t.agentId === agent.id && t.version === 1
+        )
         const settlementCurrency = term?.settlementCurrency ?? 'USDT'
         const sumCount = (field: 'memberCount' | 'betCount') =>
           included.reduce((total, record) => total + Number(record[field] || 0), 0)
@@ -1016,20 +1027,42 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
     return true
   }
 
+  // No calculation is possible from the illustrative aggregates. Do not fake success or mutate snapshots.
   const recalculateMerchant = (id: string) => {
+    void id // Preserve the existing action signature until authoritative transaction data is available.
+    return false
+  }
+  const previewMerchantBetReferences = (id: string) => {
     const record = findMerchantReconciliation(id)
-    if (!record || ['Confirmed', 'Locked', 'Cancelled'].includes(record.status)) return false
-    record.updatedAt = formatNow()
-    record.snapshot.calculatedAt = record.updatedAt
-    addLog(
-      'Merchant Reconciliation',
-      id,
-      '重新計算',
-      record.status,
-      record.status,
-      '依目前有效的帳務明細重新產生計算結果'
+    if (!record) throw new Error('找不到商戶對帳')
+    const end = new Date(`${record.periodEnd.slice(0, 10)}T00:00:00Z`)
+    end.setUTCDate(end.getUTCDate() + 1)
+    const result = prepareMerchantBetReferences(partnerStore, transactionStore.bets, {
+      merchantId: record.merchantId,
+      lineUid: record.lineUid,
+      currency: record.currency,
+      timezone: platformLocale.defaultTimezone?.id || '',
+      from: record.periodStart.slice(0, 10),
+      toExclusive: end.toISOString().slice(0, 10)
+    })
+    return {
+      ...result,
+      expectedBetCount: record.betCount,
+      complete: result.matchedCount === record.betCount && !result.issues.length
+    }
+  }
+  const previewContractCoverage = (kind: 'agent' | 'merchant', id: string) => {
+    const record = kind === 'agent' ? findAgentReconciliation(id) : findMerchantReconciliation(id)
+    if (!record) throw new Error('找不到對帳資料')
+    const targetId = 'merchantId' in record ? record.merchantId : record.agentId
+    const end = new Date(`${record.periodEnd.slice(0, 10)}T00:00:00Z`)
+    end.setUTCDate(end.getUTCDate() + 1)
+    return settlementContractCoverage(
+      partnerStore,
+      { kind, id: targetId },
+      record.periodStart.slice(0, 10),
+      end.toISOString().slice(0, 10)
     )
-    return true
   }
 
   const confirmMerchant = (id: string, actualAmount?: number, note = '') => {
@@ -1261,6 +1294,8 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
     createSettlementAdjustment,
     reviewSettlementAdjustment,
     recalculateMerchant,
+    previewContractCoverage,
+    previewMerchantBetReferences,
     confirmProvider,
     confirmMerchant,
     confirmAgent,

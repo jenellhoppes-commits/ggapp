@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
-import { useLocalStorage } from '@vueuse/core'
+import { computed, ref, toRaw } from 'vue'
+import { useLocalStorage, useNow } from '@vueuse/core'
+import { agentContractHistory, merchantContractHistory } from '@/domain/business-contracts'
+import { platformDate } from '@/domain/report-four-tabs'
+import { usePlatformLocaleStore } from './platformLocale'
 import { agentMockData, merchantRecords } from '@/mock/game-provider'
 import type {
   AgentCommercialTerm,
@@ -75,6 +78,12 @@ const formatNow = () => {
 }
 
 export const useBusinessPartnerStore = defineStore('businessPartnerStore', () => {
+  // Append-only portal prototype journal. Shared partner IDs; no writes to financial snapshots.
+  const portalRateVersions = useLocalStorage<import('@/domain/agent-portal').PortalRateVersion[]>(
+    'ggap-agent-rate-versions-v1',
+    [],
+    { writeDefaults: false }
+  )
   const sourceAgents = structuredClone(agentMockData)
   const nameToId = new Map(sourceAgents.map((agent) => [agent.name, agent.id]))
   const agents = ref<AgentRecord[]>(
@@ -88,7 +97,7 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
     'ggap-business-merchants-v1',
     structuredClone(merchantRecords)
   )
-  const commercialTerms = ref<AgentCommercialTerm[]>(
+  const initialCommercialTerms = ref<AgentCommercialTerm[]>(
     agents.value.map((agent, index) => ({
       id: `TERM-${agent.id}-001`,
       agentId: agent.id,
@@ -108,8 +117,12 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
       createdAt: agent.createdAt
     }))
   )
+  const commercialTerms = useLocalStorage<AgentCommercialTerm[]>(
+    'ggap-agent-contracts-v1',
+    structuredClone(toRaw(initialCommercialTerms.value))
+  )
   merchants.value.forEach((merchant, index) => {
-    const agentTerm = commercialTerms.value.find((term) => term.agentId === merchant.agentId)
+    const agentTerm = initialCommercialTerms.value.find((term) => term.agentId === merchant.agentId)
     merchant.agentTermPercent = agentTerm?.ratePercent || 0
     merchant.merchantTermPercent = Number(
       Math.max(0, merchant.agentTermPercent - 0.75 - (index % 3) * 0.25).toFixed(2)
@@ -117,9 +130,11 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
     merchant.email ||= `${merchant.code.toLowerCase()}@example.com`
     merchant.cooperationStartDate ||= merchant.createdAt.slice(0, 10)
   })
-  const merchantCommercialTerms = ref<MerchantCommercialTerm[]>(
+  const initialMerchantCommercialTerms = ref<MerchantCommercialTerm[]>(
     merchants.value.map((merchant) => {
-      const agentTerm = commercialTerms.value.find((term) => term.agentId === merchant.agentId)
+      const agentTerm = initialCommercialTerms.value.find(
+        (term) => term.agentId === merchant.agentId
+      )
       return {
         id: `MTERM-${merchant.id}-001`,
         merchantId: merchant.id,
@@ -137,6 +152,10 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
       }
     })
   )
+  const merchantCommercialTerms = useLocalStorage<MerchantCommercialTerm[]>(
+    'ggap-merchant-contracts-v1',
+    structuredClone(toRaw(initialMerchantCommercialTerms.value))
+  )
   const merchantGameConfigurations = useLocalStorage<MerchantGameConfiguration[]>(
     'ggap-business-games-v1',
     merchants.value.flatMap((merchant, merchantIndex) =>
@@ -150,10 +169,13 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
       }))
     )
   )
-  const merchantReconciliationSummaries = ref<MerchantReconciliationSummary[]>(
+  const merchantReconciliationSummaries = useLocalStorage<MerchantReconciliationSummary[]>(
+    'ggap-merchant-reconciliation-summaries-v1',
     merchants.value.flatMap((merchant, index) =>
       ['2026-08', '2026-07', '2026-06'].map((period, periodIndex) => {
-        const term = merchantCommercialTerms.value.find((item) => item.merchantId === merchant.id)!
+        const term = initialMerchantCommercialTerms.value.find(
+          (item) => item.merchantId === merchant.id
+        )!
         const betAmount = 420000 + index * 28000 - periodIndex * 31000
         const winAmount = Math.round(betAmount * (0.932 + (index % 4) * 0.005))
         const ggr = betAmount - winAmount
@@ -284,13 +306,14 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
       )
     )
   )
-  const reconciliationSummaries = ref<AgentReconciliationSummary[]>(
+  const reconciliationSummaries = useLocalStorage<AgentReconciliationSummary[]>(
+    'ggap-agent-reconciliation-summaries-v1',
     agents.value.flatMap((agent, index) =>
       ['2026-08', '2026-07', '2026-06'].map((period, periodIndex) => {
         const betAmount = 680000 + index * 37000 - periodIndex * 42000
         const winAmount = Math.round(betAmount * (0.93 + (index % 4) * 0.006))
         const ggr = betAmount - winAmount
-        const term = commercialTerms.value.find((item) => item.agentId === agent.id)!
+        const term = initialCommercialTerms.value.find((item) => item.agentId === agent.id)!
         const baseValue =
           term.settlementBasis === 'GGR'
             ? ggr
@@ -374,12 +397,23 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
     const agentIds = new Set([agentId, ...getDescendants(agentId).map((agent) => agent.id)])
     return merchants.value.filter((merchant) => agentIds.has(merchant.agentId))
   }
-  const getTerms = (agentId: string) =>
-    commercialTerms.value
-      .filter((term) => term.agentId === agentId)
-      .sort((a, b) => b.version - a.version)
+  const contractClock = useNow({ interval: 60000 })
+  const contractLocale = usePlatformLocaleStore()
+  const contractToday = () =>
+    contractLocale.defaultTimezone
+      ? platformDate(contractClock.value, contractLocale.defaultTimezone.id)
+      : ''
+  const contractSource = () => ({
+    agents: agents.value,
+    merchants: merchants.value,
+    commercialTerms: commercialTerms.value,
+    merchantCommercialTerms: merchantCommercialTerms.value,
+    portalRateVersions: portalRateVersions.value
+  })
+  const getTerms = (agentId: string, date = contractToday()) =>
+    agentContractHistory(contractSource(), agentId, date)
   const getCurrentTerm = (agentId: string) =>
-    getTerms(agentId).find((term) => term.status === 'Active') || getTerms(agentId)[0]
+    getTerms(agentId).find((term) => term.status === 'Active')
   const getReconciliations = (agentId: string) =>
     reconciliationSummaries.value.filter((item) => item.agentId === agentId)
   const getAuditLogs = (agentId: string) => auditLogs.value[agentId] || []
@@ -394,13 +428,10 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
   }
   const isLineUidAvailable = (uid: string) =>
     !merchants.value.some((merchant) => merchant.lines.some((line) => line.uid === uid))
-  const getMerchantTerms = (merchantId: string) =>
-    merchantCommercialTerms.value
-      .filter((term) => term.merchantId === merchantId)
-      .sort((a, b) => b.version - a.version)
+  const getMerchantTerms = (merchantId: string, date = contractToday()) =>
+    merchantContractHistory(contractSource(), merchantId, date)
   const getCurrentMerchantTerm = (merchantId: string) =>
-    getMerchantTerms(merchantId).find((term) => term.status === 'Active') ||
-    getMerchantTerms(merchantId)[0]
+    getMerchantTerms(merchantId).find((term) => term.status === 'Active')
   const getMerchantGameConfigurations = (merchantId: string) =>
     merchantGameConfigurations.value.filter((item) => item.merchantId === merchantId)
   const getMerchantReconciliations = (merchantId: string) =>
@@ -708,7 +739,16 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
 
   const activateCommercialTerm = (termId: string, reason: string) => {
     const term = commercialTerms.value.find((item) => item.id === termId)
-    if (!term) return
+    if (!term || term.status !== 'Draft') return false
+    if (
+      !contractToday() ||
+      term.effectiveFrom < contractToday() ||
+      getTerms(term.agentId).some(
+        (t) =>
+          t.status !== 'Draft' && t.status !== 'Disabled' && t.effectiveFrom >= term.effectiveFrom
+      )
+    )
+      return false
     commercialTerms.value.forEach((item) => {
       if (item.agentId === term.agentId && item.status === 'Active') {
         item.status = 'Expired'
@@ -924,7 +964,16 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
 
   const activateMerchantCommercialTerm = (termId: string, reason: string) => {
     const term = merchantCommercialTerms.value.find((item) => item.id === termId)
-    if (!term) return
+    if (!term || term.status !== 'Draft') return false
+    if (
+      !contractToday() ||
+      term.effectiveFrom < contractToday() ||
+      getMerchantTerms(term.merchantId).some(
+        (t) =>
+          t.status !== 'Draft' && t.status !== 'Disabled' && t.effectiveFrom >= term.effectiveFrom
+      )
+    )
+      return false
     merchantCommercialTerms.value.forEach((item) => {
       if (item.merchantId === term.merchantId && item.status === 'Active') {
         item.status = 'Expired'
@@ -1162,6 +1211,7 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
   refreshCounts()
 
   return {
+    portalRateVersions,
     agents,
     merchants,
     commercialTerms,

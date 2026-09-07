@@ -146,7 +146,7 @@
               ><ElButton type="primary" @click="openTermDrawer">新增下一版本</ElButton></div
             >
             <ElAlert
-              title="結算公式尚未定案；目前只保存結算基礎、代理條件、幣別與週期。"
+              title="總後台與代理共用費率版本；待生效版本按平台日期適用。正式結算尚未串接，既有對帳單不變。"
               type="info"
               :closable="false"
               show-icon
@@ -721,7 +721,7 @@
   const openTermDrawer = () => {
     Object.assign(termForm, {
       settlementBasis: currentTerm.value?.settlementBasis || 'GGR',
-      ratePercent: currentTerm.value?.ratePercent || 6.5,
+      ratePercent: currentTerm.value?.ratePercent ?? 0,
       settlementCurrency: currentTerm.value?.settlementCurrency || 'USDT',
       settlementCycle: currentTerm.value?.settlementCycle || 'Monthly',
       effectiveFrom: '',
@@ -742,9 +742,10 @@
   }
   const confirmActivateTerm = () => {
     if (!activatingTerm.value || !termActivateReason.value.trim()) return
-    store.activateCommercialTerm(activatingTerm.value.id, termActivateReason.value)
+    if (store.activateCommercialTerm(activatingTerm.value.id, termActivateReason.value) === false)
+      return ElMessage.error('無法生效：日期不可追溯或早於／等於既有生效版本')
     termActivateVisible.value = false
-    ElMessage.success('商務條件版本已生效')
+    ElMessage.success('商務條件已確認，將依生效日期適用')
   }
   const openParentDialog = () => {
     newParentId.value = agent.value?.parentAgentId || ''

@@ -255,6 +255,10 @@ export type ReconciliationDifferenceType =
   | 'Other'
 
 export interface FinanceCalculationSnapshot {
+  /** Missing on legacy demo snapshots; never infer a contract version from formulaVersion. */
+  contractReferences?: import('../domain/settlement-contracts').SettlementContractReference[]
+  contractTimeBasis?: 'betAt' | 'settledAt'
+  contractTimezone?: string
   settlementBasis: SettlementBasis
   ratePercent: number
   transactionCurrency: string
@@ -783,6 +787,8 @@ export interface BetResultAccessLog {
 }
 
 export interface BetCenterRecord extends MemberBetRecord {
+  /** Explicit instant for rate selection; time remains the legacy display field. */
+  betAt?: string
   externalMemberId: string
   gameCode: string
   gameType: string

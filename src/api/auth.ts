@@ -7,7 +7,14 @@ const LOCAL_USER_KEY = 'ggap-demo-user'
 
 const localUsers: Record<
   string,
-  { password: string; userId: number; roles: string[]; email: string; merchantId?: string }
+  {
+    password: string
+    userId: number
+    roles: string[]
+    email: string
+    merchantId?: string
+    agentId?: string
+  }
 > = {
   super: {
     password: '123456',
@@ -16,6 +23,7 @@ const localUsers: Record<
     email: 'admin@ggap.local'
   },
   agent: {
+    agentId: 'A00001',
     password: '123456',
     userId: 2,
     roles: ['R_AGENT'],
@@ -74,6 +82,7 @@ export async function fetchGetUserInfo(): Promise<Api.Auth.UserInfo> {
       roles: profile.roles,
       userId: profile.userId,
       merchantId: profile.merchantId,
+      agentId: profile.agentId,
       userName: key === 'super' ? 'GGAP 管理者' : key === 'agent' ? '示範代理' : '示範商戶',
       email: profile.email
     }

@@ -250,6 +250,8 @@ export const useTransactionCenterStore = defineStore('transactionCenterStore', (
               : '部分派彩'
       return {
         ...record,
+        // This store generates demonstration data whose displayed clock is Asia/Taipei.
+        betAt: `${record.time.replace(' ', 'T')}:00+08:00`,
         externalMemberId: member.externalId,
         gameCode: game?.code || record.gameId,
         gameName: game?.displayName || record.gameName,

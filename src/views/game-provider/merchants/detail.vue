@@ -84,7 +84,7 @@
               <ElButton type="primary" @click="openTermDialog">新增條件版本</ElButton>
             </div>
             <ElAlert
-              :title="`商戶條件不得高於代理條件 ${merchant.agentTermPercent.toFixed(2)}%，目前條件差 ${termSpread.toFixed(2)}%。`"
+              title="總後台與代理共用費率版本；待生效版本按平台日期適用。正式結算尚未串接，既有對帳單不變。"
               type="warning"
               :closable="false"
               show-icon
@@ -460,9 +460,6 @@
   const createSandbox = ref(true)
   const currencies = ['USD', 'TWD', 'SGD', 'PHP', 'THB', 'HKD', 'VND', 'MYR', 'JPY', 'EUR']
   const descriptionColumns = computed(() => (width.value < 760 ? 1 : 2))
-  const termSpread = computed(
-    () => merchant.value.agentTermPercent - merchant.value.merchantTermPercent
-  )
   const terms = computed(() => store.getMerchantTerms(merchant.value.id))
   const reconciliations = computed(() => store.getMerchantReconciliations(merchant.value.id))
   const editForm = reactive({
@@ -580,7 +577,7 @@
     const current = store.getCurrentMerchantTerm(merchant.value.id)
     Object.assign(termForm, {
       settlementBasis: current?.settlementBasis || 'GGR',
-      merchantTermPercent: current?.merchantTermPercent || merchant.value.merchantTermPercent,
+      merchantTermPercent: current?.merchantTermPercent ?? merchant.value.merchantTermPercent,
       settlementCurrency: current?.settlementCurrency || merchant.value.settlementCurrency,
       settlementCycle: current?.settlementCycle || merchant.value.settlementCycle,
       effectiveFrom: '',
@@ -621,8 +618,9 @@
           inputValidator: (value) => Boolean(value?.trim()) || '請填寫原因'
         }
       )
-      store.activateMerchantCommercialTerm(termId, result.value)
-      ElMessage.success('新商務條件已生效')
+      if (store.activateMerchantCommercialTerm(termId, result.value) === false)
+        return ElMessage.error('無法生效：日期不可追溯或早於／等於既有生效版本')
+      ElMessage.success('商務條件已確認，將依生效日期適用')
     } catch {
       // 使用者取消
     }

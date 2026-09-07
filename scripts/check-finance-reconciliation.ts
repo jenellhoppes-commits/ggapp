@@ -8,6 +8,12 @@ const store = useFinanceCenterStore()
 assert.ok(store.providerReconciliations.length > 0, 'Provider reconciliation data exists')
 assert.ok(store.agentReconciliations.length > 0, 'Agent reconciliation data exists')
 assert.ok(store.merchantReconciliations.length > 0, 'Merchant reconciliation data exists')
+const immutableMerchant = JSON.stringify(store.merchantReconciliations)
+const immutableLogs = JSON.stringify(store.actionLogs)
+assert.equal(store.recalculateMerchant(store.merchantReconciliations[0].id), false)
+store.previewContractCoverage('merchant', store.merchantReconciliations[0].id)
+assert.equal(JSON.stringify(store.merchantReconciliations), immutableMerchant)
+assert.equal(JSON.stringify(store.actionLogs), immutableLogs)
 
 const blockedProvider = store.providerReconciliations.find(
   (record) => record.unresolvedDifferenceCount > 0
