@@ -21,10 +21,12 @@ export interface DemoProvider {
   lines: ProviderLine[]
 }
 export interface DemoGame {
+  status?: 'active' | 'disabled' | 'integrating'
   version?: number
   sourceName?: string
   sourceAvailable?: boolean
   type?: string
+  typeOverridden?: boolean
   syncedAt?: string
   id: string
   providerId: string
@@ -61,6 +63,9 @@ export interface DemoLink extends DemoInput {
   createdAt: string
 }
 export interface DemoSession {
+  merchantId?: string
+  providerId?: string
+  currency?: string
   id: string
   linkId: string
   gameId: string
@@ -79,7 +84,7 @@ export interface DemoState {
   audit: { at: string; providerId: string; action: string; actor: string }[]
 }
 export const modeLabel = (mode?: DemoMode) =>
-  mode === 'native' ? '原生試玩' : mode === 'sandbox' ? '核准測試帳號' : '不支援試玩'
+  mode === 'native' ? '原生試玩' : mode === 'sandbox' ? '測試試玩' : '未設定'
 
 export function createDemoState(): DemoState {
   const state: DemoState = {
@@ -124,14 +129,17 @@ export function visibleLinks(state: DemoState, actor: DemoActor) {
     )
   return []
 }
-export function capabilityError(state: DemoState, input: DemoInput): string {
+export function capabilityError(state: DemoState, input: DemoInput, selecting = false): string {
   const provider = state.providers.find((item) => item.id === input.providerId)
   const game = state.games.find((item) => item.id === input.gameId)
   const line = provider?.lines.find((item) => item.id === input.lineId)
   if (!provider || game?.providerId !== provider.id) return '供應商與遊戲不一致'
+  if (!provider.profile?.offersTrial) return '供應商未提供試玩'
   const availability = gameAvailabilityError(state, game, input.lineId, input.merchantId)
   if (availability) return availability
-  if (!provider.mode || !provider.billingExcluded) return '未核准試玩方式或尚未確認排除供應商計費'
+  if (!provider.mode) return '尚未設定試玩方式'
+  if (provider.mode === 'native' && !provider.billingExcluded)
+    return '原生試玩尚未確認排除供應商計費'
   if (!game || game.providerId !== provider.id || !game.active || !game.demoSupported)
     return '遊戲未啟用或不支援試玩'
   if (!line?.available || !game.currencies.includes(line.currency))
@@ -139,12 +147,20 @@ export function capabilityError(state: DemoState, input: DemoInput): string {
   if (line.config && (line.config.environment !== 'sandbox' || line.config.status !== 'active'))
     return '此線路尚未開放測試啟動；正式設定不可用於演示試玩'
   if (!game.locales.includes(input.locale)) return '遊戲不支援此語系'
-  if (input.purpose === 'merchant' && !input.merchantId) return '商戶試玩必須綁定商戶'
-  if (
-    input.initialCredit !== undefined &&
-    (!provider.initialCredit || !Number.isFinite(input.initialCredit) || input.initialCredit <= 0)
-  )
-    return '供應商不支援此初始試玩額度'
+  if (!selecting && provider.initialCredit) {
+    const amount = input.initialCredit
+    if (amount === undefined || !Number.isFinite(amount) || amount <= 0) return '請輸入正數試玩金額'
+    const scale = line.config?.scale
+    if (scale === undefined || !Number.isInteger(scale) || scale < 0 || scale > 6)
+      return '供應商幣別精度未確認'
+    if (
+      !new RegExp(`^\\d+(?:\\.\\d{1,${Math.max(1, scale)}})?$`).test(String(amount)) ||
+      (scale === 0 && !Number.isInteger(amount))
+    )
+      return '試玩金額超出幣別精度'
+    // Prototype safety ceiling, not a statement about the supplier contract.
+    if (amount > 1000000) return '超出演示保護上限 1,000,000；正式上限尚待確認'
+  }
   return ''
 }
 export function validateDemoInput(
@@ -187,6 +203,16 @@ function audit(state: DemoState, link: DemoLink, action: string, actor: string) 
     action: `${action}：${link.name}`,
     actor
   })
+}
+export function createMerchantTrial(
+  state: DemoState,
+  input: DemoInput,
+  actor: DemoActor
+): DemoLink {
+  if (input.purpose !== 'merchant' || !input.merchantId) throw new Error('請先選擇試玩商戶')
+  if (!state.merchants?.some((m) => m.id === input.merchantId && m.active))
+    throw new Error('試玩商戶不存在或未啟用')
+  return createDemoLink(state, input, actor)
 }
 export function createDemoLink(state: DemoState, input: DemoInput, actor: DemoActor): DemoLink {
   validateDemoInput(state, input, actor)
@@ -251,6 +277,11 @@ export function launchDemo(state: DemoState, token: string, simulateFailure = fa
   const session: DemoSession = {
     id: crypto.randomUUID(),
     linkId: link.id,
+    merchantId: link.merchantId,
+    providerId: link.providerId,
+    currency: state.providers
+      .find((p) => p.id === link.providerId)
+      ?.lines.find((l) => l.id === link.lineId)?.currency,
     gameId: link.gameId,
     createdAt: new Date().toISOString(),
     mode: link.mode,

@@ -18,14 +18,6 @@
       </template>
     </AppPageHeader>
 
-    <ElAlert
-      type="warning"
-      :closable="false"
-      show-icon
-      title="目前為前端文件工具演示；預設規格不是正式契約，也不包含可用憑證。"
-      description="正式上線時請匯入經版本核准的完整 OpenAPI JSON，並由後端權限控制可查看的環境與文件版本。"
-    />
-
     <div class="summary-grid">
       <div
         ><span>文件版本</span><strong>{{ apiSpec.info?.version || '未標示' }}</strong

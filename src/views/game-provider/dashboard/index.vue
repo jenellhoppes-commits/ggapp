@@ -3,7 +3,7 @@
     <AppPageHeader
       title="營運儀錶板"
       eyebrow="首頁"
-      description="沿用遊戲商營運流程，集中查看供應商串接、商戶線路與交易資訊。以下為開發演示資料。"
+      description="集中查看供應商串接、商戶線路與交易資訊。"
     >
       <template #actions>
         <span class="updated-at">最後更新：{{ dashboardStore.refreshedAt }}</span>

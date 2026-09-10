@@ -22,6 +22,7 @@ import { listPage } from '../src/domain/list-query'
 const actor = { roles: ['R_SUPER'], name: '核心演示測試' }
 const denied = { roles: ['R_MERCHANT'], name: '商戶' }
 const state = createDemoState()
+state.providers[0].initialCredit = true // Explicit capability for this test adapter only.
 const oldIds = state.providers.flatMap((p) => p.lines.map((l) => l.id))
 ensureProviderCore(state)
 assert.deepEqual(
@@ -70,6 +71,7 @@ const link = createDemoLink(
     gameId: state.games[0].id,
     lineId: line.id,
     purpose: 'internal',
+    initialCredit: 100,
     locale: 'zh-TW',
     expiresAt: new Date(Date.now() + 60000).toISOString()
   },

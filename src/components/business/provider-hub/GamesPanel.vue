@@ -1,11 +1,5 @@
 <template>
   <section class="games-panel">
-    <ElAlert
-      title="固定資料模擬同步・非正式供應商串接"
-      description="同步不覆蓋人工名稱、上架設定或商戶授權。未取得的資料保留原狀；來源明確不可用時只阻擋新啟動。"
-      type="info"
-      :closable="false"
-    />
     <ElForm class="toolbar" @submit.prevent="search">
       <ElInput
         v-model="draft.q"
@@ -71,9 +65,16 @@
       <ElTableColumn prop="type" label="類型" width="105" />
       <ElTableColumn label="狀態" min-width="150"
         ><template #default="{ row }"
-          >{{ row.active ? '平台已上架' : '平台未上架' }}<br />{{
-            row.sourceAvailable ? '來源可用' : '來源不可用'
-          }}</template
+          ><ElTag
+            :type="
+              gameStatus(row) === 'active'
+                ? 'success'
+                : gameStatus(row) === 'integrating'
+                  ? 'warning'
+                  : 'info'
+            "
+            >{{ statusLabels[gameStatus(row)] }}</ElTag
+          ></template
         ></ElTableColumn
       >
       <ElTableColumn label="可用線路（模擬）" min-width="180"
@@ -84,12 +85,9 @@
       <ElTableColumn prop="syncedAt" label="同步時間" min-width="180" sortable="custom"
         ><template #default="{ row }">{{ formatTime(row.syncedAt) }}</template></ElTableColumn
       >
-      <ElTableColumn label="操作" min-width="190"
+      <ElTableColumn label="操作" width="90" fixed="right"
         ><template #default="{ row }"
-          ><ElButton link @click="open(row.id)">詳情</ElButton
-          ><ElButton link type="primary" :disabled="!canTrial(row)" @click="createTrial(row.id)"
-            >建立試玩連結</ElButton
-          ></template
+          ><ElButton link @click="open(row.id)">詳情</ElButton></template
         ></ElTableColumn
       >
     </ElTable>
@@ -106,7 +104,7 @@
 
     <ElDrawer
       :model-value="!!selected"
-      title="遊戲詳情"
+      :title="selected ? `${selected.name}｜遊戲詳情` : '遊戲詳情'"
       size="min(860px, 100%)"
       :before-close="close"
     >
@@ -118,51 +116,49 @@
           /><ElTabPane label="商戶授權" name="grants" /><ElTabPane label="同步紀錄" name="sync" />
         </ElTabs>
         <template v-if="pane === 'profile'">
-          <ElAlert title="只修改展示資料，不調控遊戲結果。來源識別為唯讀。" :closable="false" />
+          <ElDescriptions title="來源資料" :column="1" border class="source-details">
+            <ElDescriptionsItem label="供應商">{{
+              providerName(selected.providerId)
+            }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="平台識別">{{ selected.id }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="供應商遊戲代碼">{{ selected.code }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="來源名稱">{{ selected.sourceName }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="來源狀態">{{
+              selected.sourceAvailable ? '可用' : '不可用'
+            }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="支援語系">{{
+              selected.locales.join('、')
+            }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="供應商 RTP">{{
+              selected.rtp ?? '未提供'
+            }}</ElDescriptionsItem>
+          </ElDescriptions>
+          <h3>平台展示設定</h3>
           <ElForm label-position="top" class="edit-form">
-            <ElFormItem label="平台識別／供應商代碼"
-              ><ElInput :model-value="`${selected.id} / ${selected.code}`" readonly
-            /></ElFormItem>
-            <ElFormItem label="供應商／來源名稱"
-              ><ElInput
-                :model-value="`${providerName(selected.providerId)} / ${selected.sourceName}`"
-                readonly
-            /></ElFormItem>
             <ElFormItem label="展示名稱" required
               ><ElInput v-model="edit.name" maxlength="80" :disabled="!canManage"
             /></ElFormItem>
-            <ElFormItem label="輕量顯示標籤（最多 8 個）"
-              ><ElSelect
-                v-model="edit.tags"
-                multiple
-                filterable
-                allow-create
-                default-first-option
-                :multiple-limit="8"
-                :disabled="!canManage"
-                ><ElOption
-                  v-for="tag in ['直式畫面', '橫式畫面']"
-                  :key="tag"
-                  :label="tag"
-                  :value="tag" /></ElSelect
-            ></ElFormItem>
-            <ElFormItem label="平台上架"
-              ><ElSwitch v-model="edit.active" :disabled="!canManage"
-            /></ElFormItem>
-            <ElFormItem label="來源狀態／支援語系"
-              >{{ selected.sourceAvailable ? '可用' : '不可用' }} ·
-              {{ selected.locales.join('、') }}</ElFormItem
-            >
-            <ElFormItem label="供應商 RTP（唯讀）">{{ selected.rtp ?? '未提供' }}</ElFormItem>
+            <ElFormItem label="遊戲類型" required>
+              <ElSelect v-model="edit.type" :disabled="!canManage" placeholder="請選擇遊戲類型">
+                <ElOption label="沿用供應商預設類型" value="__inherit" />
+                <ElOption v-for="type in gameTypes" :key="type" :label="type" :value="type" />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem label="狀態">
+              <ElSelect v-model="edit.status" :disabled="!canManage" aria-label="遊戲狀態">
+                <ElOption
+                  v-for="(label, value) in statusLabels"
+                  :key="value"
+                  :label="label"
+                  :value="value"
+                />
+              </ElSelect>
+            </ElFormItem>
             <ElFormItem label="編輯版本／最新版本"
               >{{ editVersion }} / {{ selected.version }}</ElFormItem
             >
           </ElForm>
           <ElAlert v-if="editError" :title="editError" type="error" :closable="false" />
-          <div class="toolbar"
-            ><ElButton :disabled="!canManage" type="primary" @click="save">儲存顯示資料</ElButton
-            ><ElButton @click="reloadEdit">重新載入比對</ElButton></div
-          >
         </template>
         <ElTable v-else-if="pane === 'lines'" :data="lineRows" border>
           <ElTableColumn prop="id" label="線路識別" min-width="170" /><ElTableColumn
@@ -225,7 +221,13 @@
           </div>
         </template>
       </template>
-      <template #footer><ElButton @click="close">關閉</ElButton></template>
+      <template #footer>
+        <ElButton @click="close">關閉</ElButton>
+        <template v-if="selected && pane === 'profile'">
+          <ElButton @click="reloadEdit">重新載入比對</ElButton>
+          <ElButton :disabled="!canManage" type="primary" @click="save">儲存變更</ElButton>
+        </template>
+      </template>
     </ElDrawer>
     <ElDrawer v-model="historyOpen" title="供應商同步紀錄（模擬）" size="min(900px, 100%)">
       <ElTable :data="syncHistoryPage.result.value.items" border
@@ -281,6 +283,7 @@
     finishGameSync,
     saveGameDisplay,
     syncLabels,
+    gameTypes,
     type SyncScenario
   } from '@/domain/game-sync'
   const store = useProviderDemoStore()
@@ -341,22 +344,24 @@
   const lines = (g: DemoGame) =>
     store.state.providers.find((p) => p.id === g.providerId)?.lines || []
   const trialError = (g: DemoGame, lineId: string) =>
-    capabilityError(store.state, {
-      name: '',
-      purpose: 'internal',
-      providerId: g.providerId,
-      gameId: g.id,
-      lineId,
-      locale: g.locales[0] || '',
-      expiresAt: ''
-    })
-  const canTrial = (g: DemoGame) => canManage.value && lines(g).some((l) => !trialError(g, l.id))
+    capabilityError(
+      store.state,
+      {
+        name: '',
+        purpose: 'internal',
+        providerId: g.providerId,
+        gameId: g.id,
+        lineId,
+        locale: g.locales[0] || '',
+        expiresAt: ''
+      },
+      true
+    )
   const usableLines = (g: DemoGame) =>
     lines(g)
       .filter((l) => !gameAvailabilityError(store.state, g, l.id))
       .map((l) => l.currency)
       .join('、')
-  const createTrial = (id: string) => router.push({ path: '/trials/links', query: { game: id } })
   const open = (id: string) => updateQuery({ game: id, pane: 'profile' })
   const selected = computed(() => store.state.games.find((g) => g.id === route.query.game))
   const pane = computed(() =>
@@ -364,7 +369,16 @@
       ? String(route.query.pane)
       : 'profile'
   )
-  const edit = reactive({ name: '', tags: [] as string[], active: false })
+  const statusLabels = { active: '啟用', disabled: '停用', integrating: '串接中' }
+  const gameStatus = (g: DemoGame): NonNullable<DemoGame['status']> =>
+    g.status ?? (g.active ? 'active' : 'disabled')
+  const edit = reactive({
+    name: '',
+    tags: [] as string[],
+    active: false,
+    type: '',
+    status: 'disabled' as NonNullable<DemoGame['status']>
+  })
   const editVersion = ref(0)
   const editError = ref('')
   const baseline = ref('')
@@ -373,8 +387,10 @@
     if (!selected.value) return
     Object.assign(edit, {
       name: selected.value.name,
+      type: selected.value.typeOverridden ? selected.value.type || '未分類' : '__inherit',
       tags: [...selected.value.tags],
-      active: selected.value.active
+      active: selected.value.active,
+      status: gameStatus(selected.value)
     })
     editVersion.value = selected.value.version || 1
     baseline.value = JSON.stringify(edit)
@@ -403,7 +419,7 @@
       if (!selected.value) return
       saveGameDisplay(store.state, selected.value.id, edit, editVersion.value, actor.value)
       loadEdit()
-      ElMessage.success('顯示資料已儲存於本地演示')
+      ElMessage.success('遊戲資料已儲存')
     } catch (e) {
       editError.value = (e as Error).message
     }
@@ -515,6 +531,13 @@
   }
   .edit-form {
     margin-top: 18px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 20px;
+  }
+  .source-details {
+    margin: 16px 0 24px;
+    overflow-wrap: anywhere;
   }
   .edit-form .el-select {
     width: 100%;
@@ -525,6 +548,9 @@
     }
   }
   @media (max-width: 600px) {
+    .edit-form {
+      grid-template-columns: minmax(0, 1fr);
+    }
     .toolbar {
       grid-template-columns: minmax(0, 1fr);
     }

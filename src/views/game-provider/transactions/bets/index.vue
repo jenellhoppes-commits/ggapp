@@ -7,8 +7,8 @@
       description="查詢注單生命週期、遊戲結果、派彩、關聯交易與交易異常。"
     >
       <template #actions>
-        <ElTag type="warning" effect="light" round>{{ store.unsettledBetCount }} 筆進行中</ElTag>
-        <ElTag type="danger" effect="plain" round>{{ store.exceptionBetCount }} 筆異常</ElTag>
+        <ElTag type="warning" effect="light" round>{{ unsettledCount }} 筆進行中</ElTag>
+        <ElTag type="danger" effect="plain" round>{{ exceptionCount }} 筆異常</ElTag>
         <ElButton @click="exportRows">匯出注單</ElButton>
       </template>
     </AppPageHeader>
@@ -103,15 +103,21 @@
       ).values()
     )
   )
+  const unsettledCount = computed(
+    () => filteredRows.value.filter((r) => r.status === 'In Progress').length
+  )
+  const exceptionCount = computed(
+    () => filteredRows.value.filter((r) => r.riskStatus === 'Exception').length
+  )
   const summary = computed(() => [
-    { label: '注單總數', value: store.bets.length, note: '目前查詢範圍' },
+    { label: '注單總數', value: filteredRows.value.length, note: '目前查詢範圍' },
     {
       label: '已結算',
-      value: store.bets.filter((row) => row.status === 'Settled').length,
+      value: filteredRows.value.filter((row) => row.status === 'Settled').length,
       note: '已有最終遊戲結果'
     },
-    { label: '進行中', value: store.unsettledBetCount, note: '等待遊戲或錢包結果' },
-    { label: '異常注單', value: store.exceptionBetCount, note: '查看異常交易與錯誤紀錄' }
+    { label: '進行中', value: unsettledCount.value, note: '等待遊戲或錢包結果' },
+    { label: '異常注單', value: exceptionCount.value, note: '查看異常交易與錯誤紀錄' }
   ])
   const searchItems = computed(() => [
     {
@@ -254,26 +260,6 @@
             },
             () => '查看'
           ),
-          row.result.replay.supportsBoardDisplay
-            ? h(
-                ElButton,
-                {
-                  link: true,
-                  onClick: () => router.push(`/transactions/bets/${row.id}?tab=board`)
-                },
-                () => '查看盤面'
-              )
-            : null,
-          row.result.replay.supportsResultReplay || row.result.replay.supportsEventReplay
-            ? h(
-                ElButton,
-                {
-                  link: true,
-                  onClick: () => router.push(`/transactions/bets/${row.id}?tab=replay`)
-                },
-                () => '結果重播'
-              )
-            : null,
           row.transactionIds.length
             ? h(
                 ElButton,

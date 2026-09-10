@@ -10,16 +10,28 @@ export const portalRoutes: AppRouteRecord[] = [
     meta: {
       title: '代理後台',
       icon: 'ri:node-tree',
-      menuGroup: '代理入口',
+      menuGroup: '代理作業',
       roles: ['R_AGENT']
     },
     children: [
       {
+        path: 'relations/create',
+        name: 'AgentPortalCreateAgent',
+        component: '/portals/partner-create',
+        meta: { title: '新增下級代理', roles: ['R_AGENT'], isHide: true, keepAlive: false }
+      },
+      {
+        path: 'merchants/create',
+        name: 'AgentPortalCreateMerchant',
+        component: '/portals/partner-create',
+        meta: { title: '新增直屬商戶', roles: ['R_AGENT'], isHide: true, keepAlive: false }
+      },
+      {
         path: 'dashboard',
         name: 'AgentPortalDashboard',
-        component: '/portals/dashboard',
+        component: '/portals/agent-dashboard',
         meta: {
-          title: '代理總覽',
+          title: '儀錶板',
           icon: 'ri:dashboard-3-line',
           roles: ['R_AGENT'],
           fixedTab: true,
@@ -27,44 +39,105 @@ export const portalRoutes: AppRouteRecord[] = [
         }
       },
       {
+        path: 'relations',
+        name: 'AgentPortalRelations',
+        component: '/portals/agent-partners',
+        meta: { title: '代理關係', icon: 'ri:node-tree', roles: ['R_AGENT'], keepAlive: false }
+      },
+      {
         path: 'merchants',
         name: 'AgentPortalMerchants',
         component: '/portals/agent-partners',
         meta: {
-          title: '下級代理與商戶',
-          icon: 'ri:node-tree',
+          title: '商戶管理',
+          icon: 'ri:store-2-line',
           roles: ['R_AGENT'],
           keepAlive: false
         }
       },
-      plannedPage(
-        'integration',
-        'AgentPortalIntegration',
-        '串接進度',
-        '查看推廣商戶的測試環境測試及審核進度。',
-        ['R_AGENT']
-      ),
-      plannedPage(
-        'reports',
-        'AgentPortalReports',
-        '營運摘要',
-        '查看自身推廣商戶的營運摘要，不顯示供應商成本或平台毛利。',
-        ['R_AGENT']
-      ),
-      plannedPage(
-        'commissions',
-        'AgentPortalCommissions',
-        '我的佣金',
-        '只查看自身佣金及引用的已確認商戶結算。',
-        ['R_AGENT']
-      ),
-      plannedPage(
-        'payments',
-        'AgentPortalPayments',
-        '佣金付款紀錄',
-        '查看自身佣金付款狀態，不向商戶代收款。',
-        ['R_AGENT']
-      )
+      {
+        path: 'terms',
+        name: 'AgentPortalTerms',
+        component: '/portals/agent-partners',
+        meta: {
+          title: '商務條件',
+          icon: 'ri:file-list-3-line',
+          roles: ['R_AGENT'],
+          keepAlive: false
+        }
+      },
+      ...[
+        [
+          'reports',
+          'AgentPortalReports',
+          '代理報表',
+          'ri:bar-chart-box-line',
+          '/portals/agent-reports'
+        ],
+        [
+          'exchange-rates',
+          'AgentPortalExchangeRates',
+          '匯率報表',
+          'ri:exchange-dollar-line',
+          '/portals/agent-reports'
+        ],
+        [
+          'settlements',
+          'AgentPortalSettlements',
+          '對帳／結算',
+          'ri:bill-line',
+          '/portals/agent-services'
+        ],
+        [
+          'notifications',
+          'AgentPortalNotifications',
+          '公告通知',
+          'ri:notification-3-line',
+          '/portals/agent-services'
+        ],
+        [
+          'account',
+          'AgentPortalAccount',
+          '帳號與權限',
+          'ri:shield-user-line',
+          '/portals/agent-services'
+        ]
+      ].map(([path, name, title, icon, component]) => ({
+        path,
+        name,
+        component,
+        meta: { title, icon, roles: ['R_AGENT'], keepAlive: false }
+      })),
+      {
+        path: 'merchants/integration',
+        name: 'AgentPortalIntegration',
+        component: '/portals/agent-integration',
+        meta: { title: '商戶串接進度', roles: ['R_AGENT'], isHide: true, keepAlive: false }
+      },
+      {
+        path: 'integration',
+        name: 'AgentPortalLegacyIntegration',
+        component: '/navigation/planned-page',
+        redirect: (to) => ({ path: '/agent/merchants/integration', query: to.query }),
+        meta: { title: '串接進度', roles: ['R_AGENT'], isHide: true }
+      },
+      {
+        path: 'commissions',
+        name: 'AgentPortalCommissions',
+        component: '/navigation/planned-page',
+        redirect: (to) => ({
+          path: '/agent/settlements',
+          query: { ...to.query, tab: 'commissions' }
+        }),
+        meta: { title: '我的佣金', roles: ['R_AGENT'], isHide: true }
+      },
+      {
+        path: 'payments',
+        name: 'AgentPortalPayments',
+        component: '/navigation/planned-page',
+        redirect: (to) => ({ path: '/agent/settlements', query: { ...to.query, tab: 'payments' } }),
+        meta: { title: '付款紀錄', roles: ['R_AGENT'], isHide: true }
+      }
     ]
   },
   {
@@ -133,13 +206,12 @@ export const portalRoutes: AppRouteRecord[] = [
           keepAlive: false
         }
       })),
-      plannedPage(
-        'settlements',
-        'MerchantPortalSettlements',
-        '結算明細',
-        '查看原幣結果、帳期、鎖定匯率與正式結算。',
-        ['R_MERCHANT']
-      ),
+      {
+        path: 'settlements',
+        name: 'MerchantPortalSettlements',
+        component: '/portals/merchant-settlements',
+        meta: { title: '結算明細', roles: ['R_MERCHANT'], keepAlive: false }
+      },
       plannedPage(
         'invoices',
         'MerchantPortalInvoices',

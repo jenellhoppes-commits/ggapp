@@ -1,10 +1,13 @@
 import type { DemoProvider, DemoState } from './provider-demo'
 import { providerMockData } from '../mock/game-provider'
+import { gameTypes } from './game-types'
 
 export type LineStatus = 'draft' | 'testing' | 'active' | 'maintenance' | 'disabled'
 export type Environment = 'sandbox' | 'production'
 export type Wallet = 'Seamless' | 'Transfer'
 export interface ProviderProfile {
+  offersTrial?: boolean
+  defaultGameType?: string
   code: string
   contact: string
   note: string
@@ -87,6 +90,7 @@ export function ensureProviderCore(state: DemoState) {
       version: 1,
       updatedAt: '2026-09-04T00:00:00.000Z'
     }
+    p.profile.offersTrial ??= Boolean(p.mode && p.billingExcluded)
     for (const line of p.lines) {
       line.config ??= {
         ...blankLine(),
@@ -126,11 +130,25 @@ function lineOf(state: DemoState, id: string, lineId: string) {
 export function saveProvider(
   state: DemoState,
   id: string | undefined,
-  input: { code: string; name: string; contact: string; note: string },
+  input: {
+    code: string
+    name: string
+    contact: string
+    note: string
+    defaultGameType?: string
+    offersTrial?: boolean
+    trialMode?: 'native' | 'sandbox'
+  },
   expected: number,
   actor: CoreActor
 ) {
   authorize(actor)
+  if (input.trialMode !== undefined && !['native', 'sandbox'].includes(input.trialMode))
+    throw new Error('請選擇有效試玩方式')
+  if (input.offersTrial !== undefined && typeof input.offersTrial !== 'boolean')
+    throw new Error('請選擇是否提供試玩')
+  if (input.defaultGameType !== undefined && !gameTypes.includes(input.defaultGameType))
+    throw new Error('請選擇有效供應商遊戲類型')
   const code = input.code.trim().toUpperCase()
   if (!/^[A-Z0-9_-]{2,32}$/.test(code)) throw new Error('代碼須為 2–32 位英數字、底線或連字號')
   if (!input.name.trim() || input.name.trim().length > 80) throw new Error('名稱必填，最多 80 字')
@@ -156,8 +174,13 @@ export function saveProvider(
     }
     state.providers.push(p)
   }
+  const previousTrial = p.profile?.offersTrial ?? false
+  const previousMode = p.mode
+  if (input.trialMode !== undefined) p.mode = input.trialMode
   p.name = input.name.trim()
   p.profile = {
+    offersTrial: input.offersTrial ?? previousTrial,
+    defaultGameType: input.defaultGameType ?? p.profile?.defaultGameType,
     code,
     contact: input.contact.trim(),
     note: input.note.trim(),
@@ -166,6 +189,25 @@ export function saveProvider(
     updatedAt: now()
   }
   log(state, p.id, id ? '更新供應商基本資料' : '新增供應商草稿（尚未核准任何能力）', actor)
+  if (previousMode !== p.mode)
+    log(state, p.id, `試玩方式：${previousMode || '未設定'} → ${p.mode}`, actor)
+  if (previousTrial !== p.profile.offersTrial)
+    log(
+      state,
+      p.id,
+      `是否提供試玩：${previousTrial ? '是' : '否'} → ${p.profile.offersTrial ? '是' : '否'}`,
+      actor
+    )
+  if (input.defaultGameType !== undefined) {
+    for (const g of state.games.filter((g) => g.providerId === p.id && !g.typeOverridden)) {
+      if (g.type !== input.defaultGameType) {
+        g.type = input.defaultGameType
+        g.typeOverridden = false
+        g.version = (g.version || 1) + 1
+      }
+    }
+    log(state, p.id, `預設遊戲類型：${input.defaultGameType}；個別設定保留`, actor)
+  }
   return p
 }
 export function changeProviderStatus(

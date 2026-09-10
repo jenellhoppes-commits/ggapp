@@ -1,6 +1,8 @@
 import { gameRecords, providerMockData } from '../mock/game-provider'
 import type { DemoState, DemoGame } from './provider-demo'
 import { canManageProviders, type CoreActor } from './provider-core'
+import { gameTypes } from './game-types'
+export { gameTypes } from './game-types'
 
 export type SyncScenario = 'success' | 'partial' | 'failed'
 export interface GameSyncRun {
@@ -28,7 +30,9 @@ export function ensureGameCatalog(state: DemoState) {
     g.sourceName ??=
       gameRecords.find((fixture) => fixture.code === g.code)?.displayName || '尚未同步'
     g.sourceAvailable ??= true
-    g.type ??= '未分類'
+    g.typeOverridden ??= !!g.type && g.type !== '未分類'
+    g.type ??=
+      state.providers.find((p) => p.id === g.providerId)?.profile?.defaultGameType || '未分類'
   }
 }
 function authorized(actor: CoreActor) {
@@ -37,11 +41,13 @@ function authorized(actor: CoreActor) {
 export function saveGameDisplay(
   state: DemoState,
   id: string,
-  edit: Pick<DemoGame, 'name' | 'tags' | 'active'>,
+  edit: Pick<DemoGame, 'name' | 'tags' | 'active'> & { type?: string; status?: DemoGame['status'] },
   expected: number,
   actor: CoreActor
 ) {
   authorized(actor)
+  if (edit.status !== undefined && !['active', 'disabled', 'integrating'].includes(edit.status))
+    throw new Error('請選擇有效遊戲狀態')
   const g = state.games.find((g) => g.id === id)
   if (!g) throw new Error('遊戲不存在')
   if (g.version !== expected) throw new Error('版本衝突：資料已更新，請保留輸入並重新載入比對')
@@ -52,9 +58,18 @@ export function saveGameDisplay(
     edit.tags.some((t) => !t.trim() || t.length > 20)
   )
     throw new Error('名稱須為 1–80 字；標籤最多 8 個，每個 1–20 字')
+  if (edit.type !== undefined && edit.type !== '__inherit' && !gameTypes.includes(edit.type))
+    throw new Error('請選擇有效遊戲類型')
   g.name = edit.name.trim()
+  if (edit.type !== undefined) {
+    g.typeOverridden = edit.type !== '__inherit'
+    g.type = g.typeOverridden
+      ? edit.type
+      : state.providers.find((p) => p.id === g.providerId)?.profile?.defaultGameType || '未分類'
+  }
   g.tags = [...new Set(edit.tags.map((t) => t.trim()))]
-  g.active = edit.active
+  g.status = edit.status ?? (edit.active ? 'active' : 'disabled')
+  g.active = g.status === 'active'
   g.version++
   state.audit.unshift({
     at: new Date().toISOString(),
@@ -132,10 +147,12 @@ export function finishGameSync(
         code: item.code,
         name: item.name,
         active: false,
+        status: 'integrating',
         demoSupported: true,
         currencies: ['TWD', 'USD'],
         locales: ['zh-TW', 'en-US'],
         tags: [],
+        typeOverridden: false,
         version: 1
       }
       state.games.push(game)
@@ -147,7 +164,11 @@ export function finishGameSync(
     // Source fields only: never change platform display name, publication or merchant grants.
     game.sourceName = item.name
     game.sourceAvailable = item.available
-    game.type = '電子遊戲'
+    if (!game.typeOverridden)
+      game.type =
+        state.providers.find((p) => p.id === run.providerId)?.profile?.defaultGameType ||
+        game.type ||
+        '未分類'
     game.syncedAt = now
     if (!item.available) run.unavailable++
     run.events.push({

@@ -1,20 +1,11 @@
 <template>
   <section class="provider-terms">
-    <ElAlert
-      title="原型演示：請勿輸入真實合約數字。資料只保存在此瀏覽器，不會執行正式結算。"
-      type="warning"
-      :closable="false"
-    />
-    <div class="terms-heading">
-      <div
-        ><h3>合約費率與結算條件</h3><p>未修改持續沿用；修改需指定生效日期，歷史版本保留。</p></div
-      >
-      <ElButton v-if="canWrite" type="primary" @click="edit">{{
-        versions.length ? '修改條件' : '新增條件'
-      }}</ElButton>
+    <SupplierCostConditions owner="platform" owner-id="platform" :provider-id="providerId" />
+    <div v-if="versions.length" class="terms-heading">
+      <div><h3>舊版合約紀錄（唯讀）</h3></div>
+      <ElButton v-if="canWrite" disabled @click="edit">舊版編輯已停用</ElButton>
     </div>
-    <ElEmpty v-if="!versions.length" description="待設定：尚未填寫合約費率與結算條件" />
-    <template v-else>
+    <template v-if="versions.length">
       <ElDescriptions :column="1" border>
         <ElDescriptionsItem label="目前生效">{{
           current ? `V${current.version} · ${describe(current)}` : '尚未生效，不能作為本日計費依據'
@@ -62,11 +53,6 @@
       :close-on-click-modal="false"
       :before-close="beforeClose"
     >
-      <ElAlert
-        title="不回寫歷史結算；原型暫不支援追溯生效、同日覆蓋或改寫已排定版本。"
-        type="info"
-        :closable="false"
-      />
       <ElForm label-position="top" class="terms-form" @submit.prevent="save">
         <ElFormItem label="計費基礎" required
           ><ElSelect v-model="draft.basis" aria-label="計費基礎"
@@ -114,6 +100,7 @@
   </section>
 </template>
 <script setup lang="ts">
+  import SupplierCostConditions from '@/components/business/SupplierCostConditions.vue'
   import { computed, reactive, ref } from 'vue'
   import { useNow } from '@vueuse/core'
   import { ElMessage, ElMessageBox } from 'element-plus'

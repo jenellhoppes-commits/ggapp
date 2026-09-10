@@ -9,6 +9,13 @@ export function buildDisplayMenu(items: AppRouteRecord[], parentPath = ''): AppR
         ? item.path
         : `${parentPath}/${item.path}`
     const children = buildDisplayMenu(item.children || [], path)
+    // Agent pages are peers under the section heading; retain the parent only in the route tree.
+    if (item.name === 'AgentPortal' && path === '/agent') {
+      return children.map((child) => ({
+        ...child,
+        meta: { ...child.meta, menuGroup: item.meta.menuGroup }
+      }))
+    }
     if (children.length === 1) {
       const child = children[0]
       return [

@@ -1,12 +1,5 @@
 <template>
   <ElDrawer v-model="visible" :title="drawerTitle" :size="drawerSize" destroy-on-close>
-    <ElAlert
-      title="目前為前端 Mock 流程，送出後僅更新本次瀏覽資料。"
-      type="info"
-      :closable="false"
-      show-icon
-      class="mb-5"
-    />
     <ElForm ref="formRef" :model="form" :rules="rules" label-position="top">
       <ElRow :gutter="16">
         <ElCol :xs="24" :sm="12">
@@ -188,6 +181,6 @@
     submitting.value = false
     visible.value = false
     Object.assign(form, createInitialForm())
-    ElMessage.success('代理已建立於 Mock 資料中')
+    ElMessage.success('代理已建立')
   }
 </script>

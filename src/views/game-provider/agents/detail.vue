@@ -139,66 +139,12 @@
         </ElTabPane>
 
         <ElTabPane label="商務條件" name="terms">
-          <div class="tab-panel">
-            <div class="panel-toolbar"
-              ><div
-                ><h2>商務條件版本</h2><p>已生效版本不可覆寫；修改條件必須建立下一個版本。</p></div
-              ><ElButton type="primary" @click="openTermDrawer">新增下一版本</ElButton></div
-            >
-            <ElAlert
-              title="總後台與代理共用費率版本；待生效版本按平台日期適用。正式結算尚未串接，既有對帳單不變。"
-              type="info"
-              :closable="false"
-              show-icon
-            />
-            <ArtTable
-              :data="terms"
-              height="auto"
-              empty-height="auto"
-              :show-table-header="false"
-              style="height: auto"
-              empty-text="暫無資料"
-              ><ElTableColumn label="版本" width="75"
-                ><template #default="{ row }">V{{ row.version }}</template></ElTableColumn
-              ><ElTableColumn label="結算基礎" width="110"
-                ><template #default="{ row }">{{
-                  basisText(row.settlementBasis)
-                }}</template></ElTableColumn
-              ><ElTableColumn label="代理條件" width="105"
-                ><template #default="{ row }"
-                  ><strong>{{ row.ratePercent }}%</strong></template
-                ></ElTableColumn
-              ><ElTableColumn
-                prop="settlementCurrency"
-                label="結算幣別"
-                width="100"
-              /><ElTableColumn label="結算週期" width="100"
-                ><template #default="{ row }">{{
-                  cycleText(row.settlementCycle)
-                }}</template></ElTableColumn
-              ><ElTableColumn prop="effectiveFrom" label="生效日期" width="115" /><ElTableColumn
-                label="狀態"
-                width="105"
-                ><template #default="{ row }"
-                  ><GameProviderStatusTag
-                    :status="termStatusTag(row.status)" /></template></ElTableColumn
-              ><ElTableColumn prop="reason" label="建立原因" min-width="180" /><ElTableColumn
-                label="操作"
-                width="120"
-                fixed="right"
-                ><template #default="{ row }"
-                  ><ElButton
-                    v-if="row.status === 'Draft'"
-                    link
-                    type="primary"
-                    @click="openActivateTerm(row)"
-                    >設為生效</ElButton
-                  ><span v-else>—</span></template
-                ></ElTableColumn
-              ></ArtTable
-            >
-            >
-          </div>
+          <SupplierCostConditions
+            embedded
+            owner="agent"
+            :owner-id="agent.id"
+            :parent-id="agent.parentAgentId"
+          />
         </ElTabPane>
 
         <ElTabPane name="merchants"
@@ -392,56 +338,6 @@
       ></ElDrawer
     >
 
-    <ElDrawer v-model="termVisible" title="新增商務條件版本" :size="drawerSize"
-      ><ElAlert
-        title="目前生效條件不會被直接覆寫；新版本確認後才會切換生效。"
-        type="warning"
-        :closable="false"
-        show-icon
-        class="mb-5"
-      /><ElForm ref="termFormRef" :model="termForm" :rules="termRules" label-position="top"
-        ><ElFormItem label="結算基礎" prop="settlementBasis"
-          ><ElSelect v-model="termForm.settlementBasis" class="w-full"
-            ><ElOption label="GGR" value="GGR" /><ElOption
-              label="有效投注"
-              value="Valid Bet" /><ElOption
-              label="營業額"
-              value="Turnover" /></ElSelect></ElFormItem
-        ><ElFormItem label="代理條件" prop="ratePercent"
-          ><ElInputNumber
-            v-model="termForm.ratePercent"
-            :min="0"
-            :max="100"
-            :precision="2"
-            class="w-full" /></ElFormItem
-        ><ElFormItem label="結算幣別" prop="settlementCurrency"
-          ><ElSelect v-model="termForm.settlementCurrency" class="w-full"
-            ><ElOption
-              v-for="currency in currencies"
-              :key="currency"
-              :label="currency"
-              :value="currency" /></ElSelect></ElFormItem
-        ><ElFormItem label="結算週期" prop="settlementCycle"
-          ><ElSelect v-model="termForm.settlementCycle" class="w-full"
-            ><ElOption label="每日" value="Daily" /><ElOption
-              label="每週"
-              value="Weekly" /><ElOption label="每半月" value="Semimonthly" /><ElOption
-              label="每月"
-              value="Monthly" /></ElSelect></ElFormItem
-        ><ElFormItem label="生效日期" prop="effectiveFrom"
-          ><ElDatePicker
-            v-model="termForm.effectiveFrom"
-            type="date"
-            value-format="YYYY-MM-DD"
-            class="w-full" /></ElFormItem
-        ><ElFormItem label="建立原因" prop="reason"
-          ><ElInput v-model="termForm.reason" type="textarea" :rows="3" /></ElFormItem></ElForm
-      ><template #footer
-        ><ElButton @click="termVisible = false">取消</ElButton
-        ><ElButton type="primary" @click="saveTerm">儲存版本草稿</ElButton></template
-      ></ElDrawer
-    >
-
     <ElDialog v-model="parentVisible" title="調整上級代理" :width="dialogWidth"
       ><ElAlert
         title="調整只影響生效後的資料範圍；歷史報表、對帳及結算歸屬不回溯修改。"
@@ -508,26 +404,6 @@
         ></template
       ></ElDialog
     >
-
-    <ElDialog v-model="termActivateVisible" title="商務條件生效確認" :width="dialogWidth"
-      ><ElAlert
-        title="生效後目前版本將轉為歷史版本，且不可直接修改。"
-        type="warning"
-        :closable="false"
-        show-icon
-      /><ElForm label-position="top" class="mt-4"
-        ><ElFormItem label="操作原因" required
-          ><ElInput v-model="termActivateReason" type="textarea" :rows="3" /></ElFormItem></ElForm
-      ><template #footer
-        ><ElButton @click="termActivateVisible = false">取消</ElButton
-        ><ElButton
-          type="primary"
-          :disabled="!termActivateReason.trim()"
-          @click="confirmActivateTerm"
-          >確認生效</ElButton
-        ></template
-      ></ElDialog
-    >
   </div>
   <ElResult v-else icon="warning" title="找不到代理資料"
     ><template #extra
@@ -539,16 +415,13 @@
 </template>
 
 <script setup lang="ts">
+  import SupplierCostConditions from '@/components/business/SupplierCostConditions.vue'
+  import { usePartnerWorkspaceStore } from '@/store/modules/partnerWorkspace'
   import type { FormInstance, FormRules } from 'element-plus'
   import { ElMessage } from 'element-plus'
   import { useWindowSize } from '@vueuse/core'
   import { useBusinessPartnerStore } from '@/store/modules/businessPartner'
-  import type {
-    AgentCommercialTerm,
-    AgentRecord,
-    SettlementBasis,
-    SettlementCycle
-  } from '@/types/game-provider'
+  import type { AgentRecord, SettlementBasis } from '@/types/game-provider'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import EntityLink from '@/components/business/game-provider/entity-link/index.vue'
   import GameProviderStatusTag from '@/components/business/game-provider/status-tag/index.vue'
@@ -557,6 +430,7 @@
   const route = useRoute()
   const router = useRouter()
   const store = useBusinessPartnerStore()
+  const workspace = usePartnerWorkspaceStore()
   const { width } = useWindowSize()
   const descriptionColumns = computed(() => (width.value < 720 ? 1 : 2))
   const drawerSize = computed(() => (width.value < 640 ? '100%' : '560px'))
@@ -571,7 +445,6 @@
     agent.value ? store.getDirectMerchants(agent.value.id) : []
   )
   const allMerchants = computed(() => (agent.value ? store.getAllMerchants(agent.value.id) : []))
-  const terms = computed(() => (agent.value ? store.getTerms(agent.value.id) : []))
   const currentTerm = computed(() =>
     agent.value ? store.getCurrentTerm(agent.value.id) : undefined
   )
@@ -602,13 +475,10 @@
       note: `${directMerchants.value.length} 家直屬`
     },
     {
-      label: '目前代理條件',
-      value: currentTerm.value
-        ? `${basisText(currentTerm.value.settlementBasis)} ${currentTerm.value.ratePercent}%`
-        : '未設定',
-      note: currentTerm.value
-        ? `${currentTerm.value.settlementCurrency}／${cycleText(currentTerm.value.settlementCycle)}`
-        : '待建立版本'
+      label: '供應商條件版本',
+      value: workspace.costs.filter((r) => r.owner === 'agent' && r.ownerId === agent.value?.id)
+        .length,
+      note: '依供應商／幣別管理，含歷史與待生效版本'
     },
     {
       label: '本期預估結算',
@@ -641,13 +511,9 @@
       : logs
   })
   const basicVisible = ref(false)
-  const termVisible = ref(false)
   const parentVisible = ref(false)
   const statusVisible = ref(false)
-  const termActivateVisible = ref(false)
   const basicFormRef = ref<FormInstance>()
-  const termFormRef = ref<FormInstance>()
-  const currencies = ['USDT', 'USD', 'TWD', 'EUR', 'JPY', 'SGD', 'THB', 'MYR', 'VND']
   const basicForm = reactive({
     name: '',
     contact: '',
@@ -660,37 +526,10 @@
     contact: [{ required: true, message: '請輸入聯絡人', trigger: 'blur' }],
     contactMethod: [{ required: true, message: '請輸入聯絡方式', trigger: 'blur' }]
   }
-  const termForm = reactive({
-    settlementBasis: 'GGR' as SettlementBasis,
-    ratePercent: 6.5,
-    settlementCurrency: 'USDT',
-    settlementCycle: 'Monthly' as SettlementCycle,
-    effectiveFrom: '',
-    reason: ''
-  })
-  const termRules: FormRules = {
-    settlementBasis: [{ required: true, message: '請選擇結算基礎', trigger: 'change' }],
-    ratePercent: [{ required: true, message: '請輸入代理條件', trigger: 'change' }],
-    settlementCurrency: [{ required: true, message: '請選擇結算幣別', trigger: 'change' }],
-    settlementCycle: [{ required: true, message: '請選擇結算週期', trigger: 'change' }],
-    effectiveFrom: [
-      { required: true, message: '請選擇生效日期', trigger: 'change' },
-      {
-        validator: (_rule, value, callback) =>
-          currentTerm.value && value <= currentTerm.value.effectiveFrom
-            ? callback(new Error('新版本生效日需晚於目前版本'))
-            : callback(),
-        trigger: 'change'
-      }
-    ],
-    reason: [{ required: true, message: '請輸入建立原因', trigger: 'blur' }]
-  }
   const newParentId = ref('')
   const parentReason = ref('')
   const statusReason = ref('')
   const statusCommand = ref<'activate' | 'disable'>('disable')
-  const activatingTerm = ref<AgentCommercialTerm>()
-  const termActivateReason = ref('')
   const parentCandidates = computed(() =>
     !agent.value
       ? []
@@ -717,35 +556,6 @@
     store.updateAgent(agent.value.id, { ...basicForm }, '更新代理基本資料')
     basicVisible.value = false
     ElMessage.success('代理基本資料已更新')
-  }
-  const openTermDrawer = () => {
-    Object.assign(termForm, {
-      settlementBasis: currentTerm.value?.settlementBasis || 'GGR',
-      ratePercent: currentTerm.value?.ratePercent ?? 0,
-      settlementCurrency: currentTerm.value?.settlementCurrency || 'USDT',
-      settlementCycle: currentTerm.value?.settlementCycle || 'Monthly',
-      effectiveFrom: '',
-      reason: ''
-    })
-    termVisible.value = true
-  }
-  const saveTerm = async () => {
-    if (!agent.value || !(await termFormRef.value?.validate().catch(() => false))) return
-    store.addCommercialTerm(agent.value.id, { ...termForm })
-    termVisible.value = false
-    ElMessage.success('商務條件新版本已建立為草稿')
-  }
-  const openActivateTerm = (term: AgentCommercialTerm) => {
-    activatingTerm.value = term
-    termActivateReason.value = ''
-    termActivateVisible.value = true
-  }
-  const confirmActivateTerm = () => {
-    if (!activatingTerm.value || !termActivateReason.value.trim()) return
-    if (store.activateCommercialTerm(activatingTerm.value.id, termActivateReason.value) === false)
-      return ElMessage.error('無法生效：日期不可追溯或早於／等於既有生效版本')
-    termActivateVisible.value = false
-    ElMessage.success('商務條件已確認，將依生效日期適用')
   }
   const openParentDialog = () => {
     newParentId.value = agent.value?.parentAgentId || ''
@@ -776,16 +586,6 @@
   }
   const basisText = (value?: SettlementBasis) =>
     ({ GGR: 'GGR', 'Valid Bet': '有效投注', Turnover: '營業額' })[value || 'GGR']
-  const cycleText = (value?: SettlementCycle) =>
-    ({ Daily: '每日', Weekly: '每週', Semimonthly: '每半月', Monthly: '每月' })[value || 'Monthly']
-  const termStatusTag = (status: string) =>
-    status === 'Active'
-      ? 'Active'
-      : status === 'Draft'
-        ? 'Draft'
-        : status === 'Scheduled'
-          ? 'Pending'
-          : 'Disabled'
   const reconciliationStatusText = (status: string) =>
     ({ Pending: '待確認', Difference: '有差異', Confirmed: '已確認', Completed: '已完成' })[
       status

@@ -23,6 +23,7 @@ const admin = { role: 'admin' as const, name: actor.name }
 setActivePinia(createPinia())
 const business = useBusinessPartnerStore()
 const state = createDemoState()
+state.providers[0].initialCredit = true // Explicit capability for this test adapter only.
 ensureGameCatalog(state)
 const refresh = () => {
   state.merchants = projectMerchantAccess(
@@ -38,6 +39,7 @@ const p = state.providers[0],
 const input: DemoInput = {
   name: '第二批驗收連結',
   purpose: 'merchant',
+  initialCredit: 100,
   merchantId: 'M00001',
   providerId: p.id,
   gameId: g.id,
@@ -113,7 +115,7 @@ const grantsBefore = JSON.stringify(state.merchants)
 saveGameDisplay(
   state,
   g.id,
-  { name: '人工名稱保留', active: true, tags: ['直式畫面'] },
+  { name: '人工名稱保留', active: true, tags: ['直式畫面'], type: '真人娛樂' },
   g.version!,
   actor
 )
@@ -130,6 +132,18 @@ const second = startGameSync(state, p.id, actor)
 finishGameSync(state, second, 'success', actor)
 assert.equal(state.games.length, count)
 assert.equal(g.name, '人工名稱保留')
+assert.equal(g.type, '真人娛樂')
+assert.throws(
+  () =>
+    saveGameDisplay(
+      state,
+      g.id,
+      { name: g.name, active: true, tags: [], type: 'invalid' },
+      g.version!,
+      actor
+    ),
+  /類型/
+)
 assert.deepEqual(g.tags, ['直式畫面'])
 assert.equal(JSON.stringify(state.merchants), grantsBefore)
 assert.equal(state.syncRuns![0].added, 0)
@@ -181,13 +195,19 @@ business.updateMerchantLineGameConfiguration(
 )
 refresh()
 assert.throws(() => launchDemo(state, link.token))
-business.updateMerchantLineGameConfiguration(
-  merchant.id,
-  merchantLine.uid,
-  g.id,
-  { enabled: true },
-  '第二批還原測試授權'
+assert.throws(
+  () =>
+    business.updateMerchantLineGameConfiguration(
+      merchant.id,
+      merchantLine.uid,
+      g.id,
+      { enabled: true },
+      '第二批還原測試授權'
+    ),
+  /條件/
 )
+// Remaining scenarios test historical fixture sessions, not new production grants.
+grant.enabled = true
 refresh()
 p.available = false
 assert.throws(() => launchDemo(state, link.token))

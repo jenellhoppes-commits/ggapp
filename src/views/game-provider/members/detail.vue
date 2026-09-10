@@ -278,52 +278,6 @@
           </div>
         </ElTabPane>
 
-        <ElTabPane label="獎池紀錄" name="jackpots">
-          <div class="tab-panel">
-            <div class="section-title"
-              ><div><h3>獎池派發</h3><p>顯示會員中獎與派發狀態，可直接追查獎池。</p></div></div
-            >
-            <ElTable :data="jackpotRecords" border empty-text="此會員尚無獎池紀錄">
-              <ElTableColumn label="獎池" min-width="180"
-                ><template #default="scope"
-                  ><EntityLink
-                    :label="scope.row.poolName"
-                    :secondary="scope.row.poolId"
-                    :to="`/jackpots/${scope.row.poolId}`" /></template
-              ></ElTableColumn>
-              <ElTableColumn prop="level" label="級別" width="100" />
-              <ElTableColumn label="遊戲" min-width="170"
-                ><template #default="scope"
-                  ><EntityLink
-                    :label="scope.row.gameName"
-                    :secondary="scope.row.gameId"
-                    :to="`/games/management/${scope.row.gameId}`" /></template
-              ></ElTableColumn>
-              <ElTableColumn label="派發金額" width="150" align="right"
-                ><template #default="scope"
-                  >{{ money(scope.row.amount) }} {{ scope.row.currency }}</template
-                ></ElTableColumn
-              >
-              <ElTableColumn prop="roundId" label="局號" min-width="160" />
-              <ElTableColumn label="狀態" width="90"
-                ><template #default="scope"
-                  ><ElTag
-                    :type="
-                      scope.row.status === 'Paid'
-                        ? 'success'
-                        : scope.row.status === 'Failed'
-                          ? 'danger'
-                          : 'warning'
-                    "
-                    >{{ jackpotStatusLabel(scope.row.status) }}</ElTag
-                  ></template
-                ></ElTableColumn
-              >
-              <ElTableColumn prop="payoutAt" label="派發時間" width="160" />
-            </ElTable>
-          </div>
-        </ElTabPane>
-
         <ElTabPane label="異常紀錄" name="anomalies">
           <div class="tab-panel">
             <div class="section-title"
@@ -552,7 +506,11 @@
   const store = useMemberCenterStore()
   const { width } = useWindowSize()
   const member = computed(() => store.findMember(String(route.params.id)))
-  const activeTab = ref(String(route.query.tab || 'profile'))
+  const validTab = (tab: unknown) =>
+    ['profile', 'games', 'bets', 'transactions', 'anomalies', 'tags'].includes(String(tab))
+      ? String(tab)
+      : 'profile'
+  const activeTab = ref(validTab(route.query.tab))
   const descriptionColumns = computed(() => (width.value < 760 ? 1 : 2))
   const tagVisible = ref(false)
   const restrictionVisible = ref(false)
@@ -577,9 +535,6 @@
   const betRecords = computed(() => (member.value ? store.getBetRecords(member.value.id) : []))
   const transactionRecords = computed(() =>
     member.value ? store.getTransactionRecords(member.value.id) : []
-  )
-  const jackpotRecords = computed(() =>
-    member.value ? store.getJackpotRecords(member.value.id) : []
   )
   const anomalyRecords = computed(() =>
     member.value ? store.getAnomalyRecords(member.value.id) : []
@@ -700,8 +655,6 @@
         : status === 'Processing'
           ? 'warning'
           : 'info'
-  const jackpotStatusLabel = (status: string) =>
-    ({ Pending: '待派發', Paid: '已派發', Failed: '失敗' })[status as 'Pending'] || status
   const riskLevelLabel = (level: string) =>
     ({ Low: '低', Medium: '中', High: '高' })[level as 'Low'] || level
   const riskLevelType = (level: string) =>
@@ -778,7 +731,7 @@
   watch(
     () => route.query.tab,
     (tab) => {
-      if (tab) activeTab.value = String(tab)
+      activeTab.value = validTab(tab)
     }
   )
 </script>

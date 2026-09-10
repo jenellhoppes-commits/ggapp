@@ -24,12 +24,6 @@
             :label="label"
             :value="value" /></ElSelect
       ></ElFormItem>
-      <ElFormItem label="錢包能力"
-        ><ElSelect v-model="draft.wallet" clearable placeholder="全部模式"
-          ><ElOption label="單一錢包" value="Seamless" /><ElOption
-            label="轉帳錢包"
-            value="Transfer" /></ElSelect
-      ></ElFormItem>
       <div class="filter-actions"
         ><ElButton type="primary" native-type="submit">查詢</ElButton
         ><ElButton @click="resetFilters">重置</ElButton></div
@@ -65,6 +59,11 @@
         ></ElTableColumn
       >
       <ElTableColumn prop="currencies" label="可用幣別（測試）" min-width="160" />
+      <ElTableColumn label="預設遊戲類型" min-width="130"
+        ><template #default="{ row }"
+          ><ElTag>{{ row.defaultGameType }}</ElTag></template
+        ></ElTableColumn
+      >
       <ElTableColumn prop="productionCount" label="正式啟用線" width="135" sortable="custom" />
       <ElTableColumn prop="gameCount" label="遊戲數" width="105" sortable="custom" />
       <ElTableColumn prop="updatedAt" label="更新時間（UTC）" min-width="210" sortable="custom"
@@ -118,6 +117,24 @@
           <ElFormItem label="聯絡資訊"
             ><ElInput v-model="profileForm.contact" maxlength="160"
           /></ElFormItem>
+          <ElFormItem label="預設遊戲類型" required>
+            <ElSelect v-model="profileForm.defaultGameType">
+              <ElOption v-for="type in gameTypes" :key="type" :label="type" :value="type" />
+            </ElSelect>
+            <small>旗下遊戲預設沿用此類型，個別修改的遊戲不受影響。</small>
+          </ElFormItem>
+          <ElFormItem label="是否提供試玩">
+            <ElSelect v-model="profileForm.offersTrial" aria-label="是否提供試玩">
+              <ElOption label="是" :value="true" />
+              <ElOption label="否" :value="false" />
+            </ElSelect>
+          </ElFormItem>
+          <ElFormItem label="試玩方式">
+            <ElSelect v-model="profileForm.trialMode" aria-label="試玩方式">
+              <ElOption label="原生試玩" value="native" />
+              <ElOption label="測試試玩" value="sandbox" />
+            </ElSelect>
+          </ElFormItem>
           <ElFormItem label="備註"
             ><ElInput v-model="profileForm.note" type="textarea" maxlength="500" show-word-limit
           /></ElFormItem>
@@ -128,6 +145,11 @@
           <ElTabPane label="基本資料" name="profile">
             <ElDescriptions :column="width < 768 ? 1 : 2" border>
               <ElDescriptionsItem label="供應商識別">{{ selected.id }}</ElDescriptionsItem>
+              <ElDescriptionsItem label="預設遊戲類型"
+                ><ElTag>{{
+                  selected.profile?.defaultGameType || '未分類'
+                }}</ElTag></ElDescriptionsItem
+              >
               <ElDescriptionsItem label="狀態">{{
                 providerLabels[selected.profile!.status]
               }}</ElDescriptionsItem>
@@ -140,8 +162,11 @@
               <ElDescriptionsItem label="備註">{{
                 selected.profile!.note || '—'
               }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="試玩能力（種子）">{{
+              <ElDescriptionsItem label="試玩方式">{{
                 modeLabel(selected.mode)
+              }}</ElDescriptionsItem>
+              <ElDescriptionsItem label="是否提供試玩">{{
+                selected.profile?.offersTrial ? '是' : '否'
               }}</ElDescriptionsItem>
             </ElDescriptions>
             <div v-if="canWrite" class="actions"
@@ -162,11 +187,32 @@
                 >停用</ElButton
               ></div
             >
-            <p class="hint"
-              >停用只阻擋新啟動；既有派彩、退款與查單仍須由後端驗證及受理。本頁不執行正式交易。</p
-            >
+            <p class="hint">停用只阻擋新啟動；既有派彩、退款與查單仍須受理。</p>
           </ElTabPane>
-          <ElTabPane label="幣別線路" name="lines">
+          <ElTabPane label="API 設定" name="api">
+            <ElTable :data="selected.lines" border empty-text="請先於幣別管理新增線路">
+              <ElTableColumn prop="currency" label="交易幣別" width="100" />
+              <ElTableColumn prop="config.apiUrl" label="API URL" min-width="240" />
+              <ElTableColumn prop="config.accountId" label="供應商帳號 ID" min-width="160" />
+              <ElTableColumn prop="config.currencyId" label="供應商幣別 ID" min-width="160" />
+              <ElTableColumn label="憑證" min-width="150"
+                ><template #default="{ row }">{{
+                  row.config?.credential?.mask || '未設定'
+                }}</template></ElTableColumn
+              >
+              <ElTableColumn label="操作" width="110"
+                ><template #default="{ row }"
+                  ><ElButton
+                    link
+                    type="primary"
+                    @click="patchQuery({ pane: 'lines', line: row.id })"
+                    >查看設定</ElButton
+                  ></template
+                ></ElTableColumn
+              >
+            </ElTable>
+          </ElTabPane>
+          <ElTabPane label="幣別管理" name="lines">
             <template v-if="lineForm">
               <div class="list-heading"
                 ><h3>{{ editingLineId ? '編輯線路' : '新增線路' }}</h3
@@ -207,12 +253,6 @@
                 <ElFormItem label="供應商幣別 ID" required
                   ><ElInput v-model="lineForm.currencyId" maxlength="50"
                 /></ElFormItem>
-                <ElFormItem label="錢包模式" required
-                  ><ElSelect v-model="lineForm.wallet" :disabled="identityLocked"
-                    ><ElOption label="單一錢包（Seamless）" value="Seamless" /><ElOption
-                      label="轉帳錢包（尚待能力驗證）"
-                      value="Transfer" /></ElSelect
-                ></ElFormItem>
                 <ElFormItem class="wide" label="API URL" required
                   ><ElInput
                     v-model="lineForm.apiUrl"
@@ -228,21 +268,17 @@
                     "
                     disabled
                 /></ElFormItem>
-                <ElFormItem label="金額小數位數（演示 0–8）" required
+                <ElFormItem label="金額小數位數（0–8）" required
                   ><ElInputNumber v-model="lineForm.scale" :min="0" :max="8" :precision="0"
                 /></ElFormItem>
                 <ElFormItem label="最小單位（十進位字串）" required
                   ><ElInput v-model="lineForm.minUnit" maxlength="30"
                 /></ElFormItem>
               </ElForm>
-              <p class="hint"
-                >能力由已驗證的 Adapter
-                決定，不能在表單自行勾選。正式線可保存設定，但本演示不開放正式啟用。</p
-              >
             </template>
             <template v-else>
               <div class="list-heading"
-                ><span>同供應商／幣別／環境先保留一條線；重複帳號待 D08</span
+                ><span>供應商各幣別線路共用成本費率與結算條件</span
                 ><ElButton v-if="canWrite" @click="newLine">新增線路</ElButton></div
               >
               <ElTable :data="linePage.items" border row-key="id" empty-text="尚無幣別線路">
@@ -257,11 +293,6 @@
                   ><template #default="{ row }"
                     ><ElTag>{{ lineLabels[row.config.status as LineStatus] }}</ElTag></template
                   ></ElTableColumn
-                >
-                <ElTableColumn label="錢包" min-width="130"
-                  ><template #default="{ row }">{{
-                    row.config.wallet === 'Seamless' ? '單一錢包' : '轉帳錢包'
-                  }}</template></ElTableColumn
                 >
                 <ElTableColumn label="操作" width="100"
                   ><template #default="{ row }"
@@ -342,7 +373,10 @@
               </section>
             </template>
           </ElTabPane>
-          <ElTabPane label="遊戲" name="games"
+          <ElTabPane label="成本費率" name="costs">
+            <ProviderTerms :key="selected.id" :provider-id="selected.id" />
+          </ElTabPane>
+          <ElTabPane label="遊戲清單" name="games"
             ><ElTable :data="gamePage.items" border
               ><ElTableColumn prop="name" label="遊戲" min-width="160" /><ElTableColumn
                 prop="code"
@@ -368,12 +402,6 @@
               :total="gamePage.total"
               layout="total, prev, pager, next, sizes"
               @size-change="gamePageNumber = 1"
-          /></ElTabPane>
-          <ElTabPane label="成本與結算" name="costs">
-            <ProviderTerms :key="selected.id" :provider-id="selected.id" />
-          </ElTabPane>
-          <ElTabPane label="對帳紀錄" name="reconciliation"
-            ><ElEmpty description="尚無供應商對帳來源；不以試玩啟動冒充對帳"
           /></ElTabPane>
           <ElTabPane label="操作紀錄" name="audit"
             ><ElTable :data="auditPage.items" border empty-text="尚無操作紀錄"
@@ -404,7 +432,7 @@
             type="primary"
             :loading="saving"
             @click="editingProfile ? submitProfile() : submitLine()"
-            >儲存演示資料</ElButton
+            >儲存</ElButton
           ></div
         ></template
       >
@@ -420,6 +448,7 @@
   import { useProviderDemoStore } from '@/store/modules/providerDemo'
   import { useUserStore } from '@/store/modules/user'
   import { modeLabel } from '@/domain/provider-demo'
+  import { gameTypes } from '@/domain/game-types'
   import ProviderTerms from './ProviderTerms.vue'
   import { listPage } from '@/domain/list-query'
   import {
@@ -452,7 +481,7 @@
     name: user.info.userName || '演示管理者'
   }))
   const canWrite = computed(() => canManageProviders(actor.value))
-  const keys = ['q', 'status', 'currency', 'environment', 'wallet'] as const
+  const keys = ['q', 'status', 'currency', 'environment'] as const
   const fromUrl = () =>
     Object.fromEntries(keys.map((k) => [k, String(route.query[k] || '')])) as Record<
       (typeof keys)[number],
@@ -476,18 +505,18 @@
         return (
           `${p.name} ${p.profile?.code || p.id}`.toLowerCase().includes(f.q.trim().toLowerCase()) &&
           (!f.status || p.profile?.status === f.status) &&
-          ((!f.currency && !f.environment && !f.wallet) ||
+          ((!f.currency && !f.environment) ||
             p.lines.some(
               (l) =>
                 (!f.currency || l.currency === f.currency) &&
-                (!f.environment || l.config?.environment === f.environment) &&
-                (!f.wallet || l.config?.wallet === f.wallet)
+                (!f.environment || l.config?.environment === f.environment)
             ))
         )
       })
       .map((p) => ({
         id: p.id,
         name: p.name,
+        defaultGameType: p.profile?.defaultGameType || '未分類',
         code: p.profile!.code,
         status: p.profile!.status,
         currencies:
@@ -536,16 +565,22 @@
   const creating = computed(() => route.query.createProvider === '1')
   const opened = computed(() => creating.value || !!route.params.id || !!route.query.provider)
   const pane = computed(() =>
-    ['profile', 'lines', 'games', 'costs', 'reconciliation', 'audit'].includes(
-      String(route.query.pane)
-    )
+    ['profile', 'api', 'lines', 'games', 'costs', 'audit'].includes(String(route.query.pane))
       ? String(route.query.pane)
       : 'profile'
   )
   const error = ref('')
   const saving = ref(false)
   const editingProfile = ref(false)
-  const profileForm = reactive({ code: '', name: '', contact: '', note: '' })
+  const profileForm = reactive({
+    trialMode: 'native' as 'native' | 'sandbox',
+    offersTrial: false,
+    code: '',
+    name: '',
+    contact: '',
+    note: '',
+    defaultGameType: '未分類'
+  })
   const profileErrors = reactive({ code: '', name: '' })
   const profileVersion = ref(0)
   const original = ref('')
@@ -654,10 +689,13 @@
     if (!selected.value) return
     const p = selected.value
     Object.assign(profileForm, {
+      trialMode: p.mode || 'native',
+      offersTrial: p.profile?.offersTrial ?? false,
       code: p.profile!.code,
       name: p.name,
       contact: p.profile!.contact,
-      note: p.profile!.note
+      note: p.profile!.note,
+      defaultGameType: p.profile?.defaultGameType || '未分類'
     })
     profileVersion.value = p.profile!.version
     editingProfile.value = true
@@ -670,7 +708,7 @@
     error.value = ''
     try {
       fn()
-      ElMessage.success('演示資料已更新；未執行正式 API')
+      ElMessage.success('資料已更新')
     } catch (e) {
       error.value = e instanceof Error ? e.message : '操作失敗'
       ElMessage.error(error.value)
@@ -810,7 +848,15 @@
     () => {
       Object.assign(draft, fromUrl())
       if (creating.value) {
-        Object.assign(profileForm, { code: '', name: '', contact: '', note: '' })
+        Object.assign(profileForm, {
+          trialMode: 'native',
+          offersTrial: false,
+          code: '',
+          name: '',
+          contact: '',
+          note: '',
+          defaultGameType: '未分類'
+        })
         editingProfile.value = true
         original.value = JSON.stringify(profileForm)
       }

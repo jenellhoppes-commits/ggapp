@@ -10,14 +10,6 @@
         ></template
       ></AppPageHeader
     >
-    <ElAlert
-      type="warning"
-      :closable="false"
-      show-icon
-      title="黑名單優先於白名單；本頁為前端規則演示。"
-      >正式來源判斷、防止自我鎖定、IPv6 支援與閘道套用結果仍須由後端驗證。商戶只能管理自己的 GGAP
-      串接來源，不能查看供應商規則。</ElAlert
-    >
     <div class="summary-grid"
       ><ElCard shadow="never"
         ><span>啟用白名單</span><strong>{{ enabledCount('Allow') }}</strong

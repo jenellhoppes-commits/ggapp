@@ -1,12 +1,5 @@
 <template>
   <section class="integration-tests">
-    <ElAlert
-      title="串接測試・隔離測試環境"
-      description="使用此幣別線的測試憑證識別碼與獨立測試會員／錢包。此版只模擬回應，不呼叫正式端點、不扣正式餘額，也不作為正式驗收依據。"
-      type="warning"
-      :closable="false"
-      show-icon
-    />
     <ElDescriptions :column="1" border>
       <ElDescriptionsItem label="商戶幣別線"
         >{{ line.uid }} / {{ line.currency }}</ElDescriptionsItem

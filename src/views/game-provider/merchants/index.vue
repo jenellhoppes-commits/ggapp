@@ -82,10 +82,15 @@
   import GameProviderStatusTag from '@/components/business/game-provider/status-tag/index.vue'
   import ImpactPreviewModal from '@/components/business/game-provider/impact-preview-modal/index.vue'
 
+  import { usePartnerWorkspaceStore } from '@/store/modules/partnerWorkspace'
+  import { supplierCostAt } from '@/domain/admin-supplier-costs'
+  import { platformDate } from '@/domain/report-four-tabs'
+
   defineOptions({ name: 'MerchantManagement' })
 
   const router = useRouter()
   const store = useBusinessPartnerStore()
+  const workspace = usePartnerWorkspaceStore()
   const { merchants: rows } = storeToRefs(store)
   const { width } = useWindowSize()
   const isMobile = computed(() => width.value < 640)
@@ -218,15 +223,25 @@
   ])
 
   const merchantTermText = (row: MerchantRecord) => {
-    const term = store.getCurrentMerchantTerm(row.id)
-    if (!term) return '未設定'
-    const basis =
-      term.settlementBasis === 'Valid Bet'
-        ? '有效投注'
-        : term.settlementBasis === 'Turnover'
-          ? '營業額'
-          : 'GGR'
-    return `${basis} ${term.merchantTermPercent}%`
+    const assigned = workspace.costs.filter(
+      (c) => c.owner === 'merchant' && c.ownerId === row.id && c.parentId === row.agentId
+    )
+    const terms = [...new Set(assigned.map((c) => c.providerId))].flatMap((providerId) => {
+      const term = supplierCostAt(
+        assigned,
+        'merchant',
+        row.id,
+        providerId,
+        platformDate(
+          new Date(),
+          assigned.find((c) => c.providerId === providerId)?.timezone || 'Asia/Taipei'
+        )
+      )
+      return term ? [term] : []
+    })
+    if (!terms.length) return '尚未設定上級結算費率'
+    if (terms.length > 1) return `${terms.length} 組上級結算費率`
+    return `${terms[0].basis === 'ValidBet' ? '有效投注' : 'GGR'} ${terms[0].payable}%`
   }
   const integrationText = (row: MerchantRecord) => {
     if (row.lines.some((line) => line.environment === 'Production')) return '正式環境'
@@ -254,7 +269,7 @@
           to: `/business/agents/${row.agentId}`
         })
     },
-    { prop: 'term', label: '商戶條件', minWidth: 130, formatter: merchantTermText },
+    { prop: 'term', label: '上級給予的結算費率', minWidth: 200, formatter: merchantTermText },
     {
       prop: 'walletMode',
       label: '錢包模式',

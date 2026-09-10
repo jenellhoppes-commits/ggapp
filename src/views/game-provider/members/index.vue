@@ -140,7 +140,7 @@
   ]
 
   const summary = computed(() => [
-    { label: '全部會員', value: store.totalCount, note: '目前 Mock 資料' },
+    { label: '全部會員', value: store.totalCount, note: '商戶接入會員' },
     { label: '限制中', value: store.restrictedCount, note: '限制全部遊戲' },
     { label: '報表排除', value: store.excludedCount, note: '測試會員與白名單' }
   ])

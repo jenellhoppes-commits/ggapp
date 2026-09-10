@@ -78,60 +78,13 @@
         </ElTabPane>
 
         <ElTabPane label="商務條件" name="commercial">
-          <div class="tab-panel">
-            <div class="section-toolbar">
-              <div><h3>商務條件版本</h3><p>新版本先建立為草稿，確認後才取代目前條件。</p></div>
-              <ElButton type="primary" @click="openTermDialog">新增條件版本</ElButton>
-            </div>
-            <ElAlert
-              title="總後台與代理共用費率版本；待生效版本按平台日期適用。正式結算尚未串接，既有對帳單不變。"
-              type="warning"
-              :closable="false"
-              show-icon
-              class="mb-4"
-            />
-            <ArtTable
-              :data="terms"
-              height="auto"
-              empty-height="auto"
-              :show-table-header="false"
-              style="height: auto"
-              empty-text="暫無資料"
-            >
-              <ElTableColumn label="版本" width="80"
-                ><template #default="scope">V{{ scope.row.version }}</template></ElTableColumn
-              >
-              <ElTableColumn prop="settlementBasis" label="計算基準" width="120" />
-              <ElTableColumn label="代理／商戶條件" min-width="150"
-                ><template #default="scope"
-                  >{{ scope.row.agentTermPercent }}%／{{ scope.row.merchantTermPercent }}%</template
-                ></ElTableColumn
-              >
-              <ElTableColumn prop="settlementCurrency" label="幣別" width="90" />
-              <ElTableColumn label="週期" width="100"
-                ><template #default="scope">{{
-                  cycleLabel(scope.row.settlementCycle)
-                }}</template></ElTableColumn
-              >
-              <ElTableColumn prop="effectiveFrom" label="生效日" width="120" />
-              <ElTableColumn label="狀態" width="100"
-                ><template #default="scope"
-                  ><GameProviderStatusTag :status="scope.row.status" /></template
-              ></ElTableColumn>
-              <ElTableColumn prop="reason" label="原因" min-width="170" show-overflow-tooltip />
-              <ElTableColumn label="操作" width="100" fixed="right"
-                ><template #default="scope"
-                  ><ElButton
-                    v-if="scope.row.status === 'Draft'"
-                    link
-                    type="primary"
-                    @click="activateTerm(scope.row.id)"
-                    >設為生效</ElButton
-                  ><span v-else>—</span></template
-                ></ElTableColumn
-              > </ArtTable
-            >>
-          </div>
+          <SupplierCostConditions
+            v-if="merchant.id === String(route.params.id)"
+            embedded
+            owner="merchant"
+            :owner-id="merchant.id"
+            :parent-id="merchant.agentId"
+          />
         </ElTabPane>
 
         <ElTabPane label="線路管理" name="lines">
@@ -148,11 +101,16 @@
         <ElTabPane label="遊戲配置" name="games">
           <div class="tab-panel">
             <ElAlert
-              title="RTP 採用遊戲中心核定的固定方案，設定粒度為「商戶 × 遊戲」；線路僅維護幣別相關限紅。"
+              title="聚合平台不設定 RTP。此處為既有配置摘要，不代表各幣別均已開通；請由下方線路入口逐幣確認接入與合約。"
               type="info"
               :closable="false"
               show-icon
             />
+            <div class="mt-4">
+              <ElButton v-for="item in merchant.lines" :key="item.uid" @click="openLine(item)"
+                >{{ item.currency }} · {{ item.uid }} · 線路設定</ElButton
+              >
+            </div>
             <ArtTable
               :data="gameConfigurations"
               class="mt-4"
@@ -168,28 +126,13 @@
                 <template #default="scope">
                   <ElSwitch
                     :model-value="scope.row.enabled"
+                    disabled
                     @change="(value) => updateGame(scope.row, { enabled: Boolean(value) })"
                   />
                 </template>
               </ElTableColumn>
-              <ElTableColumn label="核定 RTP 方案" min-width="170">
-                <template #default="scope">
-                  <ElSelect
-                    :model-value="scope.row.rtpPlanId"
-                    size="small"
-                    @change="(value) => changeRtp(scope.row, String(value))"
-                  >
-                    <ElOption
-                      v-for="plan in rtpPlans"
-                      :key="plan.id"
-                      :label="plan.name"
-                      :value="plan.id"
-                    />
-                  </ElSelect>
-                </template>
-              </ElTableColumn>
-              <ElTableColumn prop="updatedAt" label="更新時間" min-width="150" /> </ArtTable
-            >>
+              <ElTableColumn prop="updatedAt" label="更新時間" min-width="150" />
+            </ArtTable>
           </div>
         </ElTabPane>
 
@@ -309,70 +252,9 @@
       >
     </ElDrawer>
 
-    <ElDialog v-model="termVisible" title="新增商務條件版本" width="min(94vw, 680px)">
-      <ElAlert
-        title="新條件先儲存為草稿，不會立即改變目前生效條件。"
-        type="info"
-        :closable="false"
-        show-icon
-        class="mb-4"
-      />
-      <ElForm label-position="top">
-        <div class="form-grid">
-          <ElFormItem label="計算基準" required
-            ><ElSelect v-model="termForm.settlementBasis" class="w-full"
-              ><ElOption label="GGR" value="GGR" /><ElOption
-                label="有效投注"
-                value="Valid Bet" /><ElOption label="總投注" value="Turnover" /></ElSelect
-          ></ElFormItem>
-          <ElFormItem label="代理條件"
-            ><ElInput :model-value="`${merchant.agentTermPercent}%`" disabled
-          /></ElFormItem>
-          <ElFormItem label="商戶條件 (%)" required
-            ><ElInputNumber
-              v-model="termForm.merchantTermPercent"
-              :min="0"
-              :max="merchant.agentTermPercent"
-              :precision="2"
-              class="w-full"
-          /></ElFormItem>
-          <ElFormItem label="結算幣別" required
-            ><ElSelect v-model="termForm.settlementCurrency" class="w-full"
-              ><ElOption
-                v-for="currency in currencies"
-                :key="currency"
-                :label="currency"
-                :value="currency" /></ElSelect
-          ></ElFormItem>
-          <ElFormItem label="結算週期" required
-            ><ElSelect v-model="termForm.settlementCycle" class="w-full"
-              ><ElOption label="每日" value="Daily" /><ElOption
-                label="每週"
-                value="Weekly" /><ElOption label="每半月" value="Semimonthly" /><ElOption
-                label="每月"
-                value="Monthly" /></ElSelect
-          ></ElFormItem>
-          <ElFormItem label="預計生效日" required
-            ><ElDatePicker
-              v-model="termForm.effectiveFrom"
-              type="date"
-              value-format="YYYY-MM-DD"
-              class="w-full"
-          /></ElFormItem>
-        </div>
-        <ElFormItem label="建立原因" required
-          ><ElInput v-model="termForm.reason" type="textarea" :rows="3"
-        /></ElFormItem>
-      </ElForm>
-      <template #footer
-        ><ElButton @click="termVisible = false">取消</ElButton
-        ><ElButton type="primary" @click="createTerm">建立草稿</ElButton></template
-      >
-    </ElDialog>
-
     <ElDialog v-model="addLineVisible" title="新增商戶線路" width="min(92vw, 560px)">
       <ElAlert
-        :title="`新線路將繼承 ${merchant.walletMode} 錢包模式；RTP 與商務條件不在線路層級覆寫。`"
+        :title="`新線路將繼承 ${merchant.walletMode} 錢包模式；草稿不代表該幣別的供應商遊戲已正式開通。`"
         type="info"
         :closable="false"
         show-icon
@@ -425,14 +307,10 @@
 </template>
 
 <script setup lang="ts">
-  import { ElMessage, ElMessageBox } from 'element-plus'
+  import SupplierCostConditions from '@/components/business/SupplierCostConditions.vue'
+  import { ElMessage } from 'element-plus'
   import { useWindowSize } from '@vueuse/core'
-  import type {
-    MerchantGameConfiguration,
-    MerchantLine,
-    SettlementBasis,
-    SettlementCycle
-  } from '@/types/game-provider'
+  import type { MerchantGameConfiguration, MerchantLine } from '@/types/game-provider'
   import { useBusinessPartnerStore } from '@/store/modules/businessPartner'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import AuditTimeline from '@/components/business/game-provider/audit-timeline/index.vue'
@@ -453,14 +331,12 @@
   const activeTab = ref(String(route.query.tab || 'profile'))
   const addLineVisible = ref(false)
   const editVisible = ref(false)
-  const termVisible = ref(false)
   const impactVisible = ref(false)
   const newCurrency = ref('')
   const copySource = ref('')
   const createSandbox = ref(true)
   const currencies = ['USD', 'TWD', 'SGD', 'PHP', 'THB', 'HKD', 'VND', 'MYR', 'JPY', 'EUR']
   const descriptionColumns = computed(() => (width.value < 760 ? 1 : 2))
-  const terms = computed(() => store.getMerchantTerms(merchant.value.id))
   const reconciliations = computed(() => store.getMerchantReconciliations(merchant.value.id))
   const editForm = reactive({
     name: '',
@@ -472,26 +348,6 @@
     note: '',
     reason: ''
   })
-  const termForm = reactive<{
-    settlementBasis: SettlementBasis
-    merchantTermPercent: number
-    settlementCurrency: string
-    settlementCycle: SettlementCycle
-    effectiveFrom: string
-    reason: string
-  }>({
-    settlementBasis: 'GGR',
-    merchantTermPercent: 0,
-    settlementCurrency: 'USD',
-    settlementCycle: 'Monthly',
-    effectiveFrom: '',
-    reason: ''
-  })
-  const rtpPlans = [
-    { id: 'RTP-001', name: '標準 96.2%' },
-    { id: 'RTP-002', name: '均衡 95.8%' },
-    { id: 'RTP-003', name: '進階 96.8%' }
-  ]
   const newLineUid = computed(() =>
     store.createLineUid(merchant.value.code, newCurrency.value || 'CURRENCY')
   )
@@ -527,8 +383,6 @@
   )
   const auditEntries = computed(() => store.getMerchantAuditLogs(merchant.value.id))
 
-  const cycleLabel = (cycle: SettlementCycle) =>
-    ({ Daily: '每日', Weekly: '每週', Semimonthly: '每半月', Monthly: '每月' })[cycle]
   const formatMoney = (value: number) => new Intl.NumberFormat('zh-TW').format(value)
   const reconciliationStatusLabel = (status: string) =>
     ({ Pending: '待確認', Difference: '有差異', Confirmed: '已確認', Completed: '已完成' })[
@@ -573,58 +427,6 @@
     editVisible.value = false
     ElMessage.success('商戶基本資料已更新')
   }
-  const openTermDialog = () => {
-    const current = store.getCurrentMerchantTerm(merchant.value.id)
-    Object.assign(termForm, {
-      settlementBasis: current?.settlementBasis || 'GGR',
-      merchantTermPercent: current?.merchantTermPercent ?? merchant.value.merchantTermPercent,
-      settlementCurrency: current?.settlementCurrency || merchant.value.settlementCurrency,
-      settlementCycle: current?.settlementCycle || merchant.value.settlementCycle,
-      effectiveFrom: '',
-      reason: ''
-    })
-    termVisible.value = true
-  }
-  const createTerm = () => {
-    if (!termForm.effectiveFrom || !termForm.reason.trim()) {
-      ElMessage.warning('請填寫預計生效日與建立原因')
-      return
-    }
-    if (termForm.merchantTermPercent > merchant.value.agentTermPercent) {
-      ElMessage.error('商戶條件不可高於代理條件')
-      return
-    }
-    store.addMerchantCommercialTerm(merchant.value.id, {
-      settlementBasis: termForm.settlementBasis,
-      agentTermPercent: merchant.value.agentTermPercent,
-      merchantTermPercent: termForm.merchantTermPercent,
-      settlementCurrency: termForm.settlementCurrency,
-      settlementCycle: termForm.settlementCycle,
-      effectiveFrom: termForm.effectiveFrom,
-      reason: termForm.reason.trim()
-    })
-    termVisible.value = false
-    ElMessage.success('商務條件草稿已建立')
-  }
-  const activateTerm = async (termId: string) => {
-    try {
-      const result = await ElMessageBox.prompt(
-        '請輸入條件生效原因，此操作會使目前版本失效。',
-        '確認商務條件生效',
-        {
-          confirmButtonText: '確認生效',
-          cancelButtonText: '取消',
-          inputPlaceholder: '請填寫原因',
-          inputValidator: (value) => Boolean(value?.trim()) || '請填寫原因'
-        }
-      )
-      if (store.activateMerchantCommercialTerm(termId, result.value) === false)
-        return ElMessage.error('無法生效：日期不可追溯或早於／等於既有生效版本')
-      ElMessage.success('商務條件已確認，將依生效日期適用')
-    } catch {
-      // 使用者取消
-    }
-  }
   const addLine = () => {
     store.addMerchantLine(merchant.value.id, {
       currency: newCurrency.value,
@@ -639,7 +441,7 @@
   }
   const updateGame = (
     row: MerchantGameConfiguration,
-    updates: Partial<Pick<MerchantGameConfiguration, 'enabled' | 'rtpPlanId' | 'rtpPlanName'>>
+    updates: Partial<Pick<MerchantGameConfiguration, 'enabled'>>
   ) => {
     store.updateMerchantGameConfiguration(
       merchant.value.id,
@@ -648,10 +450,6 @@
       '商戶詳細頁調整遊戲配置'
     )
     ElMessage.success('遊戲配置已更新並同步至線路')
-  }
-  const changeRtp = (row: MerchantGameConfiguration, planId: string) => {
-    const plan = rtpPlans.find((item) => item.id === planId)
-    if (plan) updateGame(row, { rtpPlanId: plan.id, rtpPlanName: plan.name })
   }
   const submitStatusChange = (payload: { reason: string }) => {
     const nextStatus = merchant.value.status === 'Suspended' ? 'Active' : 'Suspended'

@@ -1,76 +1,92 @@
 <template>
   <section class="demo-links">
-    <ElAlert
-      title="遊戲試玩不是商戶串接驗收"
-      description="目前為前端模擬：連結僅在此瀏覽器資料中有效，不連接供應商、不扣正式餘額，也不進入任何正式帳務。"
-      type="warning"
-      :closable="false"
-      show-icon
-    />
-    <div class="toolbar">
-      <ElInput
-        v-model="search"
-        placeholder="搜尋名稱、遊戲或建立人"
-        clearable
-        style="max-width: 300px"
-      />
-      <ElButton type="primary" :disabled="actor.role === 'denied'" @click="openCreate()"
-        >建立試玩連結</ElButton
-      >
-    </div>
-    <ElTable :data="rows" border empty-text="尚無試玩連結，請建立第一條單遊戲連結。">
-      <ElTableColumn prop="name" label="名稱" min-width="165" />
-      <ElTableColumn label="用途" width="100"
-        ><template #default="{ row }">{{
-          row.purpose === 'internal' ? '內部試玩' : '商戶試玩'
-        }}</template></ElTableColumn
-      >
-      <ElTableColumn label="商戶" min-width="150"
-        ><template #default="{ row }">{{ merchantName(row.merchantId) }}</template></ElTableColumn
-      >
-      <ElTableColumn label="供應商／遊戲" min-width="200"
-        ><template #default="{ row }"
-          >{{ providerName(row.providerId) }}<br />{{ gameName(row.gameId) }}</template
-        ></ElTableColumn
-      >
-      <ElTableColumn label="幣別" width="80"
-        ><template #default="{ row }">{{ currency(row) }}</template></ElTableColumn
-      >
-      <ElTableColumn label="狀態" width="110"
-        ><template #default="{ row }"
-          ><ElTag :type="status(row) === '有效' ? 'success' : 'info'">{{
-            status(row)
-          }}</ElTag></template
-        ></ElTableColumn
-      >
-      <ElTableColumn label="成功啟動（模擬）" min-width="155"
-        ><template #default="{ row }"
-          >{{ row.starts }} / {{ row.maxStarts ?? '不限' }}</template
-        ></ElTableColumn
-      >
-      <ElTableColumn label="到期時間" min-width="185"
-        ><template #default="{ row }">{{ formatTime(row.expiresAt) }}</template></ElTableColumn
-      >
-      <ElTableColumn prop="createdBy" label="建立人" min-width="125" />
-      <ElTableColumn label="操作" width="210" fixed="right"
-        ><template #default="{ row }">
-          <ElButton link type="primary" @click="selectedId = row.id">查看</ElButton>
-          <ElButton link type="primary" :disabled="status(row) !== '有效'" @click="openPlay(row)"
-            >開啟試玩</ElButton
-          >
-          <ElButton link type="primary" @click="copy(row)">複製</ElButton>
-          <ElButton link type="danger" :disabled="row.disabled" @click="disable(row)"
-            >停用</ElButton
-          >
-          <ElButton link :disabled="!!row.replacedById" @click="openRegenerate(row)"
-            >重新產生</ElButton
-          >
-        </template></ElTableColumn
-      >
-    </ElTable>
-    <p class="hint"
-      >停用僅禁止新啟動；已開啟遊戲是否能終止，需視供應商能力。帳號池、租期回收、嵌入及獨立大廳不在此版範圍。</p
+    <ElTabs v-model="activeTab"
+      ><ElTabPane label="試玩連結" name="links" /><ElTabPane label="使用統計" name="statistics"
+    /></ElTabs>
+    <ElSelect
+      v-model="merchantFilter"
+      clearable
+      placeholder="全部可見商戶"
+      aria-label="試玩商戶篩選"
+      style="max-width: 300px; margin-bottom: 16px"
     >
+      <ElOption v-for="m in visibleMerchants" :key="m.id" :label="m.name" :value="m.id" />
+    </ElSelect>
+    <template v-if="activeTab === 'statistics'">
+      <p>僅統計測試連結成功啟動；不計入正式投注或結算。</p>
+      <ElTable :data="statistics" empty-text="尚無符合條件的試玩紀錄">
+        <ElTableColumn prop="merchant" label="商戶" min-width="140" />
+        <ElTableColumn prop="game" label="遊戲" min-width="150" />
+        <ElTableColumn prop="currency" label="幣別" width="90" />
+        <ElTableColumn prop="starts" label="成功啟動次數" width="150" />
+        <ElTableColumn prop="last" label="最近啟動" min-width="180" />
+      </ElTable>
+    </template>
+    <template v-else>
+      <div class="toolbar">
+        <ElInput
+          v-model="search"
+          placeholder="搜尋名稱、遊戲或建立人"
+          clearable
+          style="max-width: 300px"
+        />
+        <ElButton type="primary" :disabled="actor.role === 'denied'" @click="openCreate()"
+          >建立試玩連結</ElButton
+        >
+      </div>
+      <ElTable :data="rows" border empty-text="尚無試玩連結，請建立第一條單遊戲連結。">
+        <ElTableColumn prop="name" label="名稱" min-width="165" />
+        <ElTableColumn label="用途" width="100"
+          ><template #default="{ row }">{{
+            row.purpose === 'internal' ? '內部試玩' : '商戶試玩'
+          }}</template></ElTableColumn
+        >
+        <ElTableColumn label="商戶" min-width="150"
+          ><template #default="{ row }">{{ merchantName(row.merchantId) }}</template></ElTableColumn
+        >
+        <ElTableColumn label="供應商／遊戲" min-width="200"
+          ><template #default="{ row }"
+            >{{ providerName(row.providerId) }}<br />{{ gameName(row.gameId) }}</template
+          ></ElTableColumn
+        >
+        <ElTableColumn label="幣別" width="80"
+          ><template #default="{ row }">{{ currency(row) }}</template></ElTableColumn
+        >
+        <ElTableColumn label="狀態" width="110"
+          ><template #default="{ row }"
+            ><ElTag :type="status(row) === '有效' ? 'success' : 'info'">{{
+              status(row)
+            }}</ElTag></template
+          ></ElTableColumn
+        >
+        <ElTableColumn label="成功啟動（模擬）" min-width="155"
+          ><template #default="{ row }"
+            >{{ row.starts }} / {{ row.maxStarts ?? '不限' }}</template
+          ></ElTableColumn
+        >
+        <ElTableColumn label="到期時間" min-width="185"
+          ><template #default="{ row }">{{ formatTime(row.expiresAt) }}</template></ElTableColumn
+        >
+        <ElTableColumn prop="createdBy" label="建立人" min-width="125" />
+        <ElTableColumn label="操作" width="290" fixed="right"
+          ><template #default="{ row }">
+            <ElButton link type="primary" @click="selectedId = row.id">查看</ElButton>
+            <ElButton link type="primary" :disabled="status(row) !== '有效'" @click="openPlay(row)"
+              >開啟試玩</ElButton
+            >
+            <ElButton link type="primary" @click="copy(row)">複製</ElButton>
+            <ElButton link type="primary" @click="copyEmbed(row)">複製嵌入碼</ElButton>
+            <ElButton link type="danger" :disabled="row.disabled" @click="disable(row)"
+              >停用</ElButton
+            >
+            <ElButton link :disabled="!!row.replacedById" @click="openRegenerate(row)"
+              >重新產生</ElButton
+            >
+          </template></ElTableColumn
+        >
+      </ElTable>
+      <p class="hint">停用僅禁止新啟動；已開啟遊戲是否能終止，需視供應商能力。</p>
+    </template>
 
     <ElDrawer
       v-model="createOpen"
@@ -80,7 +96,7 @@
       destroy-on-close
     >
       <ElAlert
-        title="選供應商 → 選遊戲 → 選幣別線 → 建立連結"
+        title="選供應商 → 選遊戲 → 選幣別 → 輸入金額 → 建立連結"
         description="下列可用性及授權皆為示範資料；正式版須由後端與供應商確認。"
         type="info"
         :closable="false"
@@ -92,7 +108,7 @@
           type="info"
           :closable="false"
         />
-        <ElFormItem label="用途" required
+        <ElFormItem v-if="false" label="用途" required
           ><ElSelect
             v-model="form.purpose"
             :disabled="actor.role === 'merchant'"
@@ -101,15 +117,15 @@
               label="商戶試玩"
               value="merchant" /></ElSelect
         ></ElFormItem>
-        <ElFormItem label="綁定商戶" :required="form.purpose === 'merchant'"
+        <ElFormItem label="試玩商戶" required
           ><ElSelect
             v-model="form.merchantId"
             :disabled="actor.role === 'merchant'"
             clearable
-            placeholder="內部試玩可不綁定"
+            placeholder="請選擇試玩商戶"
             @change="resetSelection"
             ><ElOption
-              v-for="merchant in store.state.merchants || []"
+              v-for="merchant in visibleMerchants"
               :key="merchant.id"
               :label="merchant.name"
               :value="merchant.id" /></ElSelect
@@ -181,9 +197,16 @@
             :max="100000"
           />
         </ElFormItem>
-        <ElFormItem v-if="provider?.initialCredit" label="初始試玩額度（此示範供應商支援，可留空）"
-          ><ElInputNumber v-model="form.initialCredit" :min="1" :max="1000000"
-        /></ElFormItem>
+        <ElFormItem v-if="provider?.initialCredit" label="試玩金額" required>
+          <ElInputNumber
+            v-model="form.initialCredit"
+            :disabled="!form.lineId"
+            :min="0.01"
+            :max="1000000"
+            :precision="2"
+          />
+          <span>演示保護上限 1,000,000；不進入正式錢包。</span>
+        </ElFormItem>
         <ElAlert
           v-if="error || eligibilityError"
           :title="error || eligibilityError"
@@ -292,7 +315,7 @@
   import { useUserStore } from '@/store/modules/user'
   import { useProviderDemoStore } from '@/store/modules/providerDemo'
   import {
-    createDemoLink,
+    createMerchantTrial,
     capabilityError,
     linkStatus,
     manageDemoLink,
@@ -317,13 +340,36 @@
     merchantId: user.info.merchantId
   }))
   const now = useNow({ interval: 1000 })
+  const activeTab = ref('links')
+  const merchantFilter = ref('')
+  const visibleMerchants = computed(() =>
+    (store.state.merchants || []).filter(
+      (m) =>
+        actor.value.role === 'admin' ||
+        (actor.value.role === 'merchant' && m.id === actor.value.merchantId)
+    )
+  )
   const search = ref('')
   const rows = computed(() =>
-    visibleLinks(store.state, actor.value).filter((link) =>
-      `${link.name} ${gameName(link.gameId)} ${link.createdBy}`
-        .toLowerCase()
-        .includes(search.value.toLowerCase())
+    visibleLinks(store.state, actor.value).filter(
+      (link) =>
+        (!merchantFilter.value || link.merchantId === merchantFilter.value) &&
+        `${link.name} ${gameName(link.gameId)} ${link.createdBy}`
+          .toLowerCase()
+          .includes(search.value.toLowerCase())
     )
+  )
+  const statistics = computed(() =>
+    rows.value.map((link) => {
+      const sessions = store.state.sessions.filter((s) => s.linkId === link.id)
+      return {
+        merchant: merchantName(link.merchantId),
+        game: gameName(link.gameId),
+        currency: currency(link),
+        starts: link.starts,
+        last: sessions[0] ? formatTime(sessions[0].createdAt) : '尚未啟動'
+      }
+    })
   )
   const selectedId = ref('')
   const selected = computed(() =>
@@ -334,7 +380,7 @@
   const error = ref('')
   const blank = (): DemoInput => ({
     name: '',
-    purpose: actor.value.role === 'merchant' ? 'merchant' : 'internal',
+    purpose: 'merchant',
     merchantId: actor.value.merchantId,
     providerId: '',
     gameId: '',
@@ -390,14 +436,18 @@
   const game = computed(() => store.state.games.find((item) => item.id === form.gameId))
   const lineError = (gameId: string, providerId: string, lineId: string) => {
     const g = store.state.games.find((g) => g.id === gameId)
-    return capabilityError(store.state, {
-      ...form,
-      gameId,
-      providerId,
-      lineId,
-      locale: g?.locales[0] || '',
-      initialCredit: undefined
-    })
+    return capabilityError(
+      store.state,
+      {
+        ...form,
+        gameId,
+        providerId,
+        lineId,
+        locale: g?.locales[0] || '',
+        initialCredit: undefined
+      },
+      true
+    )
   }
   const eligibleGame = (g: { id: string; providerId: string }) =>
     store.state.providers
@@ -468,9 +518,22 @@
       ElMessage.warning('無法自動複製，請在詳情中手動複製網址')
     }
   }
+  async function copyEmbed(link: DemoLink) {
+    const src = shareUrl(link).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    try {
+      await navigator.clipboard.writeText(
+        `<iframe src="${src}" title="遊戲試玩" width="100%" height="720" allow="fullscreen" referrerpolicy="no-referrer"></iframe>`
+      )
+      ElMessage.success('已複製測試連結嵌入碼')
+    } catch {
+      ElMessage.error('無法存取剪貼簿，請允許複製權限後再試')
+    }
+  }
   function create() {
     try {
-      const link = createDemoLink(
+      if (!form.merchantId) throw new Error('請先選擇試玩商戶')
+      form.purpose = 'merchant'
+      const link = createMerchantTrial(
         store.state,
         {
           ...form,

@@ -13,9 +13,6 @@
           <ElTag :type="riskType(bet.riskStatus)" effect="plain" round>{{
             riskLabel(bet.riskStatus)
           }}</ElTag>
-          <ElTag :type="replayStatusType(bet.result.replay.status)" effect="plain" round>
-            {{ replayStatusLabel(bet.result.replay.status) }}
-          </ElTag>
         </template>
         <template #meta>
           <div class="hero-meta">
@@ -29,15 +26,6 @@
           <ElButton @click="router.push('/transactions/bets')">返回列表</ElButton>
           <ElButton @click="router.push(`/members/management/${bet.memberId}?tab=bets`)"
             >查看會員</ElButton
-          >
-          <ElButton v-if="bet.result.replay.supportsBoardDisplay" @click="openTab('board')"
-            >查看盤面</ElButton
-          >
-          <ElButton
-            v-if="bet.result.replay.supportsResultReplay || bet.result.replay.supportsEventReplay"
-            type="primary"
-            @click="openTab('replay')"
-            >結果重播</ElButton
           >
           <ElButton
             v-if="relatedTransactions[0]"
@@ -167,245 +155,6 @@
           </div>
         </ElTabPane>
 
-        <ElTabPane label="遊戲結果" name="result">
-          <div class="tab-panel result-layout">
-            <section class="section-block">
-              <div class="section-title"
-                ><div><h3>結果摘要</h3><p>提供客服及營運快速判讀。</p></div></div
-              >
-              <ElDescriptions :column="descriptionColumns" border>
-                <ElDescriptionsItem label="結果">{{ bet.result.outcome }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="派彩倍數"
-                  >{{ bet.result.multiplier }}x</ElDescriptionsItem
-                >
-                <ElDescriptionsItem label="觸發功能">{{ bet.result.feature }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="Jackpot 金額"
-                  >{{ money(bet.result.jackpotAmount) }} {{ bet.currency }}</ElDescriptionsItem
-                >
-                <ElDescriptionsItem label="結果代碼">{{
-                  bet.result.resultCode
-                }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="遊戲"
-                  >{{ bet.gameName }}（{{ bet.gameId }}）</ElDescriptionsItem
-                >
-                <ElDescriptionsItem label="局號">{{ bet.roundId }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="結果摘要" :span="descriptionColumns">{{
-                  bet.result.summary
-                }}</ElDescriptionsItem>
-              </ElDescriptions>
-            </section>
-            <section class="section-block">
-              <div class="section-title"
-                ><div
-                  ><h3>當局版本快照</h3
-                  ><p>一律使用下注當時的版本與設定，不讀取目前最新設定。</p></div
-                ></div
-              >
-              <ElDescriptions :column="1" border>
-                <ElDescriptionsItem label="遊戲版本">{{
-                  bet.result.version.gameVersion
-                }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="結果格式">{{
-                  bet.result.version.resultFormatVersion
-                }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="RTP 方案">{{
-                  bet.result.version.rtpPlan
-                }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="限紅方案">{{
-                  bet.result.version.limitPlan
-                }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="Replay 素材">{{
-                  bet.result.version.replayAssetVersion
-                }}</ElDescriptionsItem>
-              </ElDescriptions>
-            </section>
-          </div>
-        </ElTabPane>
-
-        <ElTabPane v-if="bet.result.replay.supportsBoardDisplay" label="遊戲盤面" name="board">
-          <div class="tab-panel board-layout">
-            <section class="section-block">
-              <div class="section-title">
-                <div>
-                  <h3>歷史靜態盤面</h3>
-                  <p>顯示當時保存的 Symbol 與中獎位置，不會重新產生結果。</p>
-                </div>
-                <ElTag type="info" effect="plain">{{ currentBoardStage.label }}</ElTag>
-              </div>
-              <div class="stage-tabs">
-                <ElButton
-                  v-for="(stage, index) in bet.result.replay.stages"
-                  :key="stage.id"
-                  :type="boardStageIndex === index ? 'primary' : 'default'"
-                  plain
-                  @click="boardStageIndex = index"
-                >
-                  {{ stage.label }}
-                </ElButton>
-              </div>
-              <div
-                class="symbol-board"
-                :style="{ gridTemplateColumns: `repeat(${currentBoardStage.columns}, 1fr)` }"
-              >
-                <div
-                  v-for="cell in currentBoardStage.cells"
-                  :key="cell.position"
-                  class="symbol-cell"
-                  :class="{ winning: cell.winning }"
-                >
-                  <span>{{ cell.icon }}</span>
-                  <strong>{{ cell.symbolId }}</strong>
-                  <small>位置 {{ cell.position + 1 }}</small>
-                </div>
-              </div>
-            </section>
-            <section class="section-block stage-summary">
-              <div class="section-title">
-                <div><h3>本盤結果</h3><p>目前階段的中獎判定摘要。</p></div>
-              </div>
-              <div class="amount-list">
-                <div
-                  ><span>盤面階段</span><strong>{{ currentBoardStage.label }}</strong></div
-                >
-                <div
-                  ><span>盤面尺寸</span
-                  ><strong
-                    >{{ currentBoardStage.columns }} × {{ currentBoardStage.rows }}</strong
-                  ></div
-                >
-                <div
-                  ><span>中獎倍率</span><strong>×{{ currentBoardStage.winMultiplier }}</strong></div
-                >
-                <div
-                  ><span>本盤派彩</span
-                  ><strong
-                    >{{ money(currentBoardStage.payoutAmount) }} {{ bet.currency }}</strong
-                  ></div
-                >
-                <div
-                  ><span>特殊玩法</span
-                  ><strong>{{ currentBoardStage.feature || '無' }}</strong></div
-                >
-              </div>
-              <ElAlert
-                title="黃色框代表保存結果中的中獎位置；此畫面僅供判讀。"
-                type="warning"
-                :closable="false"
-                show-icon
-              />
-            </section>
-          </div>
-        </ElTabPane>
-
-        <ElTabPane
-          v-if="bet.result.replay.supportsResultReplay || bet.result.replay.supportsEventReplay"
-          label="結果重播"
-          name="replay"
-        >
-          <div class="tab-panel replay-layout">
-            <ElAlert
-              v-if="route.query.alertId"
-              class="risk-source-alert"
-              :title="`已由歷史告警 ${route.query.alertId} 定位至異常階段`"
-              description="目前顯示的是該告警保存的歷史事件位置；重播只還原結果，不會重新計算。"
-              type="error"
-              :closable="false"
-              show-icon
-            />
-            <section class="section-block replay-area">
-              <div class="section-title">
-                <div>
-                  <h3>結果重播</h3>
-                  <p>依保存事件逐步還原結果，不會重新執行 RNG。</p>
-                </div>
-                <ElTag :type="replayStatusType(bet.result.replay.status)" effect="light">
-                  {{ replayStatusLabel(bet.result.replay.status) }}
-                </ElTag>
-              </div>
-
-              <div class="replay-stage">
-                <span>事件 {{ currentEventIndex + 1 }} / {{ replayEvents.length }}</span>
-                <ArtSvgIcon :icon="eventIcon(currentReplayEvent.type)" />
-                <h2>{{ currentReplayEvent.title }}</h2>
-                <p>{{ currentReplayEvent.detail }}</p>
-                <ElAlert
-                  v-if="currentReplayEvent.riskAlert"
-                  :title="`歷史告警：${currentReplayEvent.riskAlert}`"
-                  type="error"
-                  :closable="false"
-                  show-icon
-                />
-              </div>
-
-              <div class="replay-controls">
-                <ElButton :disabled="currentEventIndex === 0" @click="previousEvent"
-                  >上一步</ElButton
-                >
-                <ElButton type="primary" @click="togglePlayback">
-                  {{ isPlaying ? '暫停' : '播放' }}
-                </ElButton>
-                <ElButton @click="resetReplay">重新播放</ElButton>
-                <ElButton
-                  :disabled="currentEventIndex >= replayEvents.length - 1"
-                  @click="nextEvent"
-                  >下一步</ElButton
-                >
-                <ElSelect v-model="playbackSpeed" class="speed-select">
-                  <ElOption label="0.5x" :value="0.5" />
-                  <ElOption label="1x" :value="1" />
-                  <ElOption label="2x" :value="2" />
-                </ElSelect>
-              </div>
-              <ElProgress
-                :percentage="replayProgress"
-                :format="() => `${currentEventIndex + 1} / ${replayEvents.length}`"
-              />
-            </section>
-
-            <section class="section-block transaction-trail">
-              <div class="section-title">
-                <div><h3>交易軌跡</h3><p>同步查看本局錢包資金變化。</p></div>
-              </div>
-              <button
-                v-for="transaction in relatedTransactions"
-                :key="transaction.id"
-                type="button"
-                @click="router.push(`/transactions/records/${transaction.id}`)"
-              >
-                <span>{{ transactionTypeLabel(transaction.type) }}</span>
-                <strong :class="transaction.amount >= 0 ? 'positive' : 'negative'">
-                  {{ signedMoney(transaction.amount) }} {{ transaction.currency }}
-                </strong>
-                <small>{{ transaction.id }}</small>
-              </button>
-              <ElEmpty v-if="relatedTransactions.length === 0" description="尚無關聯交易" />
-            </section>
-
-            <section class="section-block event-timeline">
-              <div class="section-title">
-                <div><h3>事件時間軸</h3><p>點擊事件可直接跳至該階段。</p></div>
-              </div>
-              <div class="timeline-list">
-                <button
-                  v-for="(event, index) in replayEvents"
-                  :key="event.id"
-                  type="button"
-                  :class="{ active: currentEventIndex === index, risk: event.riskAlert }"
-                  @click="selectEvent(index)"
-                >
-                  <time>{{ eventTime(event.offsetSeconds) }}</time>
-                  <ArtSvgIcon :icon="eventIcon(event.type)" />
-                  <span
-                    ><strong>{{ event.title }}</strong
-                    ><small>{{ event.detail }}</small></span
-                  >
-                  <ElTag v-if="event.riskAlert" type="danger" size="small">異常階段</ElTag>
-                </button>
-              </div>
-            </section>
-          </div>
-        </ElTabPane>
-
         <ElTabPane label="關聯交易" name="transactions">
           <div class="tab-panel">
             <div class="section-title"
@@ -522,7 +271,7 @@
             </section>
             <section class="section-block">
               <div class="section-title">
-                <div><h3>查看與匯出紀錄</h3><p>追蹤盤面、Replay 與原始資料操作。</p></div>
+                <div><h3>查看與匯出紀錄</h3><p>保留歷史操作證據；本版僅提供原始資料查詢。</p></div>
               </div>
               <ArtTable
                 :data="accessLogs"
@@ -559,9 +308,6 @@
   import { ElButton, ElMessage, ElTag } from 'element-plus'
   import { useWindowSize } from '@vueuse/core'
   import type {
-    BetBoardStage,
-    BetReplayEventType,
-    BetReplayStatus,
     BetResultAccessLog,
     MemberBetStatus,
     MemberTransactionStatus,
@@ -576,32 +322,19 @@
   const router = useRouter()
   const store = useTransactionCenterStore()
   const { width } = useWindowSize()
-  const activeTab = ref(String(route.query.tab || 'overview'))
+  const activeTab = ref(
+    ['overview', 'transactions', 'anomalies', 'raw'].includes(String(route.query.tab))
+      ? String(route.query.tab)
+      : 'overview'
+  )
   const descriptionColumns = computed(() => (width.value < 760 ? 1 : 2))
   const bet = computed(() => store.findBet(String(route.params.id)))
   const relatedTransactions = computed(() =>
     bet.value ? store.getTransactionsByBet(bet.value.id) : []
   )
   const anomalies = computed(() => (bet.value ? store.getBetAnomalies(bet.value.id) : []))
-  const replayEvents = computed(() => bet.value?.result.replay.events || [])
   const accessLogs = computed(() => (bet.value ? store.getBetResultAccessLogs(bet.value.id) : []))
   const canViewRawResult = true
-  const boardStageIndex = ref(0)
-  const currentEventIndex = ref(0)
-  const playbackSpeed = ref(1)
-  const isPlaying = ref(false)
-  let playbackTimer: ReturnType<typeof setInterval> | undefined
-  const currentBoardStage = computed<BetBoardStage>(
-    () =>
-      (bet.value?.result.replay.stages[boardStageIndex.value] ||
-        bet.value?.result.replay.stages[0])!
-  )
-  const currentReplayEvent = computed(() => replayEvents.value[currentEventIndex.value]!)
-  const replayProgress = computed(() =>
-    replayEvents.value.length
-      ? Math.round(((currentEventIndex.value + 1) / replayEvents.value.length) * 100)
-      : 0
-  )
   const summary = computed(() =>
     bet.value
       ? [
@@ -620,11 +353,6 @@
             value: `${money(bet.value.playerNet)} ${bet.value.currency}`,
             note: bet.value.playerNet >= 0 ? '會員淨贏' : '會員淨輸',
             className: bet.value.playerNet >= 0 ? 'positive' : 'negative'
-          },
-          {
-            label: '派彩倍數',
-            value: `${bet.value.result.multiplier}x`,
-            note: bet.value.result.feature
           }
         ]
       : []
@@ -633,7 +361,6 @@
     new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
       value
     )
-  const signedMoney = (value: number) => `${value >= 0 ? '+' : ''}${money(value)}`
   const betStatusLabel = (status: MemberBetStatus) =>
     ({
       'In Progress': '進行中',
@@ -665,32 +392,6 @@
       GT007: '彩票遊戲',
       GT008: '其他遊戲'
     })[type as 'GT001'] || type
-  const replayStatusLabel = (status: BetReplayStatus) =>
-    ({
-      Available: '可重播',
-      Partial: '部分可重播',
-      Unsupported: '不支援重播',
-      'Missing Data': '重播資料缺失'
-    })[status]
-  const replayStatusType = (status: BetReplayStatus) =>
-    status === 'Available'
-      ? 'success'
-      : status === 'Partial'
-        ? 'warning'
-        : status === 'Missing Data'
-          ? 'danger'
-          : 'info'
-  const eventIcon = (type: BetReplayEventType) =>
-    ({
-      Bet: 'ri:money-dollar-circle-line',
-      'Game Start': 'ri:play-circle-line',
-      'Board Result': 'ri:grid-line',
-      'Win Evaluation': 'ri:award-line',
-      Feature: 'ri:magic-line',
-      Jackpot: 'ri:funds-box-line',
-      Payout: 'ri:coins-line',
-      'Round End': 'ri:stop-circle-line'
-    })[type]
   const transactionTypeLabel = (type: MemberTransactionType) =>
     ({
       Bet: '投注',
@@ -729,77 +430,15 @@
       'View Raw Result': '查看原始結果',
       'Export Result': '匯出結果資料'
     })[action]
-  const stopPlayback = () => {
-    if (playbackTimer) clearInterval(playbackTimer)
-    playbackTimer = undefined
-    isPlaying.value = false
-  }
-  const startPlayback = () => {
-    if (!bet.value || replayEvents.value.length === 0) return
-    if (currentEventIndex.value >= replayEvents.value.length - 1) currentEventIndex.value = 0
-    stopPlayback()
-    isPlaying.value = true
-    store.logBetResultAccess(bet.value.id, 'Start Replay', `播放速度 ${playbackSpeed.value}x`)
-    playbackTimer = setInterval(() => {
-      if (currentEventIndex.value >= replayEvents.value.length - 1) {
-        stopPlayback()
-        return
-      }
-      currentEventIndex.value += 1
-      const stageId = currentReplayEvent.value?.stageId
-      if (stageId && bet.value) {
-        const index = bet.value.result.replay.stages.findIndex((stage) => stage.id === stageId)
-        if (index >= 0) boardStageIndex.value = index
-      }
-    }, 1200 / playbackSpeed.value)
-  }
-  const togglePlayback = () => (isPlaying.value ? stopPlayback() : startPlayback())
-  const selectEvent = (index: number) => {
-    stopPlayback()
-    currentEventIndex.value = index
-    const stageId = replayEvents.value[index]?.stageId
-    if (stageId && bet.value) {
-      const stageIndex = bet.value.result.replay.stages.findIndex((stage) => stage.id === stageId)
-      if (stageIndex >= 0) boardStageIndex.value = stageIndex
-    }
-  }
-  const applyReplayLocation = () => {
-    if (!bet.value) return
-
-    const eventId = String(route.query.eventId || '')
-    if (eventId) {
-      const eventIndex = replayEvents.value.findIndex((event) => event.id === eventId)
-      if (eventIndex >= 0) selectEvent(eventIndex)
-    }
-
-    const stageId = String(route.query.stageId || '')
-    if (stageId) {
-      const stageIndex = bet.value.result.replay.stages.findIndex((stage) => stage.id === stageId)
-      if (stageIndex >= 0) boardStageIndex.value = stageIndex
-    }
-  }
-  const previousEvent = () => selectEvent(Math.max(0, currentEventIndex.value - 1))
-  const nextEvent = () =>
-    selectEvent(Math.min(replayEvents.value.length - 1, currentEventIndex.value + 1))
-  const resetReplay = () => selectEvent(0)
-  const eventTime = (seconds: number) =>
-    `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
   const trackTabAccess = (tab: string) => {
     if (!bet.value) return
-    if (tab === 'board') store.logBetResultAccess(bet.value.id, 'View Board', '查看歷史靜態盤面')
-    if (tab === 'replay') store.logBetResultAccess(bet.value.id, 'Start Replay', '開啟結果重播頁面')
     if (tab === 'raw')
       store.logBetResultAccess(bet.value.id, 'View Raw Result', '查看原始 JSON 結果')
   }
   const syncTab = (tab: string | number) => {
     const target = String(tab)
     trackTabAccess(target)
-    if (target !== 'replay') stopPlayback()
     router.replace({ query: { ...route.query, tab: target } })
-  }
-  const openTab = (tab: string) => {
-    activeTab.value = tab
-    syncTab(tab)
   }
   const copyRawPayload = async () => {
     if (!bet.value) return
@@ -822,25 +461,19 @@
   watch(
     () => [route.query.tab, route.query.eventId, route.query.stageId],
     ([tab]) => {
-      if (tab) activeTab.value = String(tab)
-      applyReplayLocation()
+      if (tab)
+        activeTab.value = ['overview', 'transactions', 'anomalies', 'raw'].includes(String(tab))
+          ? String(tab)
+          : 'overview'
     }
   )
-  watch(playbackSpeed, () => {
-    if (isPlaying.value) startPlayback()
-  })
   watch(
     () => bet.value?.id,
     () => {
-      stopPlayback()
-      boardStageIndex.value = 0
-      currentEventIndex.value = 0
-      applyReplayLocation()
       trackTabAccess(activeTab.value)
     },
     { immediate: true }
   )
-  onBeforeUnmount(stopPlayback)
 </script>
 
 <style scoped lang="scss">

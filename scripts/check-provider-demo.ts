@@ -20,6 +20,8 @@ const admin: DemoActor = { role: 'admin', name: '管理者' }
 const merchant: DemoActor = { role: 'merchant', name: '商戶', merchantId: 'M00001' }
 const otherMerchant: DemoActor = { ...merchant, merchantId: 'M00002' }
 const state = createDemoState()
+// Explicit test capability; does not change shipped supplier fixtures.
+state.providers[0].initialCredit = true
 setActivePinia(createPinia())
 const business = useBusinessPartnerStore()
 state.merchants = projectMerchantAccess(
@@ -35,7 +37,8 @@ const input: DemoInput = {
   lineId: 'PV00001-TWD',
   locale: 'zh-TW',
   expiresAt: new Date(Date.now() + 3600000).toISOString(),
-  maxStarts: 2
+  maxStarts: 2,
+  initialCredit: 100
 }
 const invalid = (change: Partial<DemoInput>) =>
   assert.throws(() => validateDemoInput(state, { ...input, ...change }, admin))
@@ -47,8 +50,11 @@ invalid({ maxStarts: 1.5 })
 invalid({ lineId: 'PV00002-TWD' })
 invalid({ gameId: 'G00002' })
 invalid({ locale: 'unsupported' })
-invalid({ initialCredit: 100 })
-invalid({ purpose: 'merchant' })
+invalid({ initialCredit: undefined })
+invalid({ initialCredit: 0 })
+invalid({ initialCredit: 1.001 })
+invalid({ initialCredit: 1000001 })
+validateDemoInput(state, { ...input, purpose: 'merchant' }, admin)
 invalid({ merchantId: 'M00002' })
 invalid({ providerId: 'PV00003', gameId: 'G00003', lineId: 'PV00003-TWD' })
 assert.throws(() => createDemoLink(state, input, merchant))

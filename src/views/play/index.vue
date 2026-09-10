@@ -4,13 +4,6 @@
       <ElTag type="warning">GGAP・前端試玩演示</ElTag>
       <h1>{{ game?.name || '遊戲試玩連結' }}</h1>
       <p>這是啟動流程演示，並非可投注遊戲或商戶串接測試。</p>
-      <ElAlert
-        title="僅限同一瀏覽器的本地演示資料"
-        description="正式版需由後端檢查有效期、狀態、上限、授權及供應商能力，再取得新的啟動網址。本頁不呼叫供應商，也不包含 API 密鑰或真實會員。"
-        type="warning"
-        :closable="false"
-        show-icon
-      />
       <ElDescriptions v-if="link" :column="1" border class="mt-4">
         <ElDescriptionsItem label="試玩方式">{{ modeLabel(link.mode) }}</ElDescriptionsItem>
         <ElDescriptionsItem label="幣別線">{{ link.lineId }}</ElDescriptionsItem>

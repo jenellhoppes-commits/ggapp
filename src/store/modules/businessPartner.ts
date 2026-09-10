@@ -1,9 +1,13 @@
 import { defineStore } from 'pinia'
-import { computed, ref, toRaw } from 'vue'
+import { computed, ref, toRaw, watch } from 'vue'
 import { useLocalStorage, useNow } from '@vueuse/core'
 import { agentContractHistory, merchantContractHistory } from '@/domain/business-contracts'
 import { platformDate } from '@/domain/report-four-tabs'
 import { usePlatformLocaleStore } from './platformLocale'
+import { useProviderDemoStore } from './providerDemo'
+import { resolveMerchantGameGrant } from '@/domain/merchant-game-grant'
+import { newAgentLevel } from '@/domain/agent-hierarchy'
+import { usePartnerWorkspaceStore } from './partnerWorkspace'
 import { agentMockData, merchantRecords } from '@/mock/game-provider'
 import type {
   AgentCommercialTerm,
@@ -78,6 +82,8 @@ const formatNow = () => {
 }
 
 export const useBusinessPartnerStore = defineStore('businessPartnerStore', () => {
+  const workspace = usePartnerWorkspaceStore()
+  const supplierCosts = computed(() => workspace.costs)
   // Append-only portal prototype journal. Shared partner IDs; no writes to financial snapshots.
   const portalRateVersions = useLocalStorage<import('@/domain/agent-portal').PortalRateVersion[]>(
     'ggap-agent-rate-versions-v1',
@@ -121,36 +127,42 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
     'ggap-agent-contracts-v1',
     structuredClone(toRaw(initialCommercialTerms.value))
   )
-  merchants.value.forEach((merchant, index) => {
-    const agentTerm = initialCommercialTerms.value.find((term) => term.agentId === merchant.agentId)
-    merchant.agentTermPercent = agentTerm?.ratePercent || 0
-    merchant.merchantTermPercent = Number(
-      Math.max(0, merchant.agentTermPercent - 0.75 - (index % 3) * 0.25).toFixed(2)
-    )
-    merchant.email ||= `${merchant.code.toLowerCase()}@example.com`
-    merchant.cooperationStartDate ||= merchant.createdAt.slice(0, 10)
-  })
-  const initialMerchantCommercialTerms = ref<MerchantCommercialTerm[]>(
-    merchants.value.map((merchant) => {
+  merchants.value
+    .filter((m) => !m.id.startsWith('M-DEMO-'))
+    .forEach((merchant, index) => {
       const agentTerm = initialCommercialTerms.value.find(
         (term) => term.agentId === merchant.agentId
       )
-      return {
-        id: `MTERM-${merchant.id}-001`,
-        merchantId: merchant.id,
-        version: 1,
-        settlementBasis: agentTerm?.settlementBasis || 'GGR',
-        agentTermPercent: merchant.agentTermPercent,
-        merchantTermPercent: merchant.merchantTermPercent,
-        settlementCurrency: merchant.settlementCurrency,
-        settlementCycle: merchant.settlementCycle,
-        effectiveFrom: merchant.cooperationStartDate || merchant.createdAt.slice(0, 10),
-        status: merchant.status === 'Active' ? 'Active' : 'Draft',
-        reason: '初始商務條件',
-        createdBy: 'Super Admin',
-        createdAt: merchant.createdAt
-      }
+      merchant.agentTermPercent = agentTerm?.ratePercent || 0
+      merchant.merchantTermPercent = Number(
+        Math.max(0, merchant.agentTermPercent - 0.75 - (index % 3) * 0.25).toFixed(2)
+      )
+      merchant.email ||= `${merchant.code.toLowerCase()}@example.com`
+      merchant.cooperationStartDate ||= merchant.createdAt.slice(0, 10)
     })
+  const initialMerchantCommercialTerms = ref<MerchantCommercialTerm[]>(
+    merchants.value
+      .filter((m) => !m.id.startsWith('M-DEMO-'))
+      .map((merchant) => {
+        const agentTerm = initialCommercialTerms.value.find(
+          (term) => term.agentId === merchant.agentId
+        )
+        return {
+          id: `MTERM-${merchant.id}-001`,
+          merchantId: merchant.id,
+          version: 1,
+          settlementBasis: agentTerm?.settlementBasis || 'GGR',
+          agentTermPercent: merchant.agentTermPercent,
+          merchantTermPercent: merchant.merchantTermPercent,
+          settlementCurrency: merchant.settlementCurrency,
+          settlementCycle: merchant.settlementCycle,
+          effectiveFrom: merchant.cooperationStartDate || merchant.createdAt.slice(0, 10),
+          status: merchant.status === 'Active' ? 'Active' : 'Draft',
+          reason: '初始商務條件',
+          createdBy: 'Super Admin',
+          createdAt: merchant.createdAt
+        }
+      })
   )
   const merchantCommercialTerms = useLocalStorage<MerchantCommercialTerm[]>(
     'ggap-merchant-contracts-v1',
@@ -158,79 +170,85 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
   )
   const merchantGameConfigurations = useLocalStorage<MerchantGameConfiguration[]>(
     'ggap-business-games-v1',
-    merchants.value.flatMap((merchant, merchantIndex) =>
-      Array.from({ length: 5 }, (_, gameIndex) => ({
-        gameId: `G${String(gameIndex + 1).padStart(5, '0')}`,
-        merchantId: merchant.id,
-        enabled: gameIndex < 4,
-        rtpPlanId: `RTP-${String((gameIndex % 3) + 1).padStart(3, '0')}`,
-        rtpPlanName: ['標準 96.2%', '均衡 95.8%', '進階 96.8%'][gameIndex % 3],
-        updatedAt: `2026-08-${String(28 - ((merchantIndex + gameIndex) % 8)).padStart(2, '0')} 14:20`
-      }))
-    )
+    merchants.value
+      .filter((m) => !m.id.startsWith('M-DEMO-'))
+      .flatMap((merchant, merchantIndex) =>
+        Array.from({ length: 5 }, (_, gameIndex) => ({
+          gameId: `G${String(gameIndex + 1).padStart(5, '0')}`,
+          merchantId: merchant.id,
+          enabled: gameIndex < 4,
+          rtpPlanId: `RTP-${String((gameIndex % 3) + 1).padStart(3, '0')}`,
+          rtpPlanName: ['標準 96.2%', '均衡 95.8%', '進階 96.8%'][gameIndex % 3],
+          updatedAt: `2026-08-${String(28 - ((merchantIndex + gameIndex) % 8)).padStart(2, '0')} 14:20`
+        }))
+      )
   )
   const merchantReconciliationSummaries = useLocalStorage<MerchantReconciliationSummary[]>(
     'ggap-merchant-reconciliation-summaries-v1',
-    merchants.value.flatMap((merchant, index) =>
-      ['2026-08', '2026-07', '2026-06'].map((period, periodIndex) => {
-        const term = initialMerchantCommercialTerms.value.find(
-          (item) => item.merchantId === merchant.id
-        )!
-        const betAmount = 420000 + index * 28000 - periodIndex * 31000
-        const winAmount = Math.round(betAmount * (0.932 + (index % 4) * 0.005))
-        const ggr = betAmount - winAmount
-        const validBet = Math.round(betAmount * 0.9)
-        const baseValue =
-          term.settlementBasis === 'GGR'
-            ? ggr
-            : term.settlementBasis === 'Valid Bet'
-              ? validBet
-              : betAmount
-        return {
-          id: `MREC-${merchant.id}-${period}`,
-          merchantId: merchant.id,
-          period,
-          settlementBasis: term.settlementBasis,
-          betAmount,
-          winAmount,
-          ggr,
-          validBet,
-          merchantTermPercent: term.merchantTermPercent,
-          estimatedSettlement: Math.round(baseValue * (term.merchantTermPercent / 100)),
-          currency: term.settlementCurrency,
-          exchangeRateStatus: periodIndex === 0 ? 'Estimated' : 'Locked',
-          status: periodIndex === 0 ? 'Pending' : periodIndex === 1 ? 'Confirmed' : 'Completed'
-        }
-      })
-    )
+    merchants.value
+      .filter((m) => !m.id.startsWith('M-DEMO-'))
+      .flatMap((merchant, index) =>
+        ['2026-08', '2026-07', '2026-06'].map((period, periodIndex) => {
+          const term = initialMerchantCommercialTerms.value.find(
+            (item) => item.merchantId === merchant.id
+          )!
+          const betAmount = 420000 + index * 28000 - periodIndex * 31000
+          const winAmount = Math.round(betAmount * (0.932 + (index % 4) * 0.005))
+          const ggr = betAmount - winAmount
+          const validBet = Math.round(betAmount * 0.9)
+          const baseValue =
+            term.settlementBasis === 'GGR'
+              ? ggr
+              : term.settlementBasis === 'Valid Bet'
+                ? validBet
+                : betAmount
+          return {
+            id: `MREC-${merchant.id}-${period}`,
+            merchantId: merchant.id,
+            period,
+            settlementBasis: term.settlementBasis,
+            betAmount,
+            winAmount,
+            ggr,
+            validBet,
+            merchantTermPercent: term.merchantTermPercent,
+            estimatedSettlement: Math.round(baseValue * (term.merchantTermPercent / 100)),
+            currency: term.settlementCurrency,
+            exchangeRateStatus: periodIndex === 0 ? 'Estimated' : 'Locked',
+            status: periodIndex === 0 ? 'Pending' : periodIndex === 1 ? 'Confirmed' : 'Completed'
+          }
+        })
+      )
   )
   const merchantAuditLogs = ref<Record<string, AuditEntry[]>>(
     Object.fromEntries(
-      merchants.value.map((merchant) => [
-        merchant.id,
-        [
-          {
-            id: `MAUD-${merchant.id}-002`,
-            action: '更新商戶資料',
-            operator: 'Business Ops',
-            reason: '例行資料確認',
-            time: merchant.updatedAt,
-            result: 'Success',
-            before: '前一版商戶主檔',
-            after: `${merchant.name}｜${merchant.status}`
-          },
-          {
-            id: `MAUD-${merchant.id}-001`,
-            action: '建立商戶',
-            operator: 'Super Admin',
-            reason: '建立商戶主檔與初始線路',
-            time: merchant.createdAt,
-            result: 'Success',
-            before: '無',
-            after: merchant.code
-          }
-        ] as AuditEntry[]
-      ])
+      merchants.value
+        .filter((m) => !m.id.startsWith('M-DEMO-'))
+        .map((merchant) => [
+          merchant.id,
+          [
+            {
+              id: `MAUD-${merchant.id}-002`,
+              action: '更新商戶資料',
+              operator: 'Business Ops',
+              reason: '例行資料確認',
+              time: merchant.updatedAt,
+              result: 'Success',
+              before: '前一版商戶主檔',
+              after: `${merchant.name}｜${merchant.status}`
+            },
+            {
+              id: `MAUD-${merchant.id}-001`,
+              action: '建立商戶',
+              operator: 'Super Admin',
+              reason: '建立商戶主檔與初始線路',
+              time: merchant.createdAt,
+              result: 'Success',
+              before: '無',
+              after: merchant.code
+            }
+          ] as AuditEntry[]
+        ])
     )
   )
   const gameNames = ['Dragon Vault', 'Neon Tiger', 'Lucky Panda', 'Royal Baccarat', 'Fortune Ox']
@@ -239,71 +257,77 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
   >(
     'ggap-business-line-games-v1',
     Object.fromEntries(
-      merchants.value.flatMap((merchant) =>
-        merchant.lines.map((line) => [
-          line.uid,
-          gameNames.map((_, index) => ({
-            gameId: `G${String(index + 1).padStart(5, '0')}`,
-            lineUid: line.uid,
-            enabled: index < line.enabledGames,
-            rtpPlanName: ['標準 96.2%', '均衡 95.8%', '進階 96.8%'][index % 3],
-            limitPlan: ['標準限紅', '低額限紅', '高額限紅'][index % 3],
-            jackpotMode: line.jackpotMode,
-            updatedAt: line.updatedAt
-          }))
-        ])
-      )
+      merchants.value
+        .filter((m) => !m.id.startsWith('M-DEMO-'))
+        .flatMap((merchant) =>
+          merchant.lines.map((line) => [
+            line.uid,
+            gameNames.map((_, index) => ({
+              gameId: `G${String(index + 1).padStart(5, '0')}`,
+              lineUid: line.uid,
+              enabled: index < line.enabledGames,
+              rtpPlanName: ['標準 96.2%', '均衡 95.8%', '進階 96.8%'][index % 3],
+              limitPlan: ['標準限紅', '低額限紅', '高額限紅'][index % 3],
+              jackpotMode: line.jackpotMode,
+              updatedAt: line.updatedAt
+            }))
+          ])
+        )
     )
   )
   const merchantLineTests = ref<Record<string, IntegrationTestItem[]>>(
     Object.fromEntries(
-      merchants.value.flatMap((merchant) =>
-        merchant.lines.map((line) => [
-          line.uid,
-          (line.walletMode === 'Seamless'
-            ? [
-                ['餘額查詢', '驗證餘額查詢與簽章', true],
-                ['下注', '驗證下注冪等與回應', true],
-                ['派彩', '驗證派彩與重送處理', true],
-                ['退款／回滾', '驗證退款及回滾流程', true]
-              ]
-            : [
-                ['轉入', '驗證資金轉入遊戲錢包', true],
-                ['轉出', '驗證資金轉回商戶錢包', true],
-                ['遊戲餘額', '驗證遊戲錢包餘額', true],
-                ['餘額回收', '驗證批次回收流程', true]
-              ]
-          ).map((item, index) => ({
-            id: `${line.uid}-TEST-${index + 1}`,
-            name: item[0] as string,
-            description: item[1] as string,
-            required: item[2] as boolean,
-            status: index < 2 ? ('Passed' as const) : ('Not Started' as const),
-            testedAt: index < 2 ? line.updatedAt : undefined
-          }))
-        ])
-      )
+      merchants.value
+        .filter((m) => !m.id.startsWith('M-DEMO-'))
+        .flatMap((merchant) =>
+          merchant.lines.map((line) => [
+            line.uid,
+            (line.walletMode === 'Seamless'
+              ? [
+                  ['餘額查詢', '驗證餘額查詢與簽章', true],
+                  ['下注', '驗證下注冪等與回應', true],
+                  ['派彩', '驗證派彩與重送處理', true],
+                  ['退款／回滾', '驗證退款及回滾流程', true]
+                ]
+              : [
+                  ['轉入', '驗證資金轉入遊戲錢包', true],
+                  ['轉出', '驗證資金轉回商戶錢包', true],
+                  ['遊戲餘額', '驗證遊戲錢包餘額', true],
+                  ['餘額回收', '驗證批次回收流程', true]
+                ]
+            ).map((item, index) => ({
+              id: `${line.uid}-TEST-${index + 1}`,
+              name: item[0] as string,
+              description: item[1] as string,
+              required: item[2] as boolean,
+              status: index < 2 ? ('Passed' as const) : ('Not Started' as const),
+              testedAt: index < 2 ? line.updatedAt : undefined
+            }))
+          ])
+        )
     )
   )
   const merchantLineAuditLogs = ref<Record<string, AuditEntry[]>>(
     Object.fromEntries(
-      merchants.value.flatMap((merchant) =>
-        merchant.lines.map((line) => [
-          line.uid,
-          [
-            {
-              id: `LAUD-${line.uid}-001`,
-              action: '建立商戶線路',
-              operator: 'Operations Admin',
-              reason: '商戶初始線路',
-              time: line.updatedAt,
-              result: 'Success',
-              before: '無',
-              after: line.uid
-            }
-          ] as AuditEntry[]
-        ])
-      )
+      merchants.value
+        .filter((m) => !m.id.startsWith('M-DEMO-'))
+        .flatMap((merchant) =>
+          merchant.lines.map((line) => [
+            line.uid,
+            [
+              {
+                id: `LAUD-${line.uid}-001`,
+                action: '建立商戶線路',
+                operator: 'Operations Admin',
+                reason: '商戶初始線路',
+                time: line.updatedAt,
+                result: 'Success',
+                before: '無',
+                after: line.uid
+              }
+            ] as AuditEntry[]
+          ])
+        )
     )
   )
   const reconciliationSummaries = useLocalStorage<AgentReconciliationSummary[]>(
@@ -575,13 +599,15 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
   }
 
   const createAgent = (payload: NewAgentPayload) => {
+    const level = newAgentLevel(agents.value, payload.parentAgentId)
+    if (payload.level !== level) throw new Error('代理層級必須依直接上級產生，不可跳級')
     const now = formatNow()
     const parent = payload.parentAgentId ? findAgent(payload.parentAgentId) : undefined
     const agent: AgentRecord = {
       id: nextAgentId(),
       code: payload.code.trim().toUpperCase(),
       name: payload.name.trim(),
-      level: payload.level,
+      level,
       parentAgentId: parent?.id,
       parentAgent: parent?.name || '—',
       childAgentCount: 0,
@@ -1002,7 +1028,7 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
   const updateMerchantGameConfiguration = (
     merchantId: string,
     gameId: string,
-    updates: Partial<Pick<MerchantGameConfiguration, 'enabled' | 'rtpPlanId' | 'rtpPlanName'>>,
+    updates: Partial<Pick<MerchantGameConfiguration, 'enabled'>>,
     reason: string
   ) => {
     const config = merchantGameConfigurations.value.find(
@@ -1010,6 +1036,9 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
     )
     if (!config) return
     const before = JSON.stringify(config)
+    if (Object.keys(updates).some((key) => key !== 'enabled'))
+      throw new Error('聚合平台不提供 RTP 或其他遊戲參數覆寫')
+    if (updates.enabled === true) throw new Error('請改用逐供應商、幣別與環境驗證後的開通流程')
     Object.assign(config, updates, { updatedAt: formatNow() })
     const merchant = findMerchant(merchantId)
     if (merchant) {
@@ -1020,7 +1049,6 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
         )
         if (lineConfig) {
           lineConfig.enabled = config.enabled
-          lineConfig.rtpPlanName = config.rtpPlanName
           lineConfig.updatedAt = config.updatedAt
         }
         line.enabledGames = getMerchantLineGameConfigurations(line.uid).filter(
@@ -1042,14 +1070,33 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
     merchantId: string,
     lineUid: string,
     gameId: string,
-    updates: Partial<Pick<MerchantLineGameConfiguration, 'enabled' | 'limitPlan' | 'jackpotMode'>>,
+    updates: Partial<Pick<MerchantLineGameConfiguration, 'enabled'>>,
     reason: string
   ) => {
     const line = findMerchantLine(merchantId, lineUid)
     const config = getMerchantLineGameConfigurations(lineUid).find((item) => item.gameId === gameId)
     if (!line || !config) return
+    if (Object.keys(updates).some((key) => key !== 'enabled'))
+      throw new Error('不提供 RTP、獎池或供應商限額覆寫')
+    const grant =
+      updates.enabled === true
+        ? resolveMerchantGameGrant(
+            useProviderDemoStore().state,
+            findMerchant(merchantId)!,
+            lineUid,
+            gameId,
+            supplierCosts.value,
+            platformDate(new Date(), usePlatformLocaleStore().defaultTimezone?.id || 'Asia/Taipei')
+          )
+        : undefined
     const before = JSON.stringify(config)
-    Object.assign(config, updates, { updatedAt: formatNow() })
+    Object.assign(config, updates, grant, { updatedAt: formatNow() })
+    if (grant) {
+      const parentConfig = merchantGameConfigurations.value.find(
+        (item) => item.merchantId === merchantId && item.gameId === gameId
+      )
+      if (parentConfig) parentConfig.enabled = true
+    }
     line.enabledGames = getMerchantLineGameConfigurations(lineUid).filter(
       (item) => item.enabled
     ).length
@@ -1208,7 +1255,19 @@ export const useBusinessPartnerStore = defineStore('businessPartnerStore', () =>
     })
   }
 
-  refreshCounts()
+  watch(
+    () => workspace.journal.entries,
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.agent && !findAgent(entry.agent.id))
+          agents.value.unshift(JSON.parse(JSON.stringify(entry.agent)))
+        if (entry.merchant && !findMerchant(entry.merchant.id))
+          merchants.value.unshift(JSON.parse(JSON.stringify(entry.merchant)))
+      }
+      refreshCounts()
+    },
+    { immediate: true, flush: 'sync' }
+  )
 
   return {
     portalRateVersions,

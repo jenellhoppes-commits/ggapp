@@ -2,11 +2,6 @@
   <section class="merchant-query">
     <AppPageHeader :title="title" description="僅查詢登入商戶自身資料；不提供修改或匯出。" />
     <ElAlert
-      title="本地演示資料，非正式交易或即時錢包餘額。此批資料顯示時間來源為 Asia/Taipei。"
-      type="warning"
-      :closable="false"
-    />
-    <ElAlert
       v-if="!authorized"
       title="缺少有效商戶身分，無法查詢。"
       type="error"

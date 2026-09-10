@@ -17,6 +17,16 @@ assert.ok(
 )
 const flat = flattenRoutes(all)
 const originalMenu = JSON.stringify(all)
+const agentDisplay = buildDisplayMenu([portalRoutes[0]])
+assert.equal(agentDisplay.length, 9)
+assert.ok(
+  agentDisplay.every(
+    (r) => !r.children?.length && r.meta.menuGroup === '代理作業' && r.path.startsWith('/agent/')
+  )
+)
+assert.ok(!agentDisplay.some((r) => r.name === 'AgentPortal'))
+assert.deepEqual(buildDisplayMenu(agentDisplay), agentDisplay)
+assert.equal(JSON.stringify(all), originalMenu)
 const displayMenu = buildDisplayMenu(gameProviderRoutes)
 const displayFlat = flattenRoutes(displayMenu)
 assert.equal(JSON.stringify(all), originalMenu, 'Display menu must not mutate registered routes')
@@ -176,8 +186,33 @@ for (const route of flat) {
     !String(router.currentRoute.value.name).startsWith('Exception'),
     `Unreachable ${route.path}`
   )
-  if (!route.children?.length)
+  if (!route.children?.length && !route.redirect)
     assert.equal(router.currentRoute.value.name, route.name, `Wrong landing: ${route.path}`)
+}
+
+assert.deepEqual(
+  portalRoutes[0].children?.filter((r) => !r.meta.isHide).map((r) => r.meta.title),
+  [
+    '儀錶板',
+    '代理關係',
+    '商戶管理',
+    '商務條件',
+    '代理報表',
+    '匯率報表',
+    '對帳／結算',
+    '公告通知',
+    '帳號與權限'
+  ]
+)
+for (const [oldPath, newPath, tab] of [
+  ['integration', '/agent/merchants/integration', undefined],
+  ['commissions', '/agent/settlements', 'commissions'],
+  ['payments', '/agent/settlements', 'payments']
+] as const) {
+  await router.push(`/agent/${oldPath}?q=keep`)
+  assert.equal(router.currentRoute.value.path, newPath)
+  assert.equal(router.currentRoute.value.query.q, 'keep')
+  if (tab) assert.equal(router.currentRoute.value.query.tab, tab)
 }
 
 for (const migration of legacyNavigationRedirects) {

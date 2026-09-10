@@ -19,17 +19,6 @@
       </template>
     </AppPageHeader>
 
-    <ElAlert
-      :title="
-        isHistory
-          ? '歷史紀錄為每日鎖定快照；已被結算引用的紀錄不可覆寫，只能建立更正版本。'
-          : '目前為前端演示：每日抓取與鎖定以模擬操作呈現，尚未連接外部匯率來源或正式結算排程。'
-      "
-      :type="isHistory ? 'info' : 'warning'"
-      :closable="false"
-      show-icon
-    />
-
     <div class="summary-grid">
       <div
         ><span>{{ isHistory ? '歷史快照' : '匯率幣別' }}</span

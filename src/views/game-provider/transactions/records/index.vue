@@ -6,12 +6,8 @@
       description="集中查詢投注、派彩、退款、回滾及錢包轉入轉出紀錄。"
     >
       <template #actions>
-        <ElTag type="success" effect="light" round
-          >{{ store.successfulTransactionCount }} 筆成功</ElTag
-        >
-        <ElTag type="danger" effect="plain" round
-          >{{ store.exceptionTransactionCount }} 筆異常</ElTag
-        >
+        <ElTag type="success" effect="light" round>{{ successfulCount }} 筆成功</ElTag>
+        <ElTag type="danger" effect="plain" round>{{ exceptionCount }} 筆異常</ElTag>
         <ElButton @click="exportRows">匯出交易</ElButton>
       </template>
     </AppPageHeader>
@@ -111,17 +107,23 @@
       value: currency
     }))
   )
+  const successfulCount = computed(
+    () => filteredRows.value.filter((r) => r.status === 'Success').length
+  )
+  const exceptionCount = computed(
+    () => filteredRows.value.filter((r) => r.riskStatus === 'Exception').length
+  )
   const summary = computed(() => [
-    { label: '交易總數', value: store.transactions.length, note: '目前查詢範圍' },
-    { label: '成功交易', value: store.successfulTransactionCount, note: '已完成錢包回應' },
+    { label: '交易總數', value: filteredRows.value.length, note: '目前查詢範圍' },
+    { label: '成功交易', value: successfulCount.value, note: '已完成錢包回應' },
     {
       label: '處理中',
-      value: store.transactions.filter((row) => row.status === 'Processing').length,
+      value: filteredRows.value.filter((row) => row.status === 'Processing').length,
       note: '等待最終結果'
     },
     {
       label: '異常交易',
-      value: store.exceptionTransactionCount,
+      value: exceptionCount.value,
       note: '查看異常交易與錯誤紀錄'
     }
   ])

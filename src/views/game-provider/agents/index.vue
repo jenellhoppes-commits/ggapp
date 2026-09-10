@@ -139,6 +139,7 @@
   import type { ColumnOption } from '@/types'
   import type { AgentRecord, AgentStatus } from '@/types/game-provider'
   import { useBusinessPartnerStore } from '@/store/modules/businessPartner'
+  import { usePartnerWorkspaceStore } from '@/store/modules/partnerWorkspace'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import EntityLink from '@/components/business/game-provider/entity-link/index.vue'
   import GameProviderStatusTag from '@/components/business/game-provider/status-tag/index.vue'
@@ -146,6 +147,7 @@
   defineOptions({ name: 'AgentManagement' })
   const router = useRouter()
   const store = useBusinessPartnerStore()
+  const workspace = usePartnerWorkspaceStore()
   const { agents: rows } = storeToRefs(store)
   const { width } = useWindowSize()
   const isMobile = computed(() => width.value < 640)
@@ -259,10 +261,9 @@
     }
   ])
   const termText = (agent: AgentRecord) => {
-    const term = store.getCurrentTerm(agent.id)
-    return term
-      ? `${term.settlementBasis === 'Valid Bet' ? '有效投注' : term.settlementBasis === 'Turnover' ? '營業額' : 'GGR'} ${term.ratePercent}%`
-      : '未設定'
+    const versions = workspace.costs.filter((c) => c.owner === 'agent' && c.ownerId === agent.id)
+    const count = new Set(versions.map((c) => c.providerId)).size
+    return count ? `${count} 組條件（含歷史）` : '尚未設定'
   }
   const allColumns: ColumnOption[] = [
     { prop: 'id', label: 'Agent ID', width: 105 },
@@ -279,7 +280,7 @@
     {
       prop: 'term',
       label: '代理條件',
-      minWidth: 130,
+      width: 200,
       formatter: (row: AgentRecord) => termText(row)
     },
     { prop: 'merchantCount', label: '直屬商戶', width: 105, sortable: true },
@@ -331,7 +332,11 @@
       ? allColumns
           .filter((c) => ['code', 'status', 'operation'].includes(String(c.prop)))
           .map((c) => (c.prop === 'operation' ? { ...c, fixed: undefined } : c))
-      : allColumns
+      : width.value < 1200
+        ? allColumns
+            .filter((c) => !['id', 'name', 'updatedAt', 'merchantCount'].includes(String(c.prop)))
+            .map((c) => (c.prop === 'operation' ? { ...c, width: 110, fixed: undefined } : c))
+        : allColumns
   )
   const pagedRows = computed(() => {
     const start = (pagination.current - 1) * pagination.size

@@ -9,13 +9,6 @@
         ><ElButton type="primary" @click="openCreate">新增維護排程</ElButton></template
       >
     </AppPageHeader>
-    <ElAlert
-      type="warning"
-      :closable="false"
-      show-icon
-      title="本頁為前端演示；正式阻擋必須由後端或閘道依排程執行。"
-      >維護只阻擋選定範圍的新登入或新遊戲啟動，既有派彩、退款、查單與 Callback 仍須受理。</ElAlert
-    >
     <ElTabs v-model="tab" @tab-change="changeTab"
       ><ElTabPane label="維護狀態" name="status" /><ElTabPane
         label="維護排程"

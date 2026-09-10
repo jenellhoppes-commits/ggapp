@@ -84,7 +84,8 @@
                     @change="(value) => updateLineGame(scope.row, { enabled: Boolean(value) })"
                 /></template>
               </ElTableColumn>
-              <ElTableColumn prop="rtpPlan" label="供應商 RTP（唯讀）" min-width="170" />
+              <ElTableColumn prop="providerConnectionId" label="供應商接入" min-width="170" />
+              <ElTableColumn prop="supplierCostVersionId" label="條件版本" min-width="170" />
               <ElTableColumn label="供應商限額（唯讀）" min-width="180">
                 <template #default="scope"> {{ scope.row.limitPlan }}（供應商同步） </template>
               </ElTableColumn>
@@ -105,7 +106,7 @@
                   v-if="!productionEnvironment"
                   type="primary"
                   disabled
-                  title="需後端實際驗收通過，前端模擬不開放正式環境申請"
+                  title="正式環境申請尚未開放"
                   @click="productionImpactVisible = true"
                   >申請正式環境</ElButton
                 >
@@ -320,14 +321,18 @@
     row: MerchantLineGameConfiguration,
     updates: Partial<Pick<MerchantLineGameConfiguration, 'enabled'>>
   ) => {
-    store.updateMerchantLineGameConfiguration(
-      merchant.value.id,
-      line.value.uid,
-      row.gameId,
-      updates,
-      '線路詳細頁調整遊戲設定'
-    )
-    ElMessage.success('線路遊戲設定已更新')
+    try {
+      store.updateMerchantLineGameConfiguration(
+        merchant.value.id,
+        line.value.uid,
+        row.gameId,
+        updates,
+        '線路詳細頁調整遊戲設定'
+      )
+      ElMessage.success('線路遊戲設定已更新')
+    } catch (error) {
+      ElMessage.error(error instanceof Error ? error.message : '設定失敗')
+    }
   }
   const requestProduction = (payload: { reason: string }) => {
     const success = store.requestProductionEnvironment(

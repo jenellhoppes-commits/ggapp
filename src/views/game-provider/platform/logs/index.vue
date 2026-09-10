@@ -96,13 +96,6 @@
           <ElDescriptionsItem label="修改後">{{ selected.afterValue || '—' }}</ElDescriptionsItem>
           <ElDescriptionsItem label="說明">{{ selected.note || '—' }}</ElDescriptionsItem>
         </ElDescriptions>
-        <ElAlert
-          class="drawer-alert"
-          title="來源 IP、裝置與請求追蹤編號須由正式後端提供，本演示不建立虛構值。"
-          type="warning"
-          :closable="false"
-          show-icon
-        />
       </template>
     </ElDrawer>
   </div>

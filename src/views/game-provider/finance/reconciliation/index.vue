@@ -7,16 +7,21 @@
         kind === 'provider'
           ? '核對供應商帳單、平台原幣交易、成本條件與最終應付金額。'
           : kind === 'merchant'
-            ? '按商戶線路與交易幣別核對投注、派彩、獎池及應結金額。'
+            ? '按商戶線路與交易幣別核對投注、派彩及應結金額。'
             : '彙總旗下商戶已確認結果，產生代理層級對帳資料。'
       "
     >
       <template #actions>
         <ElButton @click="refresh">重新整理</ElButton>
-        <ElButton @click="exportRows">匯出 CSV</ElButton>
+        <ElButton @click="exportRows">匯出歷史 CSV</ElButton>
       </template>
     </AppPageHeader>
 
+    <ElAlert
+      title="歷史單據保留原始快照，不以新條件重新計算；舊通用費率不代表目前逐供應商售價。"
+      type="info"
+      :closable="false"
+    />
     <div class="summary-grid">
       <button type="button" @click="setStatus('')"
         ><span>全部對帳</span><strong>{{ records.length }}</strong

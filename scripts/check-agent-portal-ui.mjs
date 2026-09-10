@@ -21,7 +21,20 @@ try {
   await page.mouse.up()
   await page.getByRole('button', { name: '登入', exact: true }).click()
   await page.waitForURL(/agent/)
-  await page.goto('http://127.0.0.1:3017/ggapp/#/agent/merchants')
+  await page.locator('.menu-group-title').filter({ hasText: '代理作業' }).waitFor()
+  assert.equal(await page.locator('.el-sub-menu__title').filter({ hasText: '代理後台' }).count(), 0)
+  assert.equal(await page.locator('.el-menu-item[level-item="1"]').count(), 9)
+  for (const [path, title] of [
+    ['relations', '代理關係'],
+    ['merchants', '商戶管理']
+  ]) {
+    await page.goto(`http://127.0.0.1:3017/ggapp/#/agent/${path}`)
+    await page.getByRole('heading', { name: title, exact: true }).waitFor()
+    await page.locator('.el-table__row').first().waitFor()
+    assert.equal(await page.getByRole('button', { name: '修改費率', exact: true }).count(), 0)
+  }
+  await page.goto('http://127.0.0.1:3017/ggapp/#/agent/terms')
+  await page.getByRole('heading', { name: '商務條件', exact: true }).waitFor()
   await page.locator('.agent-partners').waitFor()
   await page.locator('.el-table__row').first().waitFor()
   assert.equal(await page.getByText('全球策略總代理', { exact: true }).count(), 0)
@@ -29,6 +42,7 @@ try {
   assert.ok((await indirect.count()) > 0)
   assert.equal(await indirect.getByRole('button', { name: '修改費率' }).count(), 0)
   await page.getByRole('tab', { name: /^商戶/ }).click()
+  await page.waitForURL((url) => url.hash.includes('kind=merchant'))
   const editable = page
     .locator('.el-table__row')
     .filter({ has: page.getByRole('button', { name: '修改費率' }) })
@@ -70,7 +84,45 @@ try {
     view: innerWidth
   }))
   assert.ok(widths.page <= widths.view, JSON.stringify(widths))
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('http://127.0.0.1:3017/ggapp/#/agent/integration')
+  await page.getByRole('heading', { name: '串接進度', exact: true }).waitFor()
+  await page.locator('.el-table__row').first().waitFor()
+  assert.equal(
+    await page.getByRole('button', { name: /修改設定|啟用正式|輪替憑證|執行測試/ }).count(),
+    0
+  )
+  await page
+    .locator('.el-table__row')
+    .first()
+    .getByRole('button', { name: '查看', exact: true })
+    .click()
+  await page.getByRole('dialog').getByRole('heading', { name: '測試項目', exact: true }).waitFor()
+  assert.equal(await page.getByRole('dialog').locator('input').count(), 0)
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /Close|關閉/ })
+    .click()
+  await page.getByPlaceholder('商戶、代理 ID 或線路').fill('no-match-foreign')
+  await page.getByRole('button', { name: '查詢', exact: true }).click()
+  await page.getByText('符合條件 0 條線路', { exact: true }).waitFor()
+  await page.reload()
+  await page.getByRole('heading', { name: '串接進度', exact: true }).waitFor()
+  assert.equal(await page.getByPlaceholder('商戶、代理 ID 或線路').inputValue(), 'no-match-foreign')
+  await page.getByRole('button', { name: '重置', exact: true }).click()
+  await page.locator('.el-table__row').first().waitFor()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.waitForTimeout(250)
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
   const state = await page.context().storageState()
+  for (const tab of ['commissions', 'payments']) {
+    await page.goto(`http://127.0.0.1:3017/ggapp/#/agent/${tab}?q=keep`)
+    await page.waitForURL(
+      (url) => url.hash.includes('/agent/settlements') && url.hash.includes(`tab=${tab}`)
+    )
+    await page.getByRole('heading', { name: '對帳／結算', exact: true }).waitFor()
+    assert.ok(page.url().includes('q=keep'))
+  }
   for (const origin of state.origins)
     origin.localStorage = origin.localStorage.filter((item) =>
       /^ggap-(agent-rate-versions|agent-contracts|merchant-contracts|business-merchants|.*reconciliation-summaries)-v1$/.test(

@@ -161,6 +161,8 @@ export interface MerchantGameConfiguration {
 }
 
 export interface MerchantLineGameConfiguration {
+  providerConnectionId?: string
+  supplierCostVersionId?: string
   gameId: string
   lineUid: string
   enabled: boolean
