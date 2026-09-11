@@ -22,16 +22,13 @@
       <label
         >匯率案例
         <ElSelect v-model="missing"
-          ><ElOption label="每日匯率齊全" :value="false" /><ElOption
-            label="缺少一天匯率"
+          ><ElOption label="結算日匯率齊全" :value="false" /><ElOption
+            label="缺少結算日匯率"
             :value="true" /></ElSelect
       ></label>
     </div>
-    <ElCheckbox v-model="noBets">無下注、有期初扣抵驗收（USD 250）</ElCheckbox>
-    <p
-      >每日依供應商、原幣、條件版本計算；換算後四捨五入至結算幣精度，期末加總。新負 GGR
-      僅結轉下期，不於本期使用。</p
-    >
+    <ElCheckbox v-model="noBets">無下注、有期初扣抵驗收（TWD 250）</ElCheckbox>
+    <p>依供應商、原幣、條件版本計算；逐筆保留六位，統一按結算日匯率換算後扣抵，最後總額取位。</p>
     <ArtTable :data="visible" height="auto" style="height: auto" :show-table-header="false">
       <ElTableColumn prop="date" label="日期" width="115" />
       <ElTableColumn label="供應商／原幣" min-width="150"
@@ -50,13 +47,14 @@
       >
       <ElTableColumn label="期初／使用／新增扣抵" min-width="170"
         ><template #default="{ row }"
-          >{{ row.opening / 100 }} / {{ row.used / 100 }} / {{ row.added / 100 }}</template
+          >{{ row.opening / 1000000 }} / {{ row.used / 1000000 }} /
+          {{ row.added / 1000000 }}</template
         ></ElTableColumn
       >
       <ElTableColumn label="計費基數" min-width="120"
         ><template #default="{ row }">{{ (row.base / 100).toFixed(2) }}</template></ElTableColumn
       >
-      <ElTableColumn label="當日匯率／版本" min-width="170"
+      <ElTableColumn label="結算日匯率／版本" min-width="170"
         ><template #default="{ row }"
           >{{ row.fxRate || '待補' }} / {{ row.fxVersion || '待補' }}</template
         ></ElTableColumn
@@ -76,15 +74,18 @@
         ></ElTableColumn
       >
     </ArtTable>
-    <p v-for="t in totals" :key="t.id"
-      >{{ name(t.id) }}：{{
-        t.pending ? '資料待補，不提供完整應結' : `TWD ${t.amount.toFixed(2)}`
-      }}；本期新增結轉 USD {{ (t.carry / 100).toFixed(2) }}</p
+    <p v-for="t in period.totals" :key="t.currency"
+      >{{ t.currency }}：{{
+        t.pending
+          ? '資料待補，不提供完整應結'
+          : ((t.amount || 0) / 10 ** t.digits).toFixed(t.digits)
+      }}</p
     >
     <p v-for="balance in period.carry" :key="balance.scope">
-      {{ name(balance.scope.split(':')[2]) }} · 原幣 USD：期初 {{ balance.opening / 100 }}／已使用
-      {{ balance.used / 100 }}／本期新增 {{ balance.added / 100 }}／期末
-      {{ balance.closing === null ? '待補資料' : balance.closing / 100 }}
+      {{ name(balance.scope.split(':')[2]) }} · 結算幣 TWD：期初
+      {{ balance.opening / 1000000 }}／已使用 {{ balance.used / 1000000 }}／本期新增
+      {{ balance.added / 1000000 }}／期末
+      {{ balance.closing === null ? '待補資料' : balance.closing / 1000000 }}
     </p>
     <ElDialog
       :model-value="!!sources"
@@ -124,8 +125,8 @@
       ...example.bets,
       { ...example.bets[0], id: 'NEGATIVE-DEMO', time: '2026-09-18T03:00:00Z', payout: 120000 }
     ]
-    const fx = ['2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18']
-      .filter((d) => !missing.value || d !== '2026-09-16')
+    const fx = ['2026-10-01']
+      .filter(() => !missing.value)
       .map((date, i) => ({
         date,
         from: 'USD',
@@ -143,23 +144,13 @@
       'Asia/Taipei',
       fx,
       { TWD: 2 },
-      noBets.value ? { [`${owner}:DEMO-ONLY:PV00001:USD:GGR:TWD`]: 25000 } : {}
+      noBets.value ? { [`${owner}:DEMO-ONLY:PV00001:TWD`]: 250000000 } : {},
+      '2026-10-01'
     )
   })
   const rows = computed(() => period.value.lines)
   const visible = computed(() =>
     rows.value.filter((r) => !provider.value || provider.value === r.providerId)
-  )
-  const totals = computed(() =>
-    [...new Set(visible.value.map((r) => r.providerId))].map((id) => {
-      const group = visible.value.filter((r) => r.providerId === id)
-      return {
-        id,
-        amount: group.reduce((n, r) => n + (r.settled || 0), 0) / 100,
-        pending: group.some((r) => !!r.issue),
-        carry: group.reduce((n, r) => n + r.added, 0)
-      }
-    })
   )
   const name = (id: string) => (id === 'PV00001' ? 'Pragmatic Play' : 'Evolution')
 </script>

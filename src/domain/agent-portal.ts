@@ -1,3 +1,4 @@
+import { permitsAgent } from './agent-access'
 import type {
   AgentRecord,
   MerchantRecord,
@@ -55,6 +56,7 @@ export function agentScope(source: PortalSource, actor: PortalActor) {
   }
 }
 export function canEditRate(source: PortalSource, actor: PortalActor, target: RateTarget) {
+  if (!permitsAgent(actor.roles, 'business')) return false
   if (!['agent', 'merchant'].includes(target.kind)) return false
   const scope = agentScope(source, actor)
   if (!scope.own) return false
@@ -65,6 +67,15 @@ export function canEditRate(source: PortalSource, actor: PortalActor, target: Ra
     : scope.merchants.some(
         (m) => m.id === target.id && m.agentId === scope.own!.id && m.status === 'Active'
       )
+}
+/** Contract visibility is narrower than the operational descendant tree. */
+export function canViewAgentTerms(source: PortalSource, actor: PortalActor, target: RateTarget) {
+  const { own } = agentScope(source, actor)
+  if (!own) return false
+  return target.kind === 'agent'
+    ? target.id === own.id ||
+        source.agents.some((a) => a.id === target.id && a.parentAgentId === own.id)
+    : source.merchants.some((m) => m.id === target.id && m.agentId === own.id)
 }
 export function rateTimeline(source: PortalSource, target: RateTarget) {
   const base =

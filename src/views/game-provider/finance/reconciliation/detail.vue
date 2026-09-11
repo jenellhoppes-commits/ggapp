@@ -1,6 +1,6 @@
 <template>
   <div v-if="record" class="detail-page">
-    <ElRadioGroup v-model="documentMode">
+    <ElRadioGroup v-model="documentMode" aria-label="對帳檢視模式">
       <ElRadioButton value="history">歷史單據（原快照）</ElRadioButton>
       <ElRadioButton value="current">新規則月結（本地演示）</ElRadioButton>
     </ElRadioGroup>
@@ -28,28 +28,12 @@
           <ElTag :type="statusType(record.status)" effect="light">{{
             statusLabel(record.status)
           }}</ElTag>
-          <ElButton v-if="kind === 'merchant'" disabled title="計算規則與快照更新流程尚未完成"
-            >重新計算（未開放）</ElButton
+
+          <ElButton type="primary" :disabled="!canConfirm" @click="openConfirm"
+            >核帳／交付</ElButton
           >
-          <ElButton type="primary" :disabled="!canConfirm" @click="openConfirm">確認對帳</ElButton>
         </template>
       </AppPageHeader>
-
-      <ElAlert v-if="record.unresolvedDifferenceCount" type="error" :closable="false" show-icon>
-        <template #title
-          >尚有
-          {{ record.unresolvedDifferenceCount }} 筆差異未完成處理，因此不能確認對帳。</template
-        >
-        <ElButton link type="danger" @click="openDifferences">前往差異處理</ElButton>
-      </ElAlert>
-      <ElAlert
-        v-else-if="!canConfirm && record.status === 'Pending Confirmation'"
-        type="warning"
-        :closable="false"
-        show-icon
-      >
-        <template #title>{{ confirmBlockReason }}</template>
-      </ElAlert>
 
       <div class="metric-grid">
         <div
@@ -202,6 +186,44 @@
             </ArtTable>
           </ElTabPane>
 
+          <ElTabPane v-if="kind === 'provider'" label="遊戲彙總" name="provider-games">
+            <ArtTable
+              :data="providerGameSummary"
+              height="auto"
+              empty-height="auto"
+              empty-text="本帳期尚無可彙總的遊戲紀錄"
+              :show-table-header="false"
+              style="height: auto"
+            >
+              <ElTableColumn label="遊戲" min-width="200"
+                ><template #default="{ row }"
+                  >{{ row.gameName }}<br /><small>{{ row.gameCode }}</small></template
+                ></ElTableColumn
+              >
+              <ElTableColumn prop="betCount" label="投注筆數" width="110" align="right" />
+              <ElTableColumn label="投注流水" min-width="140" align="right"
+                ><template #default="{ row }">{{ money(row.betAmount) }}</template></ElTableColumn
+              >
+              <ElTableColumn label="有效投注" min-width="130" align="right"
+                ><template #default="{ row }">{{ money(row.validBet) }}</template></ElTableColumn
+              >
+              <ElTableColumn label="派彩" min-width="140" align="right"
+                ><template #default="{ row }">{{
+                  money(row.payoutAmount)
+                }}</template></ElTableColumn
+              >
+              <ElTableColumn label="GGR" min-width="140" align="right"
+                ><template #default="{ row }">{{
+                  money(row.betAmount - row.payoutAmount)
+                }}</template></ElTableColumn
+              >
+              <ElTableColumn label="應結金額" min-width="140" align="right"
+                ><template #default="{ row }">{{
+                  settlementMoney(row.settlementAmount)
+                }}</template></ElTableColumn
+              >
+            </ArtTable>
+          </ElTabPane>
           <ElTabPane v-if="kind === 'agent'" label="商戶對帳" name="merchants">
             <ArtTable
               :data="includedMerchants"
@@ -257,6 +279,16 @@
                 <ElDescriptionsItem label="狀態">{{
                   settlementStatement.status
                 }}</ElDescriptionsItem>
+                <ElDescriptionsItem v-if="kind === 'merchant'" label="收付模式">{{
+                  collectionMode === 'AgentCollect' ? '代理統收' : '平台代收'
+                }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="實際收款方">{{
+                  delivery?.recipient === 'platform' ? '平台' : delivery?.recipient || '尚未交付'
+                }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="對帳期間">{{ record.period }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="上期累積金額">{{
+                  settlementMoney(opening)
+                }}</ElDescriptionsItem>
                 <ElDescriptionsItem label="交易幣別">{{
                   record.snapshot.transactionCurrency
                 }}</ElDescriptionsItem>
@@ -270,124 +302,29 @@
                   settlementMoney(record.adjustmentAmount)
                 }}</ElDescriptionsItem>
                 <ElDescriptionsItem label="最終應結">{{
-                  settlementMoney(record.finalSettlementAmount)
+                  settlementMoney(delivery?.due ?? record.finalSettlementAmount + opening)
                 }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="確認金額">{{
+                <ElDescriptionsItem label="實收／實付金額">{{
                   record.confirmedSettlementAmount === undefined
                     ? '尚未確認'
                     : settlementMoney(record.confirmedSettlementAmount)
                 }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="累積至下期">{{
+                  delivery ? settlementMoney(delivery.carry) : '尚未交付'
+                }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="交付調整">{{
+                  settlementMoney(delivery?.difference || 0)
+                }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="負 GGR 處理"
+                  >依當期商務條件；未保存政策的舊單須先核對，不自動清零。</ElDescriptionsItem
+                >
                 <ElDescriptionsItem label="確認說明">{{
                   record.confirmationNote || '—'
                 }}</ElDescriptionsItem>
                 <ElDescriptionsItem label="建立時間">{{ record.createdAt }}</ElDescriptionsItem>
               </ElDescriptions>
-              <ElAlert
-                v-if="record.status === 'Pending Confirmation'"
-                type="info"
-                :closable="false"
-                title="完成差異處理後，在確認對帳時輸入實收／實付金額；系統會把尾差記入本張結算單。"
-              />
             </div>
-          </ElTabPane>
-
-          <ElTabPane :label="`差異（${record.differenceCount}）`" name="differences">
-            <div class="section-heading"
-              ><div><h2>差異案件</h2><p>差異未清除前，對帳不能進入確認與結算。</p></div
-              ><ElButton type="primary" plain @click="openDifferences">集中處理差異</ElButton></div
-            >
-            <ArtTable
-              :data="recordDifferences"
-              empty-text="本筆對帳沒有差異"
-              height="auto"
-              empty-height="auto"
-              :show-table-header="false"
-              style="height: auto"
-            >
-              <ElTableColumn prop="id" label="差異編號" width="135" />
-              <ElTableColumn label="類型" width="120"
-                ><template #default="scope">{{
-                  differenceTypeLabel(scope.row.type)
-                }}</template></ElTableColumn
-              >
-              <ElTableColumn label="系統值" min-width="140" align="right"
-                ><template #default="scope">{{
-                  money(scope.row.systemValue)
-                }}</template></ElTableColumn
-              >
-              <ElTableColumn label="合作方值" min-width="140" align="right"
-                ><template #default="scope">{{
-                  money(scope.row.partnerValue)
-                }}</template></ElTableColumn
-              >
-              <ElTableColumn label="差異" min-width="130" align="right"
-                ><template #default="scope"
-                  ><strong class="danger">{{ money(scope.row.differenceAmount) }}</strong></template
-                ></ElTableColumn
-              >
-              <ElTableColumn label="狀態" width="110"
-                ><template #default="scope">{{
-                  differenceStatusLabel(scope.row.status)
-                }}</template></ElTableColumn
-              >
-            </ArtTable>
-          </ElTabPane>
-
-          <ElTabPane label="計算快照" name="snapshot">
-            <ElAlert
-              v-if="!record.snapshot.contractReferences?.length"
-              title="此為舊版演示快照，未保存合約版本引用。不可把目前合約補標為歷史計算依據。"
-              type="warning"
-              :closable="false"
-            />
-            <template v-if="kind !== 'provider'">
-              <ElButton class="my-4" @click="inspectContracts">檢查期間合約與注單引用</ElButton>
-              <template v-if="betReferences">
-                <ElAlert
-                  :closable="false"
-                  type="warning"
-                  :title="`依下注時間選版（${betReferences.timezone}）：目前 ${betReferences.matchedCount} 筆／對帳記載 ${betReferences.expectedBetCount} 筆；尚未進行金額計算。`"
-                />
-                <p v-if="!betReferences.complete">明細不完整或引用有誤，禁止以彙總金額分攤補算。</p>
-                <ArtTable :data="betReferences.references" height="auto" style="height: auto">
-                  <ElTableColumn prop="transactionId" label="注單 ID" min-width="160" />
-                  <ElTableColumn prop="timestamp" label="下注時間" min-width="220" />
-                  <ElTableColumn label="合約版本／費率" min-width="200"
-                    ><template #default="{ row }"
-                      >{{ row.contract.contractKey }} · V{{ row.contract.version }} ·
-                      {{ row.contract.rate }}%</template
-                    ></ElTableColumn
-                  >
-                </ArtTable>
-                <p
-                  v-for="(issue, index) in [...betReferences.issues, ...betReferences.excluded]"
-                  :key="index"
-                  >{{ issue.betId }}：{{ issue.reason }}</p
-                >
-              </template>
-              <ElAlert v-if="contractError" :title="contractError" type="error" :closable="false" />
-              <template v-if="contractCoverage.length">
-                <p
-                  >以下依目前合約紀錄檢查日期覆蓋，僅供核對，不是此對帳單的歷史快照，也未重算金額。期間為起日含、迄日不含。</p
-                >
-                <ArtTable :data="contractCoverage" height="auto" style="height: auto">
-                  <ElTableColumn prop="from" label="起日" width="120" />
-                  <ElTableColumn prop="toExclusive" label="迄日（不含）" width="140" />
-                  <ElTableColumn label="合約引用" min-width="230"
-                    ><template #default="{ row }">{{
-                      row.reference
-                        ? `${row.reference.contractKey} · V${row.reference.version}`
-                        : row.error
-                    }}</template></ElTableColumn
-                  >
-                  <ElTableColumn label="費率／基礎" min-width="150"
-                    ><template #default="{ row }">{{
-                      row.reference ? `${row.reference.rate}% · ${row.reference.basis}` : '不可計算'
-                    }}</template></ElTableColumn
-                  >
-                </ArtTable>
-              </template>
-            </template>
+            <ElDivider>計算依據（當期快照）</ElDivider>
             <div class="section-heading"
               ><div
                 ><h2>結算計算快照</h2
@@ -443,40 +380,54 @@
         </ElTabs>
       </ElCard>
 
-      <ElDialog v-model="confirmDialogVisible" title="確認對帳與結算金額" width="min(520px, 92vw)">
-        <ElAlert
-          type="warning"
-          :closable="false"
-          title="確認後將鎖定本期對帳依據；尾數或實際收付差額會新增為本次確認調整。"
-        />
+      <ElDialog
+        v-model="confirmDialogVisible"
+        title="財務核帳／交付"
+        class="reconciliation-dialog"
+        width="min(560px, 92vw)"
+        top="4vh"
+      >
         <ElForm label-position="top" class="confirm-form">
-          <ElFormItem :label="kind === 'merchant' ? '實收金額' : '實付金額'" required>
-            <ElInputNumber
-              v-model="confirmationForm.actualAmount"
-              :min="0"
-              :precision="record.snapshot.amountPrecision"
-              controls-position="right"
-              class="full-width"
-            />
-            <small>預計金額：{{ settlementMoney(expectedBeforeConfirmation) }}</small>
+          <ElFormItem label="上期累積金額"
+            ><ElInput :model-value="settlementMoney(opening)" disabled
+          /></ElFormItem>
+          <ElFormItem label="系統應結金額"
+            ><ElInput :model-value="settlementMoney(record.finalSettlementAmount)" disabled
+          /></ElFormItem>
+          <ElFormItem label="差異調整金額"
+            ><ElInputNumber v-model="confirmationForm.difference" :precision="6" class="full-width"
+          /></ElFormItem>
+          <ElFormItem label="應收／應付金額"
+            ><ElInput :model-value="settlementMoney(due)" disabled
+          /></ElFormItem>
+          <ElFormItem label="實收／實付金額" required
+            ><ElInput v-model="paymentText" inputmode="numeric" class="full-width"
+          /></ElFormItem>
+          <ElFormItem label="剩餘未收／未付金額"
+            ><ElInput :model-value="settlementMoney(remaining)" disabled
+          /></ElFormItem>
+          <ElFormItem v-if="kind === 'merchant'" label="實際收款方" required>
+            <ElSelect v-model="actualRecipient" :disabled="!platformOperator">
+              <ElOption v-if="platformOperator" label="平台" value="platform" />
+              <ElOption
+                v-if="merchantOwner"
+                :label="merchantOwner.agentName"
+                :value="merchantOwner.agentId"
+              />
+            </ElSelect>
           </ElFormItem>
-          <ElFormItem label="確認差額">
-            <strong :class="{ danger: confirmationDelta < 0 }">{{
-              settlementMoney(confirmationDelta)
-            }}</strong>
-          </ElFormItem>
-          <ElFormItem label="確認說明">
-            <ElInput
+          <ElFormItem label="交付備註"
+            ><ElInput
               v-model="confirmationForm.note"
               type="textarea"
               :rows="3"
-              placeholder="例如：依對方付款尾數調整、銀行實收金額"
-            />
-          </ElFormItem>
+              placeholder="請填寫財務核帳調整依據"
+          /></ElFormItem>
         </ElForm>
         <template #footer>
           <ElButton @click="confirmDialogVisible = false">取消</ElButton>
-          <ElButton type="primary" @click="submitConfirmation">確認並鎖定金額</ElButton>
+          <ElButton @click="submitConfirmation(true)">累積至下期</ElButton>
+          <ElButton type="primary" @click="submitConfirmation(false)">確認交付並鎖定</ElButton>
         </template>
       </ElDialog>
     </template>
@@ -495,6 +446,12 @@
   import { useWindowSize } from '@vueuse/core'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import { useFinanceCenterStore } from '@/store/modules/financeCenter'
+  import { useCollectionModeStore } from '@/store/modules/collectionMode'
+  import { useBusinessPartnerStore } from '@/store/modules/businessPartner'
+  import { useUserStore } from '@/store/modules/user'
+  import { mayDeliver } from '@/domain/collection-mode'
+  import { providerReconciliationSamples } from '@/domain/provider-reconciliation-samples'
+  import { useProviderDemoStore } from '@/store/modules/providerDemo'
   import type {
     AgentReconciliationRecord,
     MerchantReconciliationRecord,
@@ -505,6 +462,37 @@
   const route = useRoute()
   const router = useRouter()
   const store = useFinanceCenterStore()
+  const modeStore = useCollectionModeStore(),
+    business = useBusinessPartnerStore(),
+    user = useUserStore()
+  const actualRecipient = ref('platform')
+  const merchantOwner = computed(() =>
+    merchantRecord.value ? business.findMerchant(merchantRecord.value.merchantId) : undefined
+  )
+  const collectionMode = computed(
+    () =>
+      delivery.value?.collectionMode ||
+      (record.value?.status === 'Locked'
+        ? merchantOwner.value?.collectionMode || 'AgentCollect'
+        : undefined) ||
+      (merchantOwner.value
+        ? modeStore.at(
+            merchantOwner.value.id,
+            record.value?.periodStart.slice(0, 10) || '',
+            merchantOwner.value.collectionMode
+          )
+        : 'PlatformCollect')
+  )
+  const platformOperator = computed(() =>
+    user.info.roles?.some((r) => ['R_SUPER', 'R_ADMIN'].includes(r))
+  )
+  const providers = useProviderDemoStore()
+  const providerGameSummary = computed(() =>
+    providerRecord.value
+      ? (store.reportActivityRows(providerRecord.value, 'game') ??
+        providerReconciliationSamples(providerRecord.value, providers.state.games))
+      : []
+  )
   const { width } = useWindowSize()
   type ReconciliationKind = 'provider' | 'agent' | 'merchant'
   type ReconciliationRecord =
@@ -562,30 +550,6 @@
   )
   const activeTab = ref('summary')
   const documentMode = ref('history')
-  const contractCoverage = ref<ReturnType<typeof store.previewContractCoverage>>([])
-  const contractError = ref('')
-  const betReferences = ref<ReturnType<typeof store.previewMerchantBetReferences>>()
-  watch(
-    () => route.fullPath,
-    () => {
-      contractCoverage.value = []
-      contractError.value = ''
-      betReferences.value = undefined
-    }
-  )
-  const inspectContracts = () => {
-    contractCoverage.value = []
-    contractError.value = ''
-    betReferences.value = undefined
-    try {
-      if (kind.value !== 'provider' && record.value)
-        contractCoverage.value = store.previewContractCoverage(kind.value, record.value.id)
-      if (kind.value === 'merchant' && record.value)
-        betReferences.value = store.previewMerchantBetReferences(record.value.id)
-    } catch (e) {
-      contractError.value = e instanceof Error ? e.message : '無法檢查合約'
-    }
-  }
   const descriptionColumns = computed(() => (width.value < 720 ? 1 : 2))
   const dailyRows = computed(() =>
     merchantRecord.value ? store.getDailyRows(merchantRecord.value) : []
@@ -595,9 +559,6 @@
   )
   const includedMerchants = computed(() =>
     agentRecord.value ? store.getIncludedMerchantReconciliations(agentRecord.value) : []
-  )
-  const recordDifferences = computed(() =>
-    record.value ? store.getDifferences(record.value.id) : []
   )
   const logs = computed(() => (record.value ? store.getLogs(record.value.id) : []))
   const settlementStatement = computed(() => {
@@ -610,24 +571,18 @@
           : '待確認'
     return { id: `${prefix}-${record.value?.id || ''}`, status }
   })
-  const confirmBlockReason = computed(() => {
-    if (!agentRecord.value) return ''
-    const incomplete = includedMerchants.value.filter(
-      (item) => !['Confirmed', 'Locked'].includes(item.status)
-    ).length
-    return incomplete ? `仍有 ${incomplete} 筆商戶對帳尚未確認，代理對帳暫時不能確認。` : ''
-  })
-  const canConfirm = computed(() => {
-    if (
-      !record.value ||
-      record.value.unresolvedDifferenceCount > 0 ||
-      ['Confirmed', 'Locked', 'Cancelled'].includes(record.value.status)
-    )
-      return false
-    if (agentRecord.value)
-      return includedMerchants.value.every((item) => ['Confirmed', 'Locked'].includes(item.status))
-    return true
-  })
+  const canConfirm = computed(
+    () =>
+      !!record.value &&
+      !['Locked', 'Cancelled'].includes(record.value.status) &&
+      mayDeliver(
+        user.info.roles || [],
+        user.info.agentId,
+        kind.value,
+        merchantOwner.value?.agentId,
+        collectionMode.value
+      )
+  )
   const { money: formatMoney } = useFinanceMoney()
   const moneyWithCurrency = (value: number, currency: string) =>
     formatMoney(value, currency, record.value?.snapshot.amountPrecision)
@@ -638,14 +593,14 @@
     ({
       Draft: '草稿',
       'Pending Confirmation': '待確認',
-      Difference: '有差異',
+      Difference: '待確認',
       Confirmed: '已確認',
       Locked: '已鎖定',
       Cancelled: '已取消'
     })[status] || status
   const statusType = (status: string) =>
     status === 'Difference'
-      ? 'danger'
+      ? 'warning'
       : status === 'Pending Confirmation'
         ? 'warning'
         : status === 'Confirmed'
@@ -653,74 +608,62 @@
           : status === 'Locked'
             ? 'info'
             : 'primary'
-  const differenceTypeLabel = (type: string) =>
-    ({
-      'Bet Amount': '投注金額',
-      'Payout Amount': '派彩金額',
-      'Valid Bet': '有效投注',
-      Jackpot: '獎池',
-      Refund: '退款',
-      'Exchange Rate': '匯率',
-      Fee: '費用',
-      Other: '其他'
-    })[type] || type
-  const differenceStatusLabel = (status: string) =>
-    ({
-      Open: '待處理',
-      Investigating: '調查中',
-      'Waiting Partner': '等待合作方',
-      'Waiting Internal': '等待內部',
-      Resolved: '已解決',
-      Accepted: '已接受',
-      Closed: '已關閉'
-    })[status] || status
-  const openDifferences = () =>
-    router.push({
-      path: '/finance/reconciliation/differences',
-      query: { reconciliationId: record.value?.id }
-    })
   const confirmDialogVisible = ref(false)
-  const expectedBeforeConfirmation = ref(0)
-  const confirmationForm = reactive({ actualAmount: 0, note: '' })
-  const confirmationDelta = computed(() =>
-    Number((confirmationForm.actualAmount - expectedBeforeConfirmation.value).toFixed(8))
+  const confirmationForm = reactive({ actualAmount: 0, difference: 0, note: '' })
+  const paymentText = ref('0')
+  const paymentAmount = computed(() =>
+    /^[0-9]+$/.test(paymentText.value) && Number.isSafeInteger(Number(paymentText.value))
+      ? Number(paymentText.value)
+      : null
   )
+  const delivery = computed(() => store.deliveries.find((d) => d.id === record.value?.id))
+  const opening = computed(() => store.deliveryOpening(kind.value, record.value?.id || ''))
+  const due = computed(() =>
+    Math.trunc(
+      (record.value?.finalSettlementAmount || 0) + opening.value + confirmationForm.difference
+    )
+  )
+  const remaining = computed(() => Number((due.value - (paymentAmount.value ?? 0)).toFixed(6)))
   const openConfirm = () => {
-    if (!record.value || !canConfirm.value) return
-    expectedBeforeConfirmation.value = record.value.finalSettlementAmount
-    confirmationForm.actualAmount = record.value.finalSettlementAmount
+    actualRecipient.value =
+      collectionMode.value === 'AgentCollect'
+        ? merchantOwner.value?.agentId || 'platform'
+        : 'platform'
+    if (!canConfirm.value) return
+    confirmationForm.actualAmount = 0
+    paymentText.value = '0'
+    confirmationForm.difference = 0
     confirmationForm.note = ''
     confirmDialogVisible.value = true
   }
-  const submitConfirmation = () => {
-    if (!record.value || confirmationForm.actualAmount < 0) return
-    const success =
-      kind.value === 'provider'
-        ? store.confirmProvider(
-            record.value.id,
-            confirmationForm.actualAmount,
-            confirmationForm.note
-          )
-        : kind.value === 'merchant'
-          ? store.confirmMerchant(
-              record.value.id,
-              confirmationForm.actualAmount,
-              confirmationForm.note
-            )
-          : store.confirmAgent(
-              record.value.id,
-              confirmationForm.actualAmount,
-              confirmationForm.note
-            )
-    if (success) ElMessage.success('對帳已確認')
-    else ElMessage.error('尚未符合確認條件')
-    if (success) confirmDialogVisible.value = false
+  const submitConfirmation = (defer = false) => {
+    if (paymentAmount.value === null) {
+      ElMessage.error('實收／實付請輸入非負整數')
+      return
+    }
+    if (!record.value) return
+    try {
+      store.deliverReconciliation(
+        kind.value,
+        record.value.id,
+        paymentAmount.value,
+        confirmationForm.difference,
+        confirmationForm.note,
+        defer,
+        actualRecipient.value
+      )
+      ElMessage.success('已交付並鎖定原單')
+      confirmDialogVisible.value = false
+    } catch (e) {
+      ElMessage.error(e instanceof Error ? e.message : '交付失敗')
+    }
   }
 </script>
 
 <style scoped lang="scss">
   .detail-page {
     display: grid;
+    align-content: start;
     gap: 16px;
   }
 
@@ -734,8 +677,8 @@
     display: grid;
     gap: 5px;
     padding: 16px;
-    background: var(--art-main-bg-color);
-    border: 1px solid var(--art-border-color);
+    background: transparent;
+    border: 0;
     border-radius: calc(var(--custom-radius) / 2 + 2px);
   }
 
@@ -763,6 +706,10 @@
 
   .confirm-form {
     margin-top: 16px;
+  }
+  :deep(.reconciliation-dialog .el-dialog__body) {
+    max-height: 65vh;
+    overflow-y: auto;
   }
 
   .full-width {

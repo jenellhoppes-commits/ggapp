@@ -61,12 +61,15 @@ assert.deepEqual(
   ['營運報表', '代理報表', '商戶報表', '遊戲報表']
 )
 const view = readFileSync('src/views/game-provider/report-query/index.vue', 'utf8')
-assert.equal((view.match(/<ElTable\s/g) || []).length, 1)
-assert.ok(!/GGR|RTP|ROI|有效投注|佣金估算|chart/i.test(view))
+assert.equal((view.match(/<ArtTable\s/g) || []).length, 1, 'Single operational summary table')
+assert.equal((view.match(/<ElTable\s/g) || []).length, 1, 'Report example drilldown table')
+assert.ok(view.includes('title="注單明細"'))
+assert.ok(/reportOutcome\(row\)/.test(view))
+assert.ok(!/ROI|佣金估算/i.test(view))
 assert.equal(formatReportMetric(12345), '12,345')
 assert.equal(formatReportMetric('1234567.80', true), '1,234,567.80')
 assert.equal(formatReportMetric(null, true), '資料待確認')
-log('R4T-01', '第一階段七分區、唯一報表入口、四分頁、一表與四營運指標')
+log('R4T-01', '唯一報表入口、四營運維度、原營運指標與同口徑 GGR／RTP')
 for (const tab of reportTabs)
   assert.deepEqual(run(tab).totals, {
     betCount: 4,

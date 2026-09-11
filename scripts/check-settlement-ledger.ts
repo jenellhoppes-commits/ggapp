@@ -28,15 +28,15 @@ const storage = {
   }
 }
 const first = lockStatement(storage, null, input)
-assert.equal(first.statements[0].result.carry[0].closing, 20000)
+assert.equal(first.statements[0].result.carry[0].closing, 14000000)
 const persisted = raw
 assert.throws(() => lockStatement(storage, null, input), /其他頁面/)
 assert.throws(() => lockStatement(storage, raw, input), /重複鎖單/)
 assert.equal(raw, persisted)
 const next = { ...input, month: '2026-10', settlementDate: '2026-11-01', bets: [] }
 const second = lockStatement(storage, raw, next)
-assert.equal(second.statements[1].result.carry[0].opening, 20000)
-assert.equal(second.statements[1].result.carry[0].closing, 20000)
+assert.equal(second.statements[1].result.carry[0].opening, 14000000)
+assert.equal(second.statements[1].result.carry[0].closing, 14000000)
 assert.throws(
   () => prepareStatement(second, { ...next, month: '2026-12', settlementDate: '2027-01-01' }),
   /跳期/
@@ -48,7 +48,7 @@ const third = {
   bets: [{ ...e.bets[0], time: '2026-11-15T04:00:00Z' }]
 }
 const final = lockStatement(storage, raw, third)
-assert.equal(final.statements[2].result.carry[0].used, 20000)
+assert.equal(final.statements[2].result.carry[0].used, 14000000)
 assert.equal(final.statements[2].result.carry[0].closing, 0)
 input.costs[0].payable = '99'
 assert.equal(readLedger(raw).statements[0].input.costs[0].payable, '7')

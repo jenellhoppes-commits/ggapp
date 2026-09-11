@@ -32,8 +32,8 @@
         ><small>可進行人工核對</small></button
       >
       <button type="button" @click="setStatus('Difference')"
-        ><span>有差異</span><strong class="danger">{{ countStatus('Difference') }}</strong
-        ><small>須先完成差異處理</small></button
+        ><span>待核帳</span><strong>{{ countStatus('Difference') }}</strong
+        ><small>由財務於交付時核對</small></button
       >
       <button type="button" @click="setStatus('Locked')"
         ><span>已鎖定</span><strong>{{ countStatus('Locked') }}</strong
@@ -119,18 +119,6 @@
               )
             }}</strong></template
           >
-        </ElTableColumn>
-        <ElTableColumn label="未解差異" width="95" align="center">
-          <template #default="scope">
-            <ElButton
-              v-if="scope.row.unresolvedDifferenceCount"
-              link
-              type="danger"
-              @click="openDifferences(scope.row.id)"
-              >{{ scope.row.unresolvedDifferenceCount }}</ElButton
-            >
-            <span v-else>0</span>
-          </template>
         </ElTableColumn>
         <ElTableColumn label="狀態" width="115">
           <template #default="scope"
@@ -263,8 +251,6 @@
         ? record.merchantCode
         : record.agentCode
   const openDetail = (id: string) => router.push(`/finance/reconciliation/${kind.value}s/${id}`)
-  const openDifferences = (id: string) =>
-    router.push({ path: '/finance/reconciliation/differences', query: { reconciliationId: id } })
   const { money } = useFinanceMoney()
   const { exportCsv } = useCsvExport()
   const exportRows = () =>
@@ -283,7 +269,6 @@
         '有效投注',
         'GGR',
         '最終應結',
-        '未解差異',
         '狀態',
         '更新時間'
       ],
@@ -304,7 +289,6 @@
           row.snapshot.settlementCurrency,
           row.snapshot.amountPrecision
         ),
-        row.unresolvedDifferenceCount,
         statusLabel(row.status),
         row.updatedAt
       ])
@@ -313,7 +297,7 @@
     ({
       Draft: '草稿',
       'Pending Confirmation': '待確認',
-      Difference: '有差異',
+      Difference: '待核帳',
       Confirmed: '已確認',
       Locked: '已鎖定',
       Cancelled: '已取消'

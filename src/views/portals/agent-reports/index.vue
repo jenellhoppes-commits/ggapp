@@ -1,9 +1,6 @@
 <template>
   <section class="agent-reports">
-    <AppPageHeader
-      :title="isRates ? '匯率報表' : '代理報表'"
-      description="僅呈現登入代理授權範圍，所有資料唯讀。"
-    />
+    <AppPageHeader :title="isRates ? '匯率報表' : '代理報表'" />
     <ElAlert
       v-if="!scope.own"
       type="error"
@@ -11,9 +8,20 @@
       title="缺少有效代理身分，無法查詢。"
     />
     <template v-else>
-      <ElTabs v-if="!isRates" :model-value="reportTab" @update:model-value="switchTab"
-        ><ElTabPane v-for="t in reportTabs" :key="t.id" :label="t.label" :name="t.id"
-      /></ElTabs>
+      <PortalTabs
+        v-if="!isRates"
+        :model-value="reportTab"
+        :tabs="reportTabs.map((t) => ({ value: t.id, label: t.label }))"
+        @update:model-value="switchTab"
+      />
+      <PortalTabs
+        v-else
+        v-model="rateView"
+        :tabs="[
+          { value: 'latest', label: '最新適用' },
+          { value: 'history', label: '歷史快照' }
+        ]"
+      />
       <AppFilterForm @submit.prevent="search">
         <ElFormItem label="日期範圍"
           ><ElDatePicker
@@ -57,10 +65,6 @@
           ><ElButton @click="reset">重置</ElButton></div
         >
       </AppFilterForm>
-      <p
-        >平台時區：{{ timezone || '未設定' }} ·
-        {{ isRates ? '按公布適用日期篩選' : '按下注日期篩選，未設定日期時顯示全部演示樣本' }}</p
-      >
       <ElAlert
         v-if="invalidTimeCount && !isRates"
         type="warning"
@@ -71,18 +75,28 @@
         <p>符合條件 {{ rateRows.length }} 筆</p>
         <ArtTable :data="rateRows.slice((page - 1) * 10, page * 10)" row-key="id">
           <ElTableColumn prop="date" label="適用日期" min-width="140" />
+          <ElTableColumn prop="id" label="匯率版本" min-width="180" />
           <ElTableColumn prop="fromCurrency" label="原幣" min-width="100" />
           <ElTableColumn prop="toCurrency" label="目標幣" min-width="100" />
           <ElTableColumn prop="finalRate" label="公布匯率（1 原幣）" min-width="180" />
           <ElTableColumn label="狀態"
-            ><template #default><ElTag type="success">已公布</ElTag></template></ElTableColumn
+            ><template #default="{ row }"
+              ><ElTag type="success">{{
+                row.status === 'Locked' ? '已鎖定' : '已公布'
+              }}</ElTag></template
+            ></ElTableColumn
           >
         </ArtTable>
       </template>
       <template v-else>
-        <p
-          >依直接所屬代理分組，不重複累加代理樹。金額僅統計已結算注單；其他狀態只列筆數。各原幣分列，不換算為正式結算金額。</p
-        >
+        <ReportApproxSummary
+          :rows="approxRows"
+          :metrics="[
+            { key: 'bet', label: '投注流水' },
+            { key: 'payout', label: '派彩' },
+            { key: 'ggr', label: 'GGR' }
+          ]"
+        />
         <div class="summary"
           ><ElCard shadow="never"
             >注單筆數 <strong>{{ reportRows.length }}</strong></ElCard
@@ -129,10 +143,18 @@
           :model-value="!!detailKey"
           title="查詢範圍內注單明細"
           width="min(1100px, 94vw)"
+          class="agent-bet-dialog"
+          append-to-body
           @close="detailKey = ''"
         >
-          <ArtTable :data="detailRows.slice((detailPage - 1) * 10, detailPage * 10)" row-key="id">
-            <ElTableColumn prop="id" label="注單編號" min-width="125" />
+          <ElTable
+            :data="detailRows.slice((detailPage - 1) * 10, detailPage * 10)"
+            row-key="id"
+            max-height="52vh"
+            scrollbar-always-on
+            style="width: 100%"
+          >
+            <ElTableColumn prop="id" label="注單編號" width="220" show-overflow-tooltip />
             <ElTableColumn prop="merchantName" label="商戶" min-width="160" />
             <ElTableColumn prop="agentId" label="所屬代理" min-width="120" />
             <ElTableColumn prop="gameName" label="遊戲" min-width="160" />
@@ -152,7 +174,7 @@
                 row.payoutAmount === null ? '—（未列入）' : money(row.payoutAmount, row.currency)
               }}</template></ElTableColumn
             >
-          </ArtTable>
+          </ElTable>
           <ElPagination
             v-model:current-page="detailPage"
             :page-size="10"
@@ -172,7 +194,10 @@
   </section>
 </template>
 <script setup lang="ts">
+  import PortalTabs from '@/components/business/PortalTabs.vue'
+  import { filterPortalRates } from '@/domain/portal-rates'
   import { computed, ref, watch } from 'vue'
+  import ReportApproxSummary from '@/components/business/ReportApproxSummary.vue'
   import { useRoute, useRouter } from 'vue-router'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import AppFilterForm from '@/components/business/game-provider/app-filter-form/index.vue'
@@ -205,6 +230,7 @@
   }))
   const scope = computed(() => agentScope(partners, actor.value))
   const isRates = computed(() => route.name === 'AgentPortalExchangeRates')
+  const rateView = ref('latest')
   const reportTabs = [
     { id: 'agents', label: '代理' },
     { id: 'merchants', label: '商戶' },
@@ -304,15 +330,21 @@
     )
   )
   const rateRows = computed(() =>
-    rates.value.filter(
-      (r) =>
-        inRange(r.date) &&
-        (!route.query.currency ||
-          r.fromCurrency === route.query.currency ||
-          r.toCurrency === route.query.currency)
-    )
+    filterPortalRates(rates.value, {
+      today: platformDate(new Date(), timezone.value || 'Asia/Taipei'),
+      view: rateView.value,
+      from: String(route.query.from || ''),
+      to: String(route.query.to || ''),
+      currency: String(route.query.currency || '')
+    })
   )
   const grouped = computed(() => groupAgentReports(reportRows.value, reportTab.value))
+  const approxRows = computed(() =>
+    groupAgentReports(reportRows.value, 'currencies').map((r) => ({
+      currency: r.currency,
+      values: { bet: r.bet, payout: r.payout, ggr: r.bet - r.payout }
+    }))
+  )
   const detailRows = computed(
     () => grouped.value.find((g) => g.key === detailKey.value)?.rows || []
   )
@@ -355,6 +387,19 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     min-width: 0;
+    align-content: start;
+    align-items: start;
+    grid-auto-rows: max-content;
+  }
+  .agent-reports > p {
+    margin: 0;
+  }
+  .agent-reports :deep(.filter-actions) {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+  .agent-reports :deep(.el-pagination) {
+    justify-content: flex-end;
   }
   .summary {
     display: grid;
@@ -364,5 +409,34 @@
   .summary strong {
     margin-left: 12px;
     font-size: 24px;
+  }
+</style>
+<style>
+  .agent-bet-dialog {
+    margin: 4vh auto !important;
+    max-height: 92dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  .agent-bet-dialog .el-dialog__body {
+    min-height: 0;
+    overflow: auto;
+    padding-top: 12px;
+  }
+  .agent-bet-dialog .el-dialog__header,
+  .agent-bet-dialog .el-dialog__footer {
+    flex-shrink: 0;
+  }
+  .agent-bet-dialog .el-table .cell {
+    white-space: nowrap;
+  }
+  .agent-bet-dialog .el-pagination {
+    margin-top: 16px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .agent-bet-dialog .el-dialog__footer {
+    display: flex;
+    justify-content: flex-end;
   }
 </style>

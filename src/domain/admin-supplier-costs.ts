@@ -1,9 +1,14 @@
+import { permitsAgent } from './agent-access'
 export type CostOwner = 'platform' | 'agent' | 'merchant'
 export interface SupplierCostInput {
   scope?: 'provider'
   negativeGgr?: 'zero' | 'carry'
+  /** Monthly settlement day in the following month. Missing means an unverified legacy version. */
+  settlementDay?: number
   reason?: string
   providerId: string
+  /** Undefined is a legacy contract, never a wildcard for a typed contract. */
+  gameType?: string
   /** Required for new versions. Missing on legacy rows means unverified, never all currencies. */
   transactionCurrency?: string
   basis: 'GGR' | 'ValidBet'
@@ -38,13 +43,21 @@ export function payableRate(input: Pick<SupplierCostInput, 'rate' | 'meaning'>) 
     input.meaning === 'retained' ? 100000000n - costUnits(input.rate) : costUnits(input.rate)
   )
 }
+export function monthlySettlementDate(month: string, settlementDay: number) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('請選擇有效月份')
+  if (!Number.isInteger(settlementDay) || settlementDay < 1 || settlementDay > 28)
+    throw new Error('次月結算日須為 1–28 日')
+  const [year, monthNumber] = month.split('-').map(Number)
+  return new Date(Date.UTC(year, monthNumber, settlementDay)).toISOString().slice(0, 10)
+}
 export function supplierCostAt(
   rows: SupplierCostVersion[],
   owner: CostOwner,
   ownerId: string,
   providerId: string,
   date: string,
-  transactionCurrency?: string
+  transactionCurrency?: string,
+  gameType?: string
 ) {
   return rows
     .filter(
@@ -52,6 +65,7 @@ export function supplierCostAt(
         r.owner === owner &&
         r.ownerId === ownerId &&
         r.providerId === providerId &&
+        r.gameType === gameType &&
         (r.scope === 'provider' || r.transactionCurrency === transactionCurrency) &&
         r.effectiveFrom <= date
     )
@@ -66,11 +80,16 @@ export function prepareSupplierCost(
   input: SupplierCostInput,
   context: CostContext
 ): SupplierCostVersion {
+  if (
+    input.gameType !== undefined &&
+    (!/^[A-Z][A-Z0-9_]*$/.test(input.gameType) || input.basis !== 'GGR')
+  )
+    throw new Error('遊戲類型條件必須使用有效類型與 GGR 計費基礎')
   const admin = context.roles.some((r) => ['R_SUPER', 'R_ADMIN'].includes(r))
   if (
     !admin &&
     !(
-      context.roles.includes('R_AGENT') &&
+      permitsAgent(context.roles, 'business') &&
       context.agentId &&
       owner !== 'platform' &&
       parentId === context.agentId &&
@@ -99,6 +118,11 @@ function prepareCost(
   input: SupplierCostInput,
   context: CostContext
 ): SupplierCostVersion {
+  if (
+    input.settlementDay !== undefined &&
+    (!Number.isInteger(input.settlementDay) || input.settlementDay < 1 || input.settlementDay > 28)
+  )
+    throw new Error('次月結算日須為 1–28 日；舊版本未設定時保留待確認')
   if (input.scope === 'provider') {
     if (input.transactionCurrency) throw new Error('供應商共用合約不可綁定單一交易幣別')
     if (!input.negativeGgr) throw new Error('請設定負 GGR 處理方式')
@@ -152,6 +176,7 @@ function prepareCost(
       r.owner === owner &&
       r.ownerId === ownerId &&
       r.providerId === input.providerId &&
+      r.gameType === input.gameType &&
       (input.scope === 'provider' ||
         r.scope === 'provider' ||
         r.transactionCurrency === input.transactionCurrency)
@@ -173,7 +198,8 @@ function prepareCost(
           parentId || 'platform',
           input.providerId,
           input.effectiveFrom,
-          input.transactionCurrency
+          input.transactionCurrency,
+          input.gameType
         )
   if (owner !== 'platform' && !upstream)
     throw new Error('生效日缺少上游供應商成本；請先設定上游條件')
@@ -181,6 +207,9 @@ function prepareCost(
     throw new Error('請先確認上游供應商共用合約，不自動合併舊版幣別條件')
   const compatible = (a: SupplierCostInput, b: SupplierCostInput) =>
     a.basis === b.basis &&
+    (a.settlementDay === undefined ||
+      b.settlementDay === undefined ||
+      a.settlementDay === b.settlementDay) &&
     ((a.scope === 'provider' && b.scope === 'provider') ||
       (a.currency === b.currency && a.cycle === b.cycle))
   const upstreamVersions =
@@ -191,6 +220,7 @@ function prepareCost(
             r.owner === parentOwner &&
             r.ownerId === (parentId || 'platform') &&
             r.providerId === input.providerId &&
+            r.gameType === input.gameType &&
             (input.scope === 'provider' ||
               r.scope === 'provider' ||
               r.transactionCurrency === input.transactionCurrency) &&
@@ -208,6 +238,7 @@ function prepareCost(
   const children = rows.filter(
     (r) =>
       r.providerId === input.providerId &&
+      r.gameType === input.gameType &&
       (input.scope === 'provider' ||
         r.scope === 'provider' ||
         r.transactionCurrency === input.transactionCurrency) &&
@@ -224,7 +255,8 @@ function prepareCost(
       child.ownerId,
       child.providerId,
       input.effectiveFrom,
-      input.transactionCurrency
+      input.transactionCurrency,
+      input.gameType
     )
     if (child.effectiveFrom < input.effectiveFrom && child.id !== atStart?.id) continue
     if (!compatible(input, child) || costUnits(child.payable) < costUnits(payable))
@@ -232,7 +264,7 @@ function prepareCost(
   }
   return {
     ...input,
-    id: `${owner}:${ownerId}:${input.providerId}:${input.scope === 'provider' ? 'all' : input.transactionCurrency}:${input.effectiveFrom}`,
+    id: `${owner}:${ownerId}:${input.providerId}:${input.gameType ? input.gameType + ':' : ''}${input.scope === 'provider' ? 'all' : input.transactionCurrency}:${input.effectiveFrom}`,
     owner,
     ownerId,
     parentId,

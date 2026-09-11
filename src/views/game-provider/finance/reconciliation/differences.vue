@@ -3,7 +3,7 @@
     <AppPageHeader
       title="差異處理"
       eyebrow="對帳／結算"
-      description="集中比對系統與合作方帳務，追蹤責任人、關聯資料與處理結果。"
+      description="保留歷史差異案件與處理紀錄；新結算單由財務在交付作業核帳、填寫差異金額及原因，不由系統自動核對外部帳目。"
     >
       <template #actions
         ><ElButton @click="refresh">重新整理</ElButton

@@ -2,17 +2,31 @@
   <section class="agent-partners">
     <AppPageHeader
       :title="pageTitle"
-      description="可查看所有下級；費率修改統一由商務條件辦理，其他設定唯讀。"
+      :description="
+        isTerms
+          ? '管理自己取得與直屬下發的供應商／遊戲類型條件。'
+          : isRelations
+            ? '查看授權代理樹、合作狀態與直屬關係。'
+            : '查詢直屬與間接商戶、線路及收付模式。'
+      "
       ><template #actions>
         <ElButton
-          v-if="route.name === 'AgentPortalRelations' && scope.own"
+          v-if="
+            route.name === 'AgentPortalRelations' &&
+            scope.own &&
+            permitsAgent(actor.roles, 'business')
+          "
           type="primary"
           :disabled="scope.own.level === 'L3'"
           @click="router.push('/agent/relations/create')"
           >{{ scope.own.level === 'L3' ? '已達三級上限' : '新增下級代理' }}</ElButton
         >
         <ElButton
-          v-if="route.name === 'AgentPortalMerchants' && scope.own"
+          v-if="
+            route.name === 'AgentPortalMerchants' &&
+            scope.own &&
+            permitsAgent(actor.roles, 'business')
+          "
           type="primary"
           @click="router.push('/agent/merchants/create')"
           >新增直屬商戶</ElButton
@@ -31,15 +45,47 @@
       :closable="false"
     />
     <template v-else>
-      <ElDescriptions :column="1" border>
+      <div v-if="isRelations" class="relation-overview">
+        <ElCard shadow="never">
+          <template #header>授權代理樹</template>
+          <ElTree
+            :data="agentTree"
+            node-key="id"
+            :props="{ label: 'label', children: 'children' }"
+            default-expand-all
+            highlight-current
+            @node-click="selectNode"
+          />
+        </ElCard>
+        <ElCard v-if="activeNode" shadow="never">
+          <template #header>節點摘要</template>
+          <ElDescriptions :column="1" border>
+            <ElDescriptionsItem label="代理"
+              >{{ activeNode.name }} · {{ activeNode.code }}</ElDescriptionsItem
+            >
+            <ElDescriptionsItem label="層級">{{ activeNode.level }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="直接上級">{{
+              activeNode.id === scope.own.id ? '—' : parentText(activeNode.parentAgentId)
+            }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="合作狀態"
+              ><GameProviderStatusTag :status="activeNode.status"
+            /></ElDescriptionsItem>
+            <ElDescriptionsItem label="合作開始">{{
+              activeNode.cooperationStartDate || '—'
+            }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="直屬商戶">{{
+              scope.merchants.filter((m) => m.agentId === activeNode?.id).length
+            }}</ElDescriptionsItem>
+          </ElDescriptions>
+        </ElCard>
+      </div>
+      <ElDescriptions v-else :column="2" border>
         <ElDescriptionsItem label="登入代理"
           >{{ scope.own.name }} · {{ scope.own.id }}</ElDescriptionsItem
         >
-        <ElDescriptionsItem label="舊通用費率（唯讀參考）">{{
-          ownRate ? `${ownRate.rate}% · ${basisText(ownRate.basis)}` : '未設定生效條件'
-        }}</ElDescriptionsItem>
         <ElDescriptionsItem label="日期依據">{{ today }} · {{ timezone }}</ElDescriptionsItem>
       </ElDescriptions>
+      <h3 v-if="isTerms" class="section-heading">我的取得條件</h3>
       <SupplierCostConditions
         v-if="isTerms"
         owner="agent"
@@ -52,11 +98,38 @@
           <ElFormItem label="名稱／代碼"
             ><ElInput v-model="keyword" clearable placeholder="查詢授權範圍內名稱或代碼"
           /></ElFormItem>
-          <ElFormItem label="關係"
+          <ElFormItem v-if="!isTerms" label="關係"
             ><ElSelect v-model="relation" clearable placeholder="全部關係" aria-label="關係篩選"
               ><ElOption label="直屬" value="direct" /><ElOption
                 label="間接下級"
                 value="indirect" /></ElSelect
+          ></ElFormItem>
+          <ElFormItem label="狀態"
+            ><ElSelect v-model="status" clearable placeholder="全部狀態"
+              ><ElOption
+                v-for="s in statusChoices"
+                :key="s"
+                :value="s"
+                :label="
+                  (
+                    {
+                      Active: '合作中',
+                      Disabled: '已停用',
+                      Draft: '草稿',
+                      Pending: '待確認'
+                    } as Record<string, string>
+                  )[s] || s
+                " /></ElSelect
+          ></ElFormItem>
+          <ElFormItem v-if="isRelations" label="層級"
+            ><ElSelect v-model="level" clearable placeholder="全部層級"
+              ><ElOption v-for="l in ['L1', 'L2', 'L3']" :key="l" :value="l" :label="l" /></ElSelect
+          ></ElFormItem>
+          <ElFormItem v-if="!isRelations && !isTerms" label="收付模式"
+            ><ElSelect v-model="mode" clearable placeholder="全部模式"
+              ><ElOption label="代理統收" value="AgentCollect" /><ElOption
+                label="平台代收"
+                value="PlatformCollect" /></ElSelect
           ></ElFormItem>
           <div class="filter-actions"
             ><ElButton type="primary" @click="apply">查詢</ElButton
@@ -65,8 +138,10 @@
         </AppFilterForm></ElCard
       >
       <ElTabs v-if="isTerms" v-model="tab" @tab-change="changeTab"
-        ><ElTabPane :label="`下級代理（${scope.agents.length}）`" name="agent" /><ElTabPane
-          :label="`商戶（${scope.merchants.length}）`"
+        ><ElTabPane
+          :label="`直屬代理（${scope.agents.filter((a) => a.parentAgentId === actor.agentId).length}）`"
+          name="agent" /><ElTabPane
+          :label="`直屬商戶（${scope.merchants.filter((m) => m.agentId === actor.agentId).length}）`"
           name="merchant"
       /></ElTabs>
       <ArtTable :data="paged" row-key="key">
@@ -75,27 +150,48 @@
           label="代碼"
           min-width="140"
         />
+        <ElTableColumn v-if="isRelations" prop="level" label="層級" width="80" />
+        <ElTableColumn prop="cooperationStartDate" label="合作開始" min-width="125" />
+        <ElTableColumn
+          v-if="!isRelations && !isTerms"
+          prop="currencies"
+          label="交易幣別"
+          min-width="140"
+        />
+        <ElTableColumn v-if="!isRelations && !isTerms" prop="lineCount" label="線路數" width="90" />
         <ElTableColumn label="關係" width="105"
           ><template #default="{ row }">{{
             row.direct ? '直屬' : '間接下級'
           }}</template></ElTableColumn
         >
-        <ElTableColumn label="舊通用費率（非新制成本）" min-width="150"
-          ><template #default="{ row }">{{
-            row.rate ? `${row.rate.rate}% · ${basisText(row.rate.basis)}` : '尚無生效條件'
-          }}</template></ElTableColumn
-        >
+        <ElTableColumn label="合作狀態" width="110">
+          <template #default="{ row }"><GameProviderStatusTag :status="row.status" /></template>
+        </ElTableColumn>
+        <ElTableColumn label="直接上級" min-width="160">
+          <template #default="{ row }">{{ parentText(row.parentId) }}</template>
+        </ElTableColumn>
+        <ElTableColumn v-if="route.name === 'AgentPortalMerchants'" label="收付模式" width="120">
+          <template #default="{ row }">{{
+            collection.at(
+              row.id,
+              today,
+              store.merchants.find((m) => m.id === row.id)?.collectionMode
+            ) === 'AgentCollect'
+              ? '代理統收'
+              : '平台代收'
+          }}</template>
+        </ElTableColumn>
         <ElTableColumn label="操作" min-width="160"
           ><template #default="{ row }"
             ><ElButton link type="primary" @click="inspect(row)">查看</ElButton
             ><ElButton
-              v-if="!isTerms"
+              v-if="!isTerms && row.termsVisible"
               link
               type="primary"
               @click="router.push({ path: '/agent/terms', query: { kind: row.kind, q: row.id } })"
               >商務條件</ElButton
             ><ElButton v-if="isTerms && row.editable" link type="primary" @click="edit(row)"
-              >修改費率</ElButton
+              >編輯商務條件</ElButton
             ></template
           ></ElTableColumn
         >
@@ -111,8 +207,8 @@
     </template>
     <ElDialog
       v-model="opened"
-      :title="editing ? '修改費率 · 新生效版本' : '授權資料與費率版本'"
-      width="min(560px, calc(100vw - 24px))"
+      :title="editing ? '編輯商務條件 · 新版本' : '合作資料與條件'"
+      width="min(1080px, calc(100vw - 32px))"
       append-to-body
       class="partner-dialog"
       :close-on-click-modal="false"
@@ -142,6 +238,7 @@
           }}</ElDescriptionsItem>
         </ElDescriptions>
         <SupplierCostConditions
+          v-if="selected.termsVisible"
           :key="selected.key + editing"
           ref="newConditions"
           :owner="selected.kind"
@@ -150,41 +247,25 @@
           :readonly="!editing"
           :hide-upstream="!selected.direct"
         />
-        <div v-if="!editing" class="history"
-          ><h3>舊通用費率版本（唯讀參考）</h3>
-          <ElAlert
-            v-if="selected.rate && ownRate && selected.rate.basis !== ownRate.basis"
-            type="warning"
-            :closable="false"
-            title="計費基礎與自身費率不同，不可直接比較百分比。"
-          />
-          <ElEmpty v-if="!history.length" description="尚無已核准條件" /><article
-            v-for="v in history"
-            :key="v.key"
-            ><strong>V{{ v.version }} · {{ v.rate }}%</strong
-            ><ElTag class="version-state">{{ versionState(v) }}</ElTag>
-            <ElDescriptions :column="1" size="small">
-              <ElDescriptionsItem label="適用期間"
-                >{{ v.effectiveFrom }} 起 ～ {{ versionEnd(v) || '持續適用'
-                }}{{ versionEnd(v) ? '（不含當日）' : '' }}</ElDescriptionsItem
-              >
-              <ElDescriptionsItem label="計費基礎">{{ basisText(v.basis) }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="結算幣別">{{ v.currency }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="結算週期">{{ cycleText(v.cycle) }}</ElDescriptionsItem>
-            </ElDescriptions></article
-          ></div
-        >
+        <MerchantCollectionMode
+          v-if="selected.kind === 'merchant' && selected.direct && !editing"
+          :merchant-id="selected.id"
+          :initial="store.merchants.find((m) => m.id === selected?.id)?.collectionMode"
+        />
       </template>
       <template #footer><ElButton @click="close(() => (opened = false))">關閉</ElButton></template>
     </ElDialog>
   </section>
 </template>
 <script setup lang="ts">
+  import { permitsAgent } from '@/domain/agent-access'
   import { computed, ref, watch } from 'vue'
   import { useNow, useEventListener } from '@vueuse/core'
   import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
   import { ElMessageBox } from 'element-plus'
   import SupplierCostConditions from '@/components/business/SupplierCostConditions.vue'
+  import MerchantCollectionMode from '@/components/business/MerchantCollectionMode.vue'
+  import { useCollectionModeStore } from '@/store/modules/collectionMode'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import AppFilterForm from '@/components/business/game-provider/app-filter-form/index.vue'
   import GameProviderStatusTag from '@/components/business/game-provider/status-tag/index.vue'
@@ -195,11 +276,11 @@
   import {
     agentScope,
     canEditRate,
-    rateAt,
-    rateTimeline,
+    canViewAgentTerms,
     type RateTarget
   } from '@/domain/agent-portal'
   const store = useBusinessPartnerStore(),
+    collection = useCollectionModeStore(),
     user = useUserStore(),
     locale = usePlatformLocaleStore(),
     route = useRoute(),
@@ -210,6 +291,7 @@
     name: user.info.userName || '演示代理'
   }))
   const isTerms = computed(() => route.name === 'AgentPortalTerms')
+  const isRelations = computed(() => route.name === 'AgentPortalRelations')
   const pageTitle = computed(() =>
     isTerms.value ? '商務條件' : route.name === 'AgentPortalRelations' ? '代理關係' : '商戶管理'
   )
@@ -223,12 +305,10 @@
       return ''
     }
   })
-  const ownRate = computed(() =>
-    scope.value.own
-      ? rateAt(store, { kind: 'agent', id: scope.value.own.id }, today.value)
-      : undefined
-  )
   const tab = ref(route.query.kind === 'merchant' ? 'merchant' : 'agent'),
+    status = ref(String(route.query.status || '')),
+    level = ref(String(route.query.level || '')),
+    mode = ref(String(route.query.mode || '')),
     relation = ref(String(route.query.relation || '')),
     keyword = ref(String(route.query.q || '')),
     pageNumber = ref(1),
@@ -237,6 +317,9 @@
     [
       ...scope.value.agents.map((a) => ({
         kind: 'agent' as const,
+        level: a.level,
+        currencies: '',
+        lineCount: 0,
         id: a.id,
         name: a.name,
         code: a.code,
@@ -248,6 +331,9 @@
       })),
       ...scope.value.merchants.map((m) => ({
         kind: 'merchant' as const,
+        level: '',
+        currencies: [...new Set(m.lines.map((l) => l.currency))].join(' / '),
+        lineCount: m.lines.length,
         id: m.id,
         name: m.name,
         code: m.code,
@@ -261,19 +347,65 @@
       ...r,
       key: `${r.kind}:${r.id}`,
       editable: canEditRate(store, actor.value, r),
-      rate: rateAt(store, r, today.value)
+      termsVisible: canViewAgentTerms(store, actor.value, r)
     }))
   )
+  const statusChoices = computed(() => [
+    ...new Set(
+      allRows.value
+        .filter(
+          (r) => r.kind === (isRelations.value ? 'agent' : isTerms.value ? tab.value : 'merchant')
+        )
+        .map((r) => r.status)
+    )
+  ])
+  const nodeId = ref('')
+  function selectNode(node: { id: string }) {
+    nodeId.value = node.id
+  }
+  const activeNode = computed(
+    () =>
+      [scope.value.own, ...scope.value.agents].find((a) => a?.id === nodeId.value) ||
+      scope.value.own
+  )
+  type TreeNode = { id: string; label: string; children: TreeNode[] }
+  const agentTree = computed(() => {
+    if (!scope.value.own) return []
+    const seen = new Set<string>()
+    const build = (a: NonNullable<typeof scope.value.own>): TreeNode => {
+      seen.add(a.id)
+      return {
+        id: a.id,
+        label: `${a.code} / ${a.name} · ${a.level}`,
+        children: scope.value.agents
+          .filter((c) => c.parentAgentId === a.id && !seen.has(c.id))
+          .map(build)
+      }
+    }
+    return [build(scope.value.own)]
+  })
   const rows = computed(() =>
     allRows.value.filter(
       (r) =>
+        (!isTerms.value || r.termsVisible) &&
+        (!route.query.status || r.status === route.query.status) &&
+        (!isRelations.value || !route.query.level || r.level === route.query.level) &&
+        (isRelations.value ||
+          isTerms.value ||
+          !route.query.mode ||
+          collection.at(
+            r.id,
+            today.value,
+            store.merchants.find((m) => m.id === r.id)?.collectionMode
+          ) === route.query.mode) &&
         r.kind ===
           (isTerms.value
             ? tab.value
             : route.name === 'AgentPortalRelations'
               ? 'agent'
               : 'merchant') &&
-        (!route.query.relation ||
+        (isTerms.value ||
+          !route.query.relation ||
           (route.query.relation === 'direct'
             ? r.direct
             : route.query.relation === 'indirect'
@@ -293,7 +425,10 @@
       query: {
         ...route.query,
         q: keyword.value.trim() || undefined,
-        relation: relation.value || undefined
+        relation: relation.value || undefined,
+        status: status.value || undefined,
+        level: level.value || undefined,
+        mode: mode.value || undefined
       }
     })
   }
@@ -310,8 +445,20 @@
   const reset = () => {
     keyword.value = ''
     relation.value = ''
+    status.value = ''
+    level.value = ''
+    mode.value = ''
     apply()
   }
+  watch(
+    () => route.fullPath,
+    () => {
+      status.value = String(route.query.status || '')
+      level.value = String(route.query.level || '')
+      mode.value = String(route.query.mode || '')
+      pageNumber.value = 1
+    }
+  )
   watch(
     () => route.query.relation,
     () => {
@@ -339,32 +486,9 @@
     editing = ref(false)
   const newConditions = ref<InstanceType<typeof SupplierCostConditions>>()
   const selected = computed(() => allRows.value.find((r) => r.key === selectedKey.value))
-  const history = computed(() =>
-    selected.value ? [...rateTimeline(store, selected.value)].reverse() : []
-  )
   const dirty = computed(() => opened.value && editing.value && !!newConditions.value?.dirty)
-  const basisText = (value: string) =>
-    ({ GGR: 'GGR（遊戲毛收入）', 'Valid Bet': '有效投注', Turnover: '總投注' })[value] || value
-  const cycleText = (value: string) =>
-    ({ Daily: '每日', Weekly: '每週', Semimonthly: '每半月', Monthly: '每月' })[value] || value
   const parentText = (id?: string) =>
     id ? `${store.agents.find((a) => a.id === id)?.name || '未提供名稱'}（${id}）` : '—'
-  type Version = ReturnType<typeof rateTimeline>[number]
-  const versionEnd = (v: Version) => {
-    const timeline = selected.value ? rateTimeline(store, selected.value) : []
-    const next = timeline[timeline.findIndex((item) => item.key === v.key) + 1]?.effectiveFrom
-    return [v.until, next].filter((s): s is string => !!s).sort()[0]
-  }
-  const versionState = (v: Version) =>
-    !today.value
-      ? '日期設定缺失'
-      : v.effectiveFrom > today.value
-        ? '待生效'
-        : selected.value?.rate?.key === v.key
-          ? '目前適用'
-          : v.until && v.until <= today.value
-            ? '已失效'
-            : '歷史版本'
   function inspect(row: RateTarget) {
     selectedKey.value = `${row.kind}:${row.id}`
     editing.value = false
@@ -442,9 +566,28 @@
     margin: 0;
   }
   .partner-filters {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  }
+  .relation-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+  }
+  .section-heading {
+    margin: 0;
+    font-size: 16px;
+  }
+  .relation-overview :deep(.el-tree-node__content) {
+    min-height: 36px;
+    height: auto;
+  }
+  .relation-overview :deep(.el-tree-node__label) {
+    white-space: normal;
   }
   @media (width < 1000px) {
+    .relation-overview {
+      grid-template-columns: minmax(0, 1fr);
+    }
     .partner-filters {
       grid-template-columns: minmax(0, 1fr);
     }

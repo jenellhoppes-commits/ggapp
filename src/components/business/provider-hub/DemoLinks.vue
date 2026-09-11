@@ -1,9 +1,14 @@
 <template>
   <section class="demo-links">
-    <ElTabs v-model="activeTab"
-      ><ElTabPane label="試玩連結" name="links" /><ElTabPane label="使用統計" name="statistics"
-    /></ElTabs>
+    <PortalTabs
+      v-model="activeTab"
+      :tabs="[
+        { value: 'links', label: '連結列表' },
+        { value: 'statistics', label: '使用統計' }
+      ]"
+    />
     <ElSelect
+      v-if="actor.role !== 'merchant'"
       v-model="merchantFilter"
       clearable
       placeholder="全部可見商戶"
@@ -34,7 +39,12 @@
           >建立試玩連結</ElButton
         >
       </div>
-      <ElTable :data="rows" border empty-text="尚無試玩連結，請建立第一條單遊戲連結。">
+      <ElTable
+        :data="rows"
+        border
+        scrollbar-always-on
+        empty-text="尚無試玩連結，請建立第一條單遊戲連結。"
+      >
         <ElTableColumn prop="name" label="名稱" min-width="165" />
         <ElTableColumn label="用途" width="100"
           ><template #default="{ row }">{{
@@ -68,7 +78,7 @@
           ><template #default="{ row }">{{ formatTime(row.expiresAt) }}</template></ElTableColumn
         >
         <ElTableColumn prop="createdBy" label="建立人" min-width="125" />
-        <ElTableColumn label="操作" width="290" fixed="right"
+        <ElTableColumn label="操作" width="290" :fixed="width >= 900 ? 'right' : false"
           ><template #default="{ row }">
             <ElButton link type="primary" @click="selectedId = row.id">查看</ElButton>
             <ElButton link type="primary" :disabled="status(row) !== '有效'" @click="openPlay(row)"
@@ -309,7 +319,8 @@
 
 <script setup lang="ts">
   import { computed, reactive, ref, watch } from 'vue'
-  import { useNow } from '@vueuse/core'
+  import { useNow, useWindowSize } from '@vueuse/core'
+  import PortalTabs from '@/components/business/PortalTabs.vue'
   import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { useUserStore } from '@/store/modules/user'
@@ -327,6 +338,7 @@
   } from '@/domain/provider-demo'
 
   const store = useProviderDemoStore()
+  const { width } = useWindowSize()
   const user = useUserStore()
   const route = useRoute()
   const router = useRouter()

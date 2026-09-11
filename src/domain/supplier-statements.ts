@@ -7,11 +7,13 @@ import {
 import { platformDate } from './report-four-tabs'
 
 export type StatementBet = {
+  validConfirmed?: boolean
   id: string
   providerId: string
   currency: string
   time: string
   game: string
+  gameType?: string
   bet: number
   valid: number
   payout: number
@@ -19,6 +21,7 @@ export type StatementBet = {
 export type StatementLine = {
   key: string
   providerId: string
+  gameType?: string
   currency: string
   version: string
   effectiveFrom: string
@@ -66,8 +69,16 @@ export function calculateStatement(
     if (date < from || date > to) continue
     // Merchant rows are the sales rates assigned by its parent, not provider
     // acquisition costs. Never fall back to another owner's cost or rate.
-    const version = supplierCostAt(costs, owner, ownerId, bet.providerId, date, bet.currency)
-    const key = `${bet.providerId}:${bet.currency}:${version?.id || 'missing'}`
+    const version = supplierCostAt(
+      costs,
+      owner,
+      ownerId,
+      bet.providerId,
+      date,
+      bet.currency,
+      bet.gameType
+    )
+    const key = `${bet.providerId}:${bet.gameType || 'legacy'}:${bet.currency}:${version?.id || 'missing'}`
     let line = groups.get(key)
     if (!line) {
       const next = costs
@@ -76,6 +87,7 @@ export function calculateStatement(
             c.owner === owner &&
             c.ownerId === ownerId &&
             c.providerId === bet.providerId &&
+            c.gameType === bet.gameType &&
             (c.scope === 'provider' || c.transactionCurrency === bet.currency) &&
             c.effectiveFrom > (version?.effectiveFrom || date)
         )
@@ -88,6 +100,7 @@ export function calculateStatement(
       line = {
         key,
         providerId: bet.providerId,
+        gameType: bet.gameType,
         currency: bet.currency,
         version: version?.id || '缺少條件',
         effectiveFrom: version
@@ -115,6 +128,8 @@ export function calculateStatement(
     line.valid += bet.valid
     line.payout += bet.payout
     line.sources.push({ ...bet })
+    if (line.basis !== 'GGR' && bet.validConfirmed === false)
+      line.issue = '交易來源未提供有效投注，不能推估計費基礎'
   }
   for (const line of groups.values()) {
     line.ggr = line.bet - line.payout

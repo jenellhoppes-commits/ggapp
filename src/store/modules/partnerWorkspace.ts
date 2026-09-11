@@ -1,8 +1,14 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
+import { permitsAgent, findLoginAccount, accountRolesFor } from '@/domain/agent-access'
 import type { SupplierCostVersion } from '@/domain/admin-supplier-costs'
-import { supplierCostDemoSeed, sharedPartnerSample } from '@/domain/supplier-cost-demo'
+import {
+  supplierCostDemoSeed,
+  sharedPartnerSample,
+  typedPartnerSamples,
+  settlementDayPartnerSamples
+} from '@/domain/supplier-cost-demo'
 import {
   PARTNER_JOURNAL_KEY,
   persistPartnerJournal,
@@ -49,6 +55,7 @@ export const usePartnerWorkspaceStore = defineStore('partnerWorkspace', () => {
     journal.value = JSON.parse(serialized)
   }
   function addEntry(entry: CreationEntry) {
+    assertBusinessAccess()
     const previous = journal.value.entries.find((e) => e.requestId === entry.requestId)
     if (previous) {
       if (JSON.stringify(previous) !== JSON.stringify(entry)) throw new Error('重複請求內容衝突')
@@ -57,12 +64,22 @@ export const usePartnerWorkspaceStore = defineStore('partnerWorkspace', () => {
     save({ ...journal.value, entries: [...journal.value.entries, entry] })
   }
   function addCost(version: SupplierCostVersion) {
+    assertBusinessAccess()
     if (costs.value.some((v) => v.id === version.id)) throw new Error('條件版本已存在')
     save({ ...journal.value, costVersions: [...journal.value.costVersions, version] })
+  }
+  function assertBusinessAccess() {
+    const login = localStorage.getItem('ggap-demo-user') || ''
+    const roles =
+      login === 'super' ? ['R_SUPER'] : accountRolesFor(findLoginAccount(localStorage, login))
+    if (!roles.some((r) => ['R_SUPER', 'R_ADMIN'].includes(r)) && !permitsAgent(roles, 'business'))
+      throw new Error('目前角色不可修改合作或商務條件')
   }
   if (!error.value && typeof localStorage !== 'undefined') {
     const legacySamples = supplierCostDemoSeed(costs.value)
     const demoCosts = [...legacySamples, ...sharedPartnerSample([...costs.value, ...legacySamples])]
+    demoCosts.push(...typedPartnerSamples([...costs.value, ...demoCosts]))
+    demoCosts.push(...settlementDayPartnerSamples([...costs.value, ...demoCosts]))
     if (demoCosts.length) {
       try {
         save({ ...journal.value, costVersions: [...journal.value.costVersions, ...demoCosts] })

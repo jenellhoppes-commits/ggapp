@@ -9,8 +9,25 @@ import { flattenRoutes } from '../src/router/modules/navigation'
 import { staticRoutes } from '../src/router/routes/staticRoutes'
 import { getFirstMenuPath } from '../src/utils/navigation/route'
 import { buildDisplayMenu } from '../src/utils/navigation/display-menu'
+import { RouteValidator } from '../src/router/core/RouteValidator'
 
 const all = [...gameProviderRoutes, ...portalRoutes]
+const merchantRoutes = portalRoutes.find((r) => r.path === '/merchant')!.children!
+for (const path of ['dashboard', 'profile', 'lines', 'games', 'integration', 'members', 'bets', 'transactions', 'reports', 'settlements', 'notifications', 'account', 'security']) {
+  const route = merchantRoutes.find((r) => r.path === path)
+  assert.ok(route, `Merchant module route missing: ${path}`)
+  assert.deepEqual(route.meta.roles, ['R_MERCHANT'])
+  if (!['lines', 'transactions'].includes(path)) assert.ok(!route.meta.isHide, `Merchant module hidden: ${path}`)
+}
+assert.equal(merchantRoutes.find((r) => r.path === 'invoices')?.meta.isHide, true)
+const merchantDisplay = buildDisplayMenu([portalRoutes.find((r) => r.path === '/merchant')!])
+assert.deepEqual(merchantDisplay.map((r) => r.meta.title), ['儀錶板', '商務中心', '遊戲中心', '會員中心', '交易中心', '報表管理', '對帳/結算', '匯率報表', '串接中心', '公告通知', '帳號與權限', '操作紀錄'])
+assert.ok(merchantDisplay.every((r) => !r.children?.length && r.path.startsWith('/merchant/')))
+assert.equal(
+  new RouteValidator().validate(all).valid,
+  true,
+  'Runtime route validation must allow application startup'
+)
 assert.ok(
   gameProviderRoutes.every((r) => !r.meta.menuGroup),
   'Seven sections carry their own headings'
@@ -47,7 +64,7 @@ assert.deepEqual(
 )
 assert.deepEqual(
   displayMenu.find((r) => r.path === '/finance')?.children?.map((r) => r.meta.title),
-  ['供應商對帳', '代理對帳', '商戶對帳', '差異處理', '異動紀錄']
+  ['供應商對帳', '代理對帳', '商戶對帳', '異動紀錄']
 )
 assert.deepEqual(
   displayMenu.find((r) => r.path === '/platform')?.children?.map((r) => r.meta.title),
@@ -93,7 +110,7 @@ for (const route of flat) {
     !/\b(Provider|Wallet|Round)\b/.test(`${route.meta.title} ${route.meta.description || ''}`)
   )
   if (route.meta.activePath)
-    assert.ok(displayFlat.some((item) => item.path === route.meta.activePath))
+    assert.ok(flattenRoutes(buildDisplayMenu(all)).some((item) => item.path === route.meta.activePath))
 }
 assert.deepEqual(
   buildDisplayMenu([

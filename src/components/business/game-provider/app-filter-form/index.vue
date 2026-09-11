@@ -48,6 +48,8 @@
     flex-wrap: wrap;
     gap: 8px;
     align-items: center;
+    justify-content: flex-end;
+    grid-column: 1 / -1;
   }
   .app-filter-form :deep(.filter-actions .el-button + .el-button),
   .app-filter-form :deep(.form-actions .el-button + .el-button) {

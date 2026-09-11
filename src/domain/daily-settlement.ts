@@ -1,6 +1,7 @@
 import { calculateStatement, type StatementBet } from './supplier-statements'
 import { costUnits, type CostOwner, type SupplierCostVersion } from './admin-supplier-costs'
 import { platformDate } from './report-four-tabs'
+import { divideRounded, safeMoney, finalMinor } from './settlement-money'
 
 export type DailyFx = { date: string; from: string; to: string; rate: string; version: string }
 export function dailySettlement(
@@ -16,10 +17,8 @@ export function dailySettlement(
   opening: Record<string, number> = {},
   settlementDate?: string
 ) {
-  // Validate all sources and duplicates before daily partitioning.
   calculateStatement(bets, costs, owner, ownerId, from, to, timezone)
-  const remaining = { ...opening }
-  if (Object.values(remaining).some((v) => !Number.isSafeInteger(v) || v < 0))
+  if (Object.values(opening).some((v) => !Number.isSafeInteger(v) || v < 0))
     throw new Error('期初扣抵餘額無效')
   const days = [...new Set(bets.map((b) => platformDate(new Date(b.time), timezone)))].sort()
   return days
@@ -29,24 +28,24 @@ export function dailySettlement(
         const contract = costs.find(
           (c) => c.id === line.version && c.owner === owner && c.ownerId === ownerId
         )
-        const scope = `${owner}:${ownerId}:${line.providerId}:${line.currency}:${line.basis}:${line.settlementCurrency}`
-        const start = remaining[scope] || 0
-        const used =
-          contract?.negativeGgr === 'carry' && line.basis === 'GGR'
-            ? Math.min(start, Math.max(0, line.ggr))
-            : 0
-        const added =
-          contract?.negativeGgr === 'carry' && line.basis === 'GGR' ? Math.max(0, -line.ggr) : 0
-        // New negatives are carried to NEXT period, never consumed later in this period.
-        const base = line.basis === 'GGR' ? Math.max(0, line.ggr - used) : line.valid
+        const scope = [
+          owner,
+          ownerId,
+          line.providerId,
+          line.settlementCurrency,
+          ...(line.gameType ? [line.gameType] : [])
+        ].join(':')
+        const base = line.basis === 'GGR' ? line.ggr : line.valid
         let issue = !contract
           ? '缺少適用條件'
-          : line.basis === 'GGR' && !contract.negativeGgr
+          : !contract.negativeGgr
             ? '負 GGR 政策待設定'
-            : ''
+            : line.sources.some((b) => b.validConfirmed === false) && line.basis !== 'GGR'
+              ? '交易來源未提供有效投注'
+              : ''
         const matches = fx.filter(
           (r) =>
-            r.date === (settlementDate || date) &&
+            r.date === settlementDate &&
             r.from === line.currency &&
             r.to === line.settlementCurrency
         )
@@ -56,27 +55,32 @@ export function dailySettlement(
             : matches.length === 1
               ? matches[0].rate
               : ''
-        const digits = precision[line.settlementCurrency]
-        let settled: number | null = null
-        if (!Number.isInteger(digits) || digits < 0 || digits > 6) issue ||= '結算幣別精度待設定'
+        const finalDigits = precision[line.settlementCurrency]
+        if (!settlementDate) issue ||= '請指定結算日期或預估匯率日期'
+        if (!Number.isInteger(finalDigits) || finalDigits < 0 || finalDigits > 6)
+          issue ||= '結算幣別精度待設定'
         if (!/^(0|[1-9]\d*)(\.\d{1,8})?$/.test(rate) || Number(rate) <= 0)
-          issue ||= '當日匯率缺漏或衝突'
+          issue ||= '結算日匯率缺漏或衝突'
         if (line.currency !== line.settlementCurrency && !matches[0]?.version?.trim())
-          issue ||= '缺少當日匯率版本識別'
-        if (!Number.isSafeInteger(base)) issue ||= '金額超出安全範圍'
+          issue ||= '缺少匯率版本識別'
+        let settled: number | null = null
         if (!issue) {
           const [whole, decimals = ''] = rate.split('.')
           const fxUnits = BigInt(whole) * 100000000n + BigInt(decimals.padEnd(8, '0'))
-          // Source cents → fee → FX → settlement minor units. Round once, half up.
-          const numerator = BigInt(base) * costUnits(line.rate) * fxUnits * 10n ** BigInt(digits)
-          const denominator = 100n * 100000000n * 100000000n
-          settled = Number((numerator + denominator / 2n) / denominator)
-          if (!Number.isSafeInteger(settled)) {
-            settled = null
-            issue = '金額超出安全範圍'
-          }
+          // Convert each source fee to millionths; round to currency minor units only in totals.
+          settled = safeMoney(
+            line.sources.reduce((sum, b) => {
+              const value = line.basis === 'GGR' ? b.bet - b.payout : b.valid
+              return (
+                sum +
+                divideRounded(
+                  BigInt(value) * costUnits(line.rate) * fxUnits * 1000000n,
+                  100n * 100000000n * 100000000n
+                )
+              )
+            }, 0n)
+          )
         }
-        if (!issue) remaining[scope] = start - used
         return {
           ...line,
           amount: null,
@@ -85,38 +89,81 @@ export function dailySettlement(
           base,
           issue,
           settled,
-          digits,
+          digits: 6,
+          finalDigits,
           fxRate: rate,
-          fxDate: settlementDate || date,
+          fxDate: settlementDate || '',
           fxVersion:
             line.currency === line.settlementCurrency ? '同幣 1:1' : matches[0]?.version || '',
           negativeGgr: contract?.negativeGgr,
-          opening: start,
-          used: issue ? 0 : used,
-          added: issue ? 0 : added,
-          remaining: issue ? start : start - used
+          opening: opening[scope] || 0,
+          used: 0,
+          added: 0,
+          remaining: opening[scope] || 0
         }
       })
     )
 }
-
-/** Period carry summary exists even when no bets occurred. Never writes or locks a ledger. */
 export function settlementPeriod(...args: Parameters<typeof dailySettlement>) {
   const lines = dailySettlement(...args)
-  const [, , owner, ownerId, , , , , , opening = {}] = args
-  const prefix = `${owner}:${ownerId}:`
-  if (Object.keys(opening).some((key) => !key.startsWith(prefix)))
-    throw new Error('期初扣抵不屬於本對帳對象')
+  const [, costs, owner, ownerId, , to, , , precision, opening = {}] = args
+  if (
+    Object.keys(opening).some(
+      (key) =>
+        !key.startsWith(owner + ':' + ownerId + ':') || ![4, 5].includes(key.split(':').length)
+    )
+  )
+    throw new Error('期初餘額不是本對象的結算幣餘額；舊原幣帳本須先核對轉入')
   const scopes = new Set([...Object.keys(opening), ...lines.map((l) => l.scope)])
   const carry = [...scopes].map((scope) => {
     const group = lines.filter((l) => l.scope === scope)
+    const [, , providerId, currency, gameType] = scope.split(':')
+    const policies = new Set(group.map((l) => l.negativeGgr))
+    const fallback = costs
+      .filter(
+        (c) =>
+          c.owner === owner &&
+          c.ownerId === ownerId &&
+          c.providerId === providerId &&
+          c.gameType === gameType &&
+          c.currency === currency &&
+          c.effectiveFrom <= to
+      )
+      .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0]
+    const policy = group.length ? group[0].negativeGgr : fallback?.negativeGgr
     const start = opening[scope] || 0
-    const used = group.reduce((n, l) => n + l.used, 0)
-    const added = group.reduce((n, l) => n + l.added, 0)
-    const pending = group.some((l) => !!l.issue)
-    const closing = start - used + added
-    if (!Number.isSafeInteger(closing)) throw new Error('結轉金額超出安全範圍')
-    return { scope, opening: start, used, added, closing: pending ? null : closing, pending }
+    const pending =
+      group.some((l) => !!l.issue) ||
+      policies.size > 1 ||
+      !policy ||
+      (start > 0 && policy !== 'carry')
+    if (pending)
+      group.forEach((l) => {
+        l.issue ||= '結轉政策缺漏、期中不一致或尚有待處理餘額'
+      })
+    const net = safeMoney(group.reduce((n, l) => n + BigInt(l.settled || 0), 0n))
+    const used = policy === 'carry' ? Math.min(start, Math.max(0, net)) : 0
+    const added = policy === 'carry' ? Math.max(0, -net) : 0
+    const closing = safeMoney(BigInt(start) - BigInt(used) + BigInt(added))
+    const payable = Math.max(0, net - used)
+    return {
+      scope,
+      currency,
+      opening: start,
+      used,
+      added,
+      closing: pending ? null : closing,
+      pending,
+      payable,
+      net
+    }
   })
-  return { lines, carry }
+  const totals = [...new Set(carry.map((c) => c.currency))].map((currency) => {
+    const groups = carry.filter((c) => c.currency === currency)
+    const micro = safeMoney(groups.reduce((n, c) => n + BigInt(c.payable), 0n))
+    const digits = precision[currency]
+    const pending = groups.some((c) => c.pending) || !Number.isInteger(digits)
+    return { currency, micro, digits, pending, amount: pending ? null : finalMinor(micro, digits) }
+  })
+  return { lines, carry, totals }
 }

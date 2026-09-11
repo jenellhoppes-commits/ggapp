@@ -203,8 +203,14 @@ export function organizeAdminRoutes(template: AppRouteRecord[]) {
       {
         path: '/finance/reconciliation/differences',
         name: 'ReconciliationDifferences',
-        component: '/game-provider/finance/reconciliation/differences',
-        meta: { title: '差異處理', icon: 'ri:file-warning-line', keepAlive: false }
+        component: '/game-provider/finance/settlement/logs/index',
+        redirect: '/finance/reconciliation/logs',
+        meta: {
+          title: '歷史異動紀錄',
+          icon: 'ri:file-history-line',
+          keepAlive: false,
+          isHide: true
+        }
       },
       {
         path: '/finance/reconciliation/logs',

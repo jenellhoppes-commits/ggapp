@@ -82,7 +82,7 @@
           ]
         }
       : {
-          title: '商戶總覽',
+          title: '儀錶板',
           eyebrow: 'Merchant Portal',
           description: '管理自身幣別線與串接資料，查詢會員、交易、結算及帳單。',
           scopeTitle: '資料範圍：目前登入商戶',

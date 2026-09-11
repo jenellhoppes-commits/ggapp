@@ -39,6 +39,9 @@
           </div>
         </template>
       </ArtTableHeader>
+      <p class="table-scroll-hint" role="note">
+        ↔ 表格可左右捲動；投注／派彩、會員淨額、狀態、風險與投注時間已優先顯示。
+      </p>
       <ArtTable
         :data="pagedRows"
         :columns="columns"
@@ -168,9 +171,31 @@
       prop: 'id',
       label: '注單編號',
       minWidth: 125,
+      fixed: 'left',
       formatter: (row: BetCenterRecord) =>
         h(EntityLink, { label: row.id, to: `/transactions/bets/${row.id}` })
     },
+    {
+      prop: 'betAmount',
+      label: '投注／派彩',
+      minWidth: 160,
+      align: 'right',
+      formatter: (row: BetCenterRecord) =>
+        `${money(row.betAmount)}／${money(row.payoutAmount)} ${row.currency}`
+    },
+    {
+      prop: 'playerNet',
+      label: '會員淨額',
+      minWidth: 125,
+      align: 'right',
+      formatter: (row: BetCenterRecord) =>
+        h(
+          'span',
+          { class: row.playerNet >= 0 ? 'positive' : 'negative' },
+          `${money(row.playerNet)} ${row.currency}`
+        )
+    },
+    { prop: 'time', label: '投注時間', minWidth: 160 },
     { prop: 'roundId', label: '局號', minWidth: 180 },
     {
       prop: 'memberId',
@@ -206,29 +231,10 @@
         })
     },
     {
-      prop: 'betAmount',
-      label: '投注／派彩',
-      minWidth: 160,
-      align: 'right',
-      formatter: (row: BetCenterRecord) =>
-        `${money(row.betAmount)}／${money(row.payoutAmount)} ${row.currency}`
-    },
-    {
-      prop: 'playerNet',
-      label: '會員淨額',
-      minWidth: 125,
-      align: 'right',
-      formatter: (row: BetCenterRecord) =>
-        h(
-          'span',
-          { class: row.playerNet >= 0 ? 'positive' : 'negative' },
-          `${money(row.playerNet)} ${row.currency}`
-        )
-    },
-    {
       prop: 'status',
       label: '狀態',
       width: 100,
+      fixed: 'right',
       formatter: (row: BetCenterRecord) =>
         h(ElTag, { type: betStatusType(row.status), effect: 'light' }, () =>
           betStatusLabel(row.status)
@@ -238,16 +244,16 @@
       prop: 'riskStatus',
       label: '風險',
       width: 95,
+      fixed: 'right',
       formatter: (row: BetCenterRecord) =>
         h(ElTag, { type: riskType(row.riskStatus), effect: 'plain' }, () =>
           riskLabel(row.riskStatus)
         )
     },
-    { prop: 'time', label: '投注時間', minWidth: 160 },
     {
       prop: 'operation',
       label: '操作',
-      width: 210,
+      width: 150,
       fixed: 'right',
       formatter: (row: BetCenterRecord) =>
         h('div', { class: 'row-actions' }, [
@@ -427,6 +433,12 @@
   .summary-grid small,
   .toolbar-copy span {
     color: var(--art-gray-500);
+  }
+
+  .table-scroll-hint {
+    margin: 4px 0 0;
+    color: var(--el-color-primary);
+    font-size: 13px;
   }
 
   .summary-grid strong {

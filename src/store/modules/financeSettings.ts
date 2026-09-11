@@ -213,8 +213,37 @@ export const useFinanceSettingsStore = defineStore('financeSettingsStore', () =>
     'ASGU'
   ]
   const basePairs = rateCurrencies.map((currency) => `USDT/${currency}`)
-  const dailyRates = ref<DailyExchangeRateRecord[]>(
-    rateCurrencies.flatMap((currency, currencyIndex) =>
+  const dailyRates = ref<DailyExchangeRateRecord[]>([
+    ...(
+      [
+        ['TWD', 0.03125, 'FXC-001'],
+        ['PHP', 0.01786, 'FXC-002'],
+        ['THB', 0.02857, undefined],
+        ['HKD', 0.1282, undefined],
+        ['SGD', 0.76923, undefined]
+      ] as const
+    ).map(
+      ([currency, rate, settingId]): DailyExchangeRateRecord => ({
+        id: `FXR-20261001-${currency}-USD-DEMO`,
+        date: '2026-10-01',
+        fromCurrency: currency,
+        toCurrency: 'USD',
+        baseRate: rate,
+        adjustmentPercent: 0,
+        finalRate: rate,
+        sourceId: 'FXS-003',
+        rateMode: 'Manual',
+        settingId,
+        settingVersion: currency === 'TWD' ? 3 : currency === 'PHP' ? 2 : 1,
+        status: 'Locked',
+        fetchedAt: '2026-10-01 02:00',
+        lockedAt: '2026-10-01 02:05',
+        settlementUsageCount: 0,
+        correctionNote: '驗收演示：Pragmatic Play 2026-09 月結成功情境',
+        updatedAt: '2026-10-01 02:05'
+      })
+    ),
+    ...rateCurrencies.flatMap((currency, currencyIndex) =>
       ['2026-09-04', '2026-09-03', '2026-09-02'].map((date, dateIndex) => {
         const isPegged = currency === 'ASGU'
         const baseRate = isPegged
@@ -245,7 +274,7 @@ export const useFinanceSettingsStore = defineStore('financeSettingsStore', () =>
         } as DailyExchangeRateRecord
       })
     )
-  )
+  ])
 
   const alerts = ref<ExchangeRateAlertRecord[]>(
     basePairs.slice(0, 7).map((pair, index) => ({

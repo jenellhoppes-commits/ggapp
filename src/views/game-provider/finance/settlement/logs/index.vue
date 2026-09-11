@@ -63,6 +63,29 @@
   import { ElMessage } from 'element-plus'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import { useFinanceCenterStore } from '@/store/modules/financeCenter'
+  import { LEDGER_KEY, readLedger } from '@/domain/settlement-ledger'
+  const deliveryLogs = computed(() => {
+    try {
+      return readLedger(localStorage.getItem(LEDGER_KEY)).statements.map((s) => ({
+        time: s.lockedAt,
+        entityId: s.id,
+        entityType: '交付紀錄',
+        action: '核帳／交付並鎖定',
+        before: '待核帳',
+        after: '已鎖定',
+        operator: s.input.confirmedBy || '—',
+        reason:
+          (s.delivery || [])
+            .map(
+              (d) =>
+                `${d.currency}：差異 ${d.differenceMicros / 1000000}；實收付 ${d.paidMinor / 10 ** d.digits}；結轉 ${d.carriedMinor / 10 ** d.digits}；${d.reason || d.status}`
+            )
+            .join('；') || '計算快照鎖定'
+      }))
+    } catch {
+      return []
+    }
+  })
   defineOptions({ name: 'SettlementChangeLogs' })
   const router = useRouter()
   const store = useFinanceCenterStore()
@@ -72,10 +95,11 @@
     { label: '代理對帳', value: 'Agent Reconciliation' },
     { label: '商戶對帳', value: 'Merchant Reconciliation' },
     { label: '差異處理', value: 'Difference' },
-    { label: '結算調整', value: 'Settlement Adjustment' }
+    { label: '結算調整', value: 'Settlement Adjustment' },
+    { label: '交付紀錄', value: '交付紀錄' }
   ]
   const rows = computed(() =>
-    store.actionLogs
+    [...store.actionLogs, ...deliveryLogs.value]
       .filter(
         (item) =>
           (!filters.keyword ||

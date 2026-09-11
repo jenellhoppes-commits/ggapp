@@ -38,6 +38,9 @@
           ></template
         >
       </ArtTableHeader>
+      <p class="table-scroll-hint" role="note">
+        ↔ 表格可左右捲動；金額、狀態、錢包模式與建立時間已優先顯示。
+      </p>
       <ArtTable
         :data="pagedRows"
         :columns="columns"
@@ -176,8 +179,28 @@
       prop: 'id',
       label: '交易編號',
       minWidth: 130,
+      fixed: 'left',
       formatter: (row: TransactionCenterRecord) =>
         h(EntityLink, { label: row.id, to: `/transactions/records/${row.id}` })
+    },
+    {
+      prop: 'amount',
+      label: '金額',
+      minWidth: 140,
+      align: 'right',
+      formatter: (row: TransactionCenterRecord) =>
+        h(
+          'span',
+          { class: row.amount >= 0 ? 'positive' : 'negative' },
+          `${money(row.amount)} ${row.currency}`
+        )
+    },
+    { prop: 'time', label: '建立時間', minWidth: 160 },
+    {
+      prop: 'type',
+      label: '類型',
+      width: 95,
+      formatter: (row: TransactionCenterRecord) => transactionTypeLabel(row.type)
     },
     { prop: 'externalReference', label: '外部參考號', minWidth: 190 },
     {
@@ -203,27 +226,10 @@
         })
     },
     {
-      prop: 'type',
-      label: '類型',
-      width: 95,
-      formatter: (row: TransactionCenterRecord) => transactionTypeLabel(row.type)
-    },
-    {
-      prop: 'amount',
-      label: '金額',
-      minWidth: 140,
-      align: 'right',
-      formatter: (row: TransactionCenterRecord) =>
-        h(
-          'span',
-          { class: row.amount >= 0 ? 'positive' : 'negative' },
-          `${money(row.amount)} ${row.currency}`
-        )
-    },
-    {
       prop: 'status',
       label: '狀態',
       width: 100,
+      fixed: 'right',
       formatter: (row: TransactionCenterRecord) =>
         h(ElTag, { type: transactionStatusType(row.status), effect: 'light' }, () =>
           transactionStatusLabel(row.status)
@@ -233,10 +239,10 @@
       prop: 'walletMode',
       label: '錢包模式',
       width: 110,
+      fixed: 'right',
       formatter: (row: TransactionCenterRecord) =>
         row.walletMode === 'Seamless' ? '單一錢包' : '轉帳錢包'
     },
-    { prop: 'time', label: '建立時間', minWidth: 160 },
     {
       prop: 'operation',
       label: '操作',
@@ -400,6 +406,12 @@
   .summary-grid small,
   .toolbar-copy span {
     color: var(--art-gray-500);
+  }
+
+  .table-scroll-hint {
+    margin: 4px 0 0;
+    color: var(--el-color-primary);
+    font-size: 13px;
   }
 
   .summary-grid strong {

@@ -1,8 +1,8 @@
 <template>
   <ElCard shadow="never">
-    <template #header>2. 下發條件（供應商）</template>
+    <template #header>2. 下發條件（供應商／遊戲類型）</template>
     <div class="toolbar">
-      <span>已開放 {{ selected.length }} 家</span>
+      <span>已開放 {{ selected.length }} 組</span>
       <ElButton @click="toggleAll(true)">全部開啟</ElButton>
       <ElButton @click="toggleAll(false)">全部關閉</ElButton>
     </div>
@@ -16,6 +16,7 @@
           /> </template
       ></ElTableColumn>
       <ElTableColumn prop="name" label="供應商" min-width="160" />
+      <ElTableColumn prop="gameType" label="遊戲類型" width="120" />
       <ElTableColumn label="自己的取得費率" min-width="160"
         ><template #default="{ row }">
           {{ row.term ? `${row.term.payable}%` : '無有效授權條件' }}
@@ -44,6 +45,7 @@
   </ElCard>
   <ElCard shadow="never">
     <template #header>3. 結算設定</template>
+    <slot name="collection-mode" />
     <ElForm label-position="top" class="settings">
       <ElFormItem label="結算週期" required
         ><ElSelect v-model="settings.cycle">
@@ -95,13 +97,6 @@
     negativeGgr: '' as '' | 'zero' | 'carry'
   })
   watch(
-    () => providers.state.providers.map((p) => p.id),
-    (ids) => {
-      for (const id of ids) choices[id] ||= { enabled: false, rate: '' }
-    },
-    { immediate: true }
-  )
-  watch(
     () => props.parentId,
     () => {
       for (const item of Object.values(choices)) {
@@ -112,20 +107,50 @@
   )
   const user = useUserStore()
   const rows = computed(() =>
-    providers.state.providers.map((p) => {
-      const term = supplierCostAt(
-        visiblePartnerTerms(workspace.costs, {
-          roles: user.info.roles || [],
-          agentId: user.info.agentId,
-          merchantId: user.info.merchantId
-        }),
-        props.parentId ? 'agent' : 'platform',
-        props.parentId || 'platform',
-        p.id,
-        settings.effectiveFrom || platformDate(new Date(), props.timezone || 'Asia/Taipei')
-      )
-      return { id: p.id, name: p.name, term: term?.scope === 'provider' ? term : undefined }
+    providers.state.providers.flatMap((p) => {
+      const types = [
+        ...new Set(
+          workspace.costs
+            .filter(
+              (r) =>
+                r.providerId === p.id &&
+                r.owner === (props.parentId ? 'agent' : 'platform') &&
+                r.ownerId === (props.parentId || 'platform') &&
+                r.gameType
+            )
+            .map((r) => r.gameType!)
+        )
+      ]
+      return types.map((gameType) => {
+        const term = supplierCostAt(
+          visiblePartnerTerms(workspace.costs, {
+            roles: user.info.roles || [],
+            agentId: user.info.agentId,
+            merchantId: user.info.merchantId
+          }),
+          props.parentId ? 'agent' : 'platform',
+          props.parentId || 'platform',
+          p.id,
+          settings.effectiveFrom || platformDate(new Date(), props.timezone || 'Asia/Taipei'),
+          undefined,
+          gameType
+        )
+        return {
+          id: `${p.id}:${gameType}`,
+          providerId: p.id,
+          gameType,
+          name: p.name,
+          term: term?.scope === 'provider' && term.basis === 'GGR' ? term : undefined
+        }
+      })
     })
+  )
+  watch(
+    rows,
+    (values) => {
+      for (const row of values) choices[row.id] ||= { enabled: false, rate: '' }
+    },
+    { immediate: true }
   )
   const selected = computed(() => rows.value.filter((p) => choices[p.id]?.enabled))
   function toggleAll(enabled: boolean) {
@@ -147,7 +172,8 @@
     return selected.value.map((row) => ({
       ...settings,
       negativeGgr: settings.negativeGgr as 'zero' | 'carry',
-      providerId: row.id,
+      providerId: row.providerId,
+      gameType: row.gameType,
       scope: 'provider',
       meaning: 'payable',
       basis: row.term!.basis,

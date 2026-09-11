@@ -76,6 +76,7 @@ declare namespace Api {
 
     /** 用户信息 */
     interface UserInfo {
+      agentAccountId?: string
       agentId?: string
       merchantId?: string
       buttons: string[]

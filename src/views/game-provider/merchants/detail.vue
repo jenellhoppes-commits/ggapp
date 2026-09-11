@@ -78,6 +78,7 @@
         </ElTabPane>
 
         <ElTabPane label="商務條件" name="commercial">
+          <MerchantCollectionMode :merchant-id="merchant.id" :initial="merchant.collectionMode" />
           <SupplierCostConditions
             v-if="merchant.id === String(route.params.id)"
             embedded
@@ -307,6 +308,7 @@
 </template>
 
 <script setup lang="ts">
+  import MerchantCollectionMode from '@/components/business/MerchantCollectionMode.vue'
   import SupplierCostConditions from '@/components/business/SupplierCostConditions.vue'
   import { ElMessage } from 'element-plus'
   import { useWindowSize } from '@vueuse/core'

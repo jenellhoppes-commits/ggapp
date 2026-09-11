@@ -1,6 +1,8 @@
 import request from '@/utils/http'
 import { HttpError } from '@/utils/http/error'
 import { ApiStatus } from '@/utils/http/status'
+import { findLoginAccount, accountRolesFor } from '@/domain/agent-access'
+import { findMerchantLogin, merchantAccountRoles } from '@/domain/merchant-accounts'
 
 const isFrontendMode = import.meta.env.VITE_ACCESS_MODE === 'frontend'
 const LOCAL_USER_KEY = 'ggap-demo-user'
@@ -39,8 +41,8 @@ const localUsers: Record<
 }
 
 const getLocalUser = (userName?: string) => {
-  const key = (userName || localStorage.getItem(LOCAL_USER_KEY) || 'super').toLowerCase()
-  return { key, profile: localUsers[key] || localUsers.super }
+  const key = (userName || localStorage.getItem(LOCAL_USER_KEY) || '').trim().toLowerCase()
+  return { key, profile: localUsers[key] }
 }
 
 /**
@@ -51,7 +53,15 @@ const getLocalUser = (userName?: string) => {
 export async function fetchLogin(params: Api.Auth.LoginParams): Promise<Api.Auth.LoginResponse> {
   if (isFrontendMode) {
     const { key, profile } = getLocalUser(params.userName)
-    if (!localUsers[key] || profile.password !== params.password) {
+    const account = findLoginAccount(localStorage, key)
+    const merchantAccount = findMerchantLogin(localStorage, key)
+    if (
+      merchantAccount
+        ? !merchantAccountRoles(merchantAccount).length || params.password !== '123456'
+        : account
+          ? !accountRolesFor(account).length || params.password !== '123456'
+          : !profile || ['agent', 'merchant'].includes(key) || profile.password !== params.password
+    ) {
       throw new HttpError('帳號或密碼錯誤', ApiStatus.unauthorized)
     }
 
@@ -77,6 +87,44 @@ export async function fetchLogin(params: Api.Auth.LoginParams): Promise<Api.Auth
 export async function fetchGetUserInfo(): Promise<Api.Auth.UserInfo> {
   if (isFrontendMode) {
     const { key, profile } = getLocalUser()
+    const account = findLoginAccount(localStorage, key)
+    const merchantAccount = findMerchantLogin(localStorage, key)
+    if (merchantAccount) {
+      const roles = merchantAccountRoles(merchantAccount)
+      if (!roles.length) throw new HttpError('帳號已停用', ApiStatus.unauthorized)
+      return {
+        buttons: [],
+        roles,
+        userId:
+          merchantAccount.id === 'M00001:owner'
+            ? 3
+            : [...merchantAccount.id].reduce(
+                (n, c) => (n * 31 + c.charCodeAt(0)) % 2000000000,
+                300
+              ),
+        merchantId: merchantAccount.merchantId,
+        userName: merchantAccount.name,
+        email: merchantAccount.account
+      }
+    }
+    if (account) {
+      const roles = accountRolesFor(account)
+      if (!roles.length) throw new HttpError('帳號已停用', ApiStatus.unauthorized)
+      return {
+        buttons: [],
+        roles,
+        userId:
+          account.id === 'A00001:owner'
+            ? 2
+            : [...account.id].reduce((n, c) => (n * 31 + c.charCodeAt(0)) % 2000000000, 100),
+        agentAccountId: account.id,
+        agentId: account.agentId,
+        userName: account.name,
+        email: account.account
+      }
+    }
+    if (!profile || ['agent', 'merchant'].includes(key))
+      throw new HttpError('登入身分已失效', ApiStatus.unauthorized)
     return {
       buttons: ['add', 'edit', 'delete', 'export', 'approve'],
       roles: profile.roles,

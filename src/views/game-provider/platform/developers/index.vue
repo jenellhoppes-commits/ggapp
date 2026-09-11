@@ -1,14 +1,22 @@
 <template>
   <div class="developer-page">
     <AppPageHeader
-      title="開發者中心"
-      eyebrow="系統管理 · 串接與 API"
-      description="集中查看環境、驗證、請求規則與完整 API 文件；供應商憑證仍由供應商詳情專用操作管理。"
+      :title="merchantMode ? '串接中心' : '開發者中心'"
+      :eyebrow="merchantMode ? '商戶後台 · 串接與 API' : '系統管理 · 串接與 API'"
+      :description="
+        merchantMode
+          ? '集中查看本商戶串接環境、驗證規則與 API 文件。'
+          : '集中查看環境、驗證、請求規則與完整 API 文件；供應商憑證仍由供應商詳情專用操作管理。'
+      "
     >
       <template #actions>
         <ElButton @click="copyBaseUrl">複製測試端點</ElButton>
-        <ElButton type="primary" @click="openSpecFile">匯入 OpenAPI JSON</ElButton>
+        <ElButton v-if="!merchantMode" type="primary" @click="openSpecFile"
+          >匯入 OpenAPI JSON</ElButton
+        >
+        <ElButton v-else type="primary" @click="downloadSpec">下載 OpenAPI JSON</ElButton>
         <input
+          v-if="!merchantMode"
           ref="specFileInput"
           class="visually-hidden"
           type="file"
@@ -53,6 +61,7 @@
                 >
                 <ElDescriptionsItem label="測試資料">隔離 Wallet 與測試會員</ElDescriptionsItem>
               </ElDescriptions>
+              <slot name="merchant-environments" />
             </section>
 
             <section>
@@ -77,7 +86,11 @@
           <div class="api-toolbar">
             <div
               ><strong>OpenAPI 文件工具</strong
-              ><span>匯入規格後會自動建立端點、請求與回應內容。</span></div
+              ><span>{{
+                merchantMode
+                  ? '查看範例請求與回應；正式串接以核准文件為準。'
+                  : '匯入規格後會自動建立端點、請求與回應內容。'
+              }}</span></div
             >
             <ElSpace wrap>
               <ElInput v-model="keyword" clearable placeholder="搜尋路徑、名稱或標籤" />
@@ -159,8 +172,8 @@
                 <ElTableColumn prop="code" label="錯誤碼" width="150" />
                 <ElTableColumn prop="http" label="HTTP" width="90" />
                 <ElTableColumn prop="meaning" label="說明" min-width="180" />
-                <ElTableColumn prop="retry" label="建議處理" min-width="220" /> </ArtTable
-              >>
+                <ElTableColumn prop="retry" label="建議處理" min-width="220" />
+              </ArtTable>
             </section>
           </div>
         </ElTabPane>
@@ -175,6 +188,7 @@
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
 
   defineOptions({ name: 'DeveloperCenter' })
+  const props = withDefaults(defineProps<{ merchantMode?: boolean }>(), { merchantMode: false })
 
   type OpenApiOperation = {
     summary?: string
@@ -195,11 +209,19 @@
   const route = useRoute()
   const router = useRouter()
   const { width } = useWindowSize()
-  const descriptionColumns = computed(() => (width.value < 760 ? 1 : 2))
+  const descriptionColumns = computed(() => (width.value < 1200 ? 1 : 2))
   const activeTab = ref(
     ['integration', 'api', 'callback'].includes(String(route.query.tab))
       ? String(route.query.tab)
       : 'integration'
+  )
+  watch(
+    () => route.query.tab,
+    (tab) => {
+      activeTab.value = ['integration', 'api', 'callback'].includes(String(tab))
+        ? String(tab)
+        : 'integration'
+    }
   )
   const keyword = ref('')
   const selectedTag = ref('')
@@ -419,11 +441,16 @@
   const syncTab = (name: string | number) =>
     router.replace({ query: { ...route.query, tab: String(name) } })
   const copyBaseUrl = async () => {
-    await navigator.clipboard.writeText(sandboxUrl)
-    ElMessage.success('已複製測試端點')
+    try {
+      await navigator.clipboard.writeText(sandboxUrl)
+      ElMessage.success('已複製範例測試端點（不可連線）')
+    } catch {
+      ElMessage.error('無法複製，請從環境資訊手動選取端點')
+    }
   }
   const openSpecFile = () => specFileInput.value?.click()
   const importSpec = async (event: Event) => {
+    if (props.merchantMode) return
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
     if (!file) return
@@ -457,6 +484,8 @@
 <style scoped lang="scss">
   .developer-page {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
     gap: 16px;
     min-width: 0;
   }
@@ -494,10 +523,21 @@
   .content-card :deep(.el-card__body) {
     padding-top: 4px;
   }
+  .content-card :deep(.el-descriptions__table) {
+    table-layout: fixed;
+  }
+  .content-card :deep(.el-descriptions__cell) {
+    overflow-wrap: anywhere;
+  }
   .section-grid {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
     gap: 24px;
     padding: 12px 0;
+  }
+  .section-grid > section {
+    min-width: 0;
   }
   .section-heading {
     margin-bottom: 14px;
@@ -514,6 +554,7 @@
   }
   code {
     font-family: 'SFMono-Regular', Consolas, monospace;
+    overflow-wrap: anywhere;
   }
   .rule-list {
     display: grid;

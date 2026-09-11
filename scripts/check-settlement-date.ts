@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {
   prepareSupplierCost,
   supplierCostAt,
+  monthlySettlementDate,
   type SupplierCostInput
 } from '../src/domain/admin-supplier-costs'
 import {
@@ -25,12 +26,15 @@ const contract: SupplierCostInput = {
   basis: 'GGR',
   currency: 'USD',
   cycle: 'Monthly',
+  settlementDay: 1,
   effectiveFrom: '2026-09-01',
   rate: '5',
   meaning: 'payable',
   negativeGgr: 'zero'
 }
 const cost = prepareSupplierCost([], 'platform', 'platform', '', contract, context)
+assert.equal(monthlySettlementDate('2026-09', cost.settlementDay!), '2026-10-01')
+assert.throws(() => monthlySettlementDate('2026-09', 29), /1–28/)
 assert.equal(supplierCostAt([cost], 'platform', 'platform', 'PP', '2026-09-15', 'USD')?.id, cost.id)
 assert.equal(supplierCostAt([cost], 'platform', 'platform', 'PP', '2026-09-15', 'TWD')?.id, cost.id)
 assert.throws(() =>
@@ -52,7 +56,7 @@ assert.throws(
 const input: SettlementInput = {
   stream: 'test',
   month: '2026-09',
-  settlementDate: '2026-10-01',
+  settlementDate: monthlySettlementDate('2026-09', cost.settlementDay!),
   owner: 'platform',
   ownerId: 'platform',
   timezone: 'Asia/Taipei',
@@ -86,7 +90,7 @@ const merchantInput = { ...input, owner: 'merchant' as const, ownerId: 'M', cost
 const merchantResult = prepareStatement(empty, merchantInput)
 assert.deepEqual(
   merchantResult.lines.map((l) => l.settled),
-  [1400, 44]
+  [14000000, 437500]
 )
 assert.deepEqual(
   prepareStatement(empty, {
@@ -103,7 +107,7 @@ assert.ok(
 const result = prepareStatement(empty, input)
 assert.deepEqual(
   result.lines.map((l) => l.settled),
-  [1000, 31]
+  [10000000, 312500]
 )
 assert.ok(result.lines.every((l) => l.fxDate === '2026-10-01'))
 assert.equal(result.lines[1].fxVersion, 'settlement-day')
@@ -119,7 +123,7 @@ const storage = {
 }
 lockStatement(storage, raw, input)
 input.fx[1].rate = '99'
-assert.equal(readLedger(raw).statements[0].result.lines[1].settled, 31)
+assert.equal(readLedger(raw).statements[0].result.lines[1].settled, 312500)
 assert.equal(readLedger(raw).statements[0].input.fx[1].rate, '0.03125')
 console.log(
   'Passed: shared provider contract, downstream floor, settlement-date FX, no daily fallback, date validation and immutable snapshot'

@@ -83,7 +83,18 @@
         /></ElFormItem>
       </ElForm>
     </ElCard>
-    <PartnerProviderSelection ref="conditions" :parent-id="form.parentId" :timezone="timezone" />
+    <PartnerProviderSelection ref="conditions" :parent-id="form.parentId" :timezone="timezone">
+      <template #collection-mode>
+        <div v-if="kind === 'merchant'">
+          <ElFormItem label="收付模式" required
+            ><ElSelect v-model="form.collectionMode"
+              ><ElOption label="代理統收" value="AgentCollect" /><ElOption
+                label="平台代收"
+                value="PlatformCollect" /></ElSelect
+          ></ElFormItem>
+        </div>
+      </template>
+    </PartnerProviderSelection>
     <div class="create-actions"
       ><ElButton @click="cancel">取消</ElButton
       ><ElButton
@@ -100,6 +111,7 @@
   </section>
 </template>
 <script setup lang="ts">
+  import { permitsAgent } from '@/domain/agent-access'
   import { computed, reactive, ref, watch, nextTick } from 'vue'
   import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
   import { ElMessage, ElMessageBox } from 'element-plus'
@@ -134,6 +146,7 @@
   )
   const timezone = computed(() => locale.defaultTimezone?.id || '')
   const form = reactive({
+    collectionMode: 'AgentCollect' as 'AgentCollect' | 'PlatformCollect',
     code: '',
     name: '',
     parentId: isAgent.value ? own.value?.id || '' : String(route.query.parentId || ''),
@@ -162,7 +175,9 @@
   const allowed = computed(
     () =>
       (isAgent.value
-        ? !!own.value && (props.kind !== 'agent' || own.value.level !== 'L3')
+        ? permitsAgent(user.activeRoles(), 'business') &&
+          !!own.value &&
+          (props.kind !== 'agent' || own.value.level !== 'L3')
         : user.info.roles?.some((r) => ['R_SUPER', 'R_ADMIN'].includes(r))) && !!timezone.value
   )
   const conditions = ref<InstanceType<typeof PartnerProviderSelection>>()
@@ -215,7 +230,7 @@
         },
         { ...form, kind: props.kind, terms: conditions.value.inputs() },
         {
-          roles: user.info.roles || [],
+          roles: user.activeRoles(),
           agentId: user.info.agentId,
           name: user.info.userName || '演示使用者',
           timezone: timezone.value,

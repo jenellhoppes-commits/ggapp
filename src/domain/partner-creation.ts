@@ -1,4 +1,5 @@
 import type { AgentRecord, MerchantRecord } from '../types/game-provider'
+import { permitsAgent } from './agent-access'
 import { newAgentLevel } from './agent-hierarchy'
 import {
   prepareSupplierCost,
@@ -8,6 +9,7 @@ import {
 } from './admin-supplier-costs'
 
 export interface PartnerInput {
+  collectionMode?: 'AgentCollect' | 'PlatformCollect'
   kind: 'agent' | 'merchant'
   code: string
   name: string
@@ -51,7 +53,7 @@ export function preparePartnerCreation(
   const actorKey = admin ? `admin:${context.name}` : `agent:${context.agentId}`
   if (!admin) {
     const actor = source.agents.find((a) => a.id === context.agentId && a.status === 'Active')
-    if (!context.roles.includes('R_AGENT') || !actor || input.parentId !== actor.id)
+    if (!permitsAgent(context.roles, 'business') || !actor || input.parentId !== actor.id)
       throw new Error('代理只能在本人名下建立直屬代理或商戶')
   }
   if (!['agent', 'merchant'].includes(input.kind) || !requestId) throw new Error('建立請求無效')
@@ -77,14 +79,19 @@ export function preparePartnerCreation(
   )
     throw new Error('請填寫有效合作開始日期')
   if (!input.terms.length) throw new Error('至少一組供應商初版結算條件必填')
-  const keys = input.terms.map((t) => `${t.providerId}:${t.transactionCurrency}`)
-  if (new Set(keys).size !== keys.length) throw new Error('同供應商與交易幣別只能有一組初版條件')
+  const keys = input.terms.map(
+    (t) => `${t.providerId}:${t.gameType || 'legacy'}:${t.transactionCurrency}`
+  )
+  if (new Set(keys).size !== keys.length)
+    throw new Error('同供應商、遊戲類型與交易幣別只能有一組初版條件')
   if (input.terms.some((t) => t.effectiveFrom < input.cooperationStartDate))
     throw new Error('結算條件不能早於合作開始日期')
   const parent = source.agents.find((a) => a.id === input.parentId)
   const level =
     input.kind === 'agent' ? newAgentLevel(source.agents, input.parentId || undefined) : undefined
   if (input.kind === 'merchant') {
+    if (input.collectionMode && !['AgentCollect', 'PlatformCollect'].includes(input.collectionMode))
+      throw new Error('請選擇有效收付模式')
     if (!parent || parent.status !== 'Active') throw new Error('請指定已啟用的所屬代理')
     if (!input.country.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email))
       throw new Error('請填寫商戶國家／地區及有效 Email')
@@ -134,6 +141,7 @@ export function preparePartnerCreation(
     }
   else
     entry.merchant = {
+      collectionMode: input.collectionMode || 'AgentCollect',
       id,
       code,
       name: input.name.trim(),

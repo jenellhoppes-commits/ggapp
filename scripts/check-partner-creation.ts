@@ -63,7 +63,7 @@ const input: PartnerInput = {
   lineCurrency: 'USD',
   terms: [{ ...term, rate: '7' }]
 }
-const actor = { ...context, roles: ['R_AGENT'], agentId: a.id }
+const actor = { ...context, roles: ['R_AGENT', 'R_AGENT_MANAGER'], agentId: a.id }
 const before = JSON.stringify(source)
 const entry = preparePartnerCreation(source, input, actor, 'request-1')
 assert.equal(JSON.stringify(source), before, 'prepare must not mutate or partially create')

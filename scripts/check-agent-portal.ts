@@ -45,7 +45,7 @@ const fixture = () =>
     })),
     portalRateVersions: []
   }) as unknown as PortalSource
-const actor = { roles: ['R_AGENT'], agentId: 'A', name: 'Test' }
+const actor = { roles: ['R_AGENT', 'R_AGENT_MANAGER'], agentId: 'A', name: 'Test' }
 const ctx = { today: '2026-09-07', timezone: 'Asia/Taipei' }
 const b = { kind: 'agent' as const, id: 'B' },
   m = { kind: 'merchant' as const, id: 'M' }

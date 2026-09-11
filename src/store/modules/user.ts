@@ -42,6 +42,8 @@ import { setPageTitle } from '@/utils/router'
 import { resetRouterState } from '@/router/guards/beforeEach'
 import { useMenuStore } from './menu'
 import { StorageConfig } from '@/utils/storage/storage-config'
+import { accountRolesFor, findLoginAccount } from '@/domain/agent-access'
+import { findMerchantLogin, merchantAccountRoles } from '@/domain/merchant-accounts'
 
 /**
  * 用户状态管理
@@ -60,6 +62,44 @@ export const useUserStore = defineStore(
     const lockPassword = ref('')
     // 用户信息
     const info = ref<Partial<Api.Auth.UserInfo>>({})
+    const activeRoles = () => {
+      if (
+        info.value.roles?.includes('R_MERCHANT') &&
+        import.meta.env.VITE_ACCESS_MODE === 'frontend'
+      ) {
+        try {
+          const account = findMerchantLogin(localStorage, info.value.email || '')
+          return account?.merchantId === info.value.merchantId ? merchantAccountRoles(account) : []
+        } catch {
+          return []
+        }
+      }
+      if (!info.value.roles?.includes('R_AGENT') || import.meta.env.VITE_ACCESS_MODE !== 'frontend')
+        return info.value.roles || []
+      try {
+        const account = findLoginAccount(localStorage, info.value.email || '')
+        return account?.agentId === info.value.agentId ? accountRolesFor(account) : []
+      } catch {
+        return []
+      }
+    }
+    const refreshAgentSession = () => {
+      if (!isLogin.value || !info.value.roles?.some((r) => ['R_AGENT', 'R_MERCHANT'].includes(r)))
+        return
+      const roles = activeRoles()
+      if (!roles.length) {
+        logOut()
+        return
+      }
+      if (JSON.stringify(roles) !== JSON.stringify(info.value.roles))
+        info.value = { ...info.value, roles }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', refreshAgentSession)
+      window.addEventListener('merchant-accounts-changed', refreshAgentSession)
+      window.addEventListener('focus', refreshAgentSession)
+      window.setInterval(refreshAgentSession, 1500)
+    }
     // 搜索历史记录
     const searchHistory = ref<AppRouteRecord[]>([])
     // 访问令牌
@@ -204,6 +244,8 @@ export const useUserStore = defineStore(
     }
 
     return {
+      activeRoles,
+      refreshAgentSession,
       language,
       isLogin,
       isLock,

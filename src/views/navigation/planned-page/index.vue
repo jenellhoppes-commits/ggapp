@@ -1,5 +1,6 @@
 <template>
   <div class="planned-page">
+    <MerchantCenterNav />
     <AppPageHeader
       :title="String(route.meta.title)"
       eyebrow="GGAP 開發演示"
@@ -30,6 +31,7 @@
 </template>
 
 <script setup lang="ts">
+  import MerchantCenterNav from '@/components/business/MerchantCenterNav.vue'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
   import { useCommon } from '@/hooks/core/useCommon'
 

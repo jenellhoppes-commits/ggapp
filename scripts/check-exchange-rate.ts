@@ -7,7 +7,18 @@ const store = useFinanceSettingsStore()
 
 const asgu = store.currencies.find((currency) => currency.code === 'ASGU')
 assert.ok(asgu && asgu.status === 'Active' && asgu.settlementEnabled)
-assert.ok(store.dailyRates.every((rate) => rate.fromCurrency === 'USDT'))
+const settlementDateDemo = store.dailyRates.find((rate) => rate.id === 'FXR-20261001-TWD-USD-DEMO')
+assert.ok(settlementDateDemo)
+assert.equal(settlementDateDemo.date, '2026-10-01')
+assert.equal(settlementDateDemo.fromCurrency, 'TWD')
+assert.equal(settlementDateDemo.toCurrency, 'USD')
+assert.equal(settlementDateDemo.finalRate, 0.03125)
+assert.equal(settlementDateDemo.status, 'Locked')
+assert.ok(
+  store.dailyRates
+    .filter((rate) => !rate.id.startsWith('FXR-20261001-'))
+    .every((rate) => rate.fromCurrency === 'USDT')
+)
 
 const asguSetting = store.rateSettings.find((setting) => setting.currency === 'ASGU')!
 assert.equal(asguSetting.baseCurrency, 'USDT')
@@ -39,5 +50,5 @@ assert.equal(snapshot.finalRate, 1.01)
 assert.equal(store.simulateDailyLock(asguSetting.id).ok, false)
 
 console.log(
-  'Exchange-rate checks passed: USDT anchor, ASGU peg, cross-rate derivation, versioning and daily snapshot guard.'
+  'Exchange-rate checks passed: USDT anchor, settlement-date TWD snapshot, ASGU peg, cross-rate derivation, versioning and daily snapshot guard.'
 )

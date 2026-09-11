@@ -3,279 +3,316 @@
     <AppPageHeader
       :title="overview ? '儀錶板' : '報表查詢'"
       :eyebrow="overview ? '總覽' : '報表中心'"
-      description="隔離演示資料 · 非正式交易、結算或佣金。"
     />
-    <ElTabs v-if="!overview" :model-value="current.tab" @tab-change="changeTab"
-      ><ElTabPane v-for="tab in reportTabs" :key="tab" :name="tab" :label="reportTabLabels[tab]"
-    /></ElTabs>
-    <ElCard shadow="never">
-      <AppFilterForm class="report-filters" @submit.prevent="submit">
-        <ElFormItem label="日期範圍" :error="errors.date" class="dates"
-          ><ElDatePicker
-            :shortcuts="dateShortcuts"
-            popper-class="report-date-picker"
-            v-model="range"
-            type="daterange"
-            value-format="YYYY-MM-DD"
-            range-separator="至"
-            start-placeholder="開始日期"
-            end-placeholder="結束日期"
-        /></ElFormItem>
-        <ElFormItem label="原幣別" :error="errors.currency"
-          ><ElSelect v-model="draft.currency" placeholder="請選擇單一原幣別" aria-label="原幣別"
-            ><ElOption
-              v-for="currency in Object.keys(scope.currencies)"
-              :key="currency"
-              :value="currency"
-              :label="currency" /></ElSelect
-        ></ElFormItem>
-        <ElFormItem v-if="!overview && current.tab === 'agents'" label="代理"
-          ><ElSelect v-model="draft.agent" clearable placeholder="全部授權範圍" aria-label="代理"
-            ><ElOption
-              v-for="item in agents"
-              :key="item.id"
-              :value="item.id"
-              :label="item.label" /></ElSelect
-        ></ElFormItem>
-        <ElFormItem v-if="!overview && current.tab === 'merchants'" label="商戶"
-          ><ElSelect v-model="draft.merchant" clearable placeholder="全部授權範圍" aria-label="商戶"
-            ><ElOption
-              v-for="item in merchants"
-              :key="item.id"
-              :value="item.id"
-              :label="item.label" /></ElSelect
-        ></ElFormItem>
-        <ElFormItem v-if="!overview && current.tab === 'games'" label="供應商"
-          ><ElSelect
-            v-model="draft.provider"
-            clearable
-            placeholder="全部授權範圍"
-            aria-label="供應商"
-            ><ElOption
-              v-for="item in providers"
-              :key="item.id"
-              :value="item.id"
-              :label="item.label" /></ElSelect
-        ></ElFormItem>
-        <ElFormItem v-if="!overview && current.tab === 'games'" label="遊戲名稱／代碼"
-          ><ElInput v-model="draft.game" clearable placeholder="遊戲名稱或代碼"
-        /></ElFormItem>
-        <details class="more-filters">
-          <summary
-            >更多條件<span v-if="extraFilterCount">（已選擇 {{ extraFilterCount }}）</span></summary
-          >
-          <div class="extra-filter-grid">
-            <ElFormItem v-if="overview || current.tab !== 'agents'" label="代理"
-              ><ElSelect
-                v-model="draft.agent"
-                clearable
-                placeholder="全部授權範圍"
-                aria-label="代理"
-                ><ElOption
-                  v-for="item in agents"
-                  :key="item.id"
-                  :value="item.id"
-                  :label="item.label" /></ElSelect
-            ></ElFormItem>
-            <ElFormItem v-if="overview || current.tab !== 'merchants'" label="商戶"
-              ><ElSelect
-                v-model="draft.merchant"
-                clearable
-                placeholder="全部授權範圍"
-                aria-label="商戶"
-                ><ElOption
-                  v-for="item in merchants"
-                  :key="item.id"
-                  :value="item.id"
-                  :label="item.label" /></ElSelect
-            ></ElFormItem>
-            <ElFormItem v-if="overview || current.tab !== 'games'" label="供應商"
-              ><ElSelect
-                v-model="draft.provider"
-                clearable
-                placeholder="全部授權範圍"
-                aria-label="供應商"
-                ><ElOption
-                  v-for="item in providers"
-                  :key="item.id"
-                  :value="item.id"
-                  :label="item.label" /></ElSelect
-            ></ElFormItem>
-            <ElFormItem v-if="overview || current.tab !== 'games'" label="遊戲名稱／代碼"
-              ><ElInput v-model="draft.game" clearable placeholder="遊戲名稱或代碼"
-            /></ElFormItem>
-          </div>
-        </details>
-        <div class="form-actions"
-          ><ElButton type="primary" native-type="submit" :disabled="!scope.canView">查詢</ElButton
-          ><ElButton @click="reset">重置</ElButton></div
+    <ElTabs v-if="!overview" v-model="reportSection" class="report-navigation">
+      <ElTabPane label="營運報表" name="operations" />
+      <ElTabPane label="結算報表" name="settlements" />
+      <ElTabPane label="收付報表" name="payments" />
+      <ElTabPane label="商務差額報表" name="margin" />
+    </ElTabs>
+    <SettlementReports v-if="!overview && reportSection !== 'operations'" :view="reportSection" />
+    <div v-show="overview || reportSection === 'operations'">
+      <ElTabs
+        v-if="!overview"
+        class="dimension-tabs"
+        :model-value="current.tab"
+        @tab-change="changeTab"
+        ><ElTabPane
+          v-for="tab in reportTabs"
+          :key="tab"
+          :name="tab"
+          :label="
+            { operations: '每日營運', agents: '依代理', merchants: '依商戶', games: '依遊戲' }[tab]
+          "
+      /></ElTabs>
+      <ElCard shadow="never" class="query-card">
+        <template #header
+          ><div class="query-heading"
+            ><h2>查詢條件</h2><p>選擇日期、幣別與分析範圍</p></div
+          ></template
         >
-      </AppFilterForm>
-      <p class="context"
-        >平台時區：{{ scope.timezone || '缺設定' }} · 固定演示樣本日期 {{ reportSampleDate }} ·
-        {{
-          result
-            ? `已套用 ${result.query.from} 至 ${result.query.to}／${result.query.currency} · 資料更新 ${result.cutoff}`
-            : '請完成必填條件'
-        }}
-        <span v-if="appliedFilters"> · 限定範圍：{{ appliedFilters }}（可按重置清除）</span></p
-      >
-    </ElCard>
-    <ElAlert v-if="!scope.canView" title="無報表查看權限" type="error" :closable="false" />
-    <ElAlert v-else-if="failure" :title="failure" type="error" :closable="false"
-      ><ElButton @click="load">重新查詢</ElButton></ElAlert
-    >
-    <ElAlert
-      v-if="result?.issues.length"
-      :title="result.issues.join('；')"
-      type="warning"
-      :closable="false"
-    />
-    <div v-loading="loading" class="result-area">
-      <template v-if="result && !failure && scope.canView">
-        <template v-if="!overview && result.query.tab === 'operations'">
-          <ReportFinancialSummary v-if="canViewFinancial" :result="result" />
-          <ElAlert
-            v-else
-            title="無財務資料查看權限；仍可查詢已授權營運資料"
-            type="info"
-            :closable="false"
-          />
-          <details class="operational-totals"
-            ><summary>查看營運統計</summary
-            ><ReportOperationalMetrics :stats="result.totals" :currency="result.query.currency"
-          /></details>
-        </template>
-        <ReportOperationalMetrics v-else :stats="result.totals" :currency="result.query.currency" />
-        <p v-if="!overview && result.query.tab === 'agents'" class="context">
-          本頁僅呈現代理歸屬的原幣營運資料；正式核對與結算由財務中心管理。
-          <RouterLink v-if="canViewFinancial" to="/finance/reconciliation/agents"
-            >前往代理對帳</RouterLink
-          >
-          <span v-else>目前無財務資料查看權限。</span>
-        </p>
-        <p v-if="!overview && result.query.tab === 'merchants'" class="context"
-          >隔離樣本商戶尚未與商務主檔建立核對關聯，因此暫不提供商戶詳情連結，避免開啟錯誤商戶；精確注單仍可查詢。</p
-        >
-        <template v-if="overview">
-          <div class="overview-links"
-            ><ElButton type="primary" @click="openReport">查看同範圍報表</ElButton></div
-          >
-          <p class="context"
-            >目前待辦：尚未接入可核對的待辦狀態來源，因此不顯示待辦數字。營運指標僅計入上方已套用範圍。</p
-          >
-        </template>
-        <template v-else>
-          <div class="table-tools"
-            ><span
-              >共 {{ display(result.rows.length) }} 列 ·
-              {{ reportTabLabels[result.query.tab] }}</span
-            ><ElButton v-if="scope.canExport" :disabled="loading" @click="download"
-              >匯出 CSV</ElButton
-            ></div
-          >
-          <div class="table-region"
-            ><ArtTable
-              :key="result.query.tab"
-              :data="page.items"
-              row-key="key"
-              empty-text="本範圍沒有可呈現明細；若有來源缺項，請以上方警示及合計狀態為準"
-              height="auto"
-              empty-height="auto"
-              :show-table-header="false"
-              style="height: auto"
+        <AppFilterForm class="report-filters" @submit.prevent="submit">
+          <ElFormItem label="日期範圍" :error="errors.date" class="dates"
+            ><ElDatePicker
+              :shortcuts="dateShortcuts"
+              popper-class="report-date-picker"
+              v-model="range"
+              type="daterange"
+              value-format="YYYY-MM-DD"
+              range-separator="至"
+              start-placeholder="開始日期"
+              end-placeholder="結束日期"
+          /></ElFormItem>
+          <ElFormItem label="原幣別" :error="errors.currency"
+            ><ElSelect v-model="draft.currency" placeholder="請選擇單一原幣別" aria-label="原幣別"
+              ><ElOption
+                v-for="currency in Object.keys(scope.currencies)"
+                :key="currency"
+                :value="currency"
+                :label="currency" /></ElSelect
+          ></ElFormItem>
+          <ElFormItem v-if="!overview && current.tab === 'agents'" label="代理"
+            ><ElSelect v-model="draft.agent" clearable placeholder="全部授權範圍" aria-label="代理"
+              ><ElOption
+                v-for="item in agents"
+                :key="item.id"
+                :value="item.id"
+                :label="item.label" /></ElSelect
+          ></ElFormItem>
+          <ElFormItem v-if="!overview && current.tab === 'merchants'" label="商戶"
+            ><ElSelect
+              v-model="draft.merchant"
+              clearable
+              placeholder="全部授權範圍"
+              aria-label="商戶"
+              ><ElOption
+                v-for="item in merchants"
+                :key="item.id"
+                :value="item.id"
+                :label="item.label" /></ElSelect
+          ></ElFormItem>
+          <ElFormItem v-if="!overview && current.tab === 'games'" label="供應商"
+            ><ElSelect
+              v-model="draft.provider"
+              clearable
+              placeholder="全部授權範圍"
+              aria-label="供應商"
+              ><ElOption
+                v-for="item in providers"
+                :key="item.id"
+                :value="item.id"
+                :label="item.label" /></ElSelect
+          ></ElFormItem>
+          <ElFormItem v-if="!overview && current.tab === 'games'" label="遊戲名稱／代碼"
+            ><ElInput v-model="draft.game" clearable placeholder="遊戲名稱或代碼"
+          /></ElFormItem>
+          <div class="form-actions">
+            <ElButton
+              text
+              :aria-expanded="moreFiltersOpen"
+              aria-controls="report-extra-filters"
+              @click="moreFiltersOpen = !moreFiltersOpen"
+              >{{ moreFiltersOpen ? '收合條件' : '更多條件'
+              }}{{ extraFilterCount ? `（${extraFilterCount}）` : '' }}</ElButton
             >
-              <ElTableColumn
-                v-if="result.query.tab === 'operations'"
-                prop="date"
-                label="日期"
-                min-width="150"
-                ><template #header
-                  ><button
-                    type="button"
-                    class="sort-control"
-                    :aria-label="sortLabel('date', '日期')"
-                    @click="sort('date')"
-                    >日期 <span>{{ sortState('date') }}</span></button
-                  ></template
-                ><template #default="{ row }">{{ row.label }}</template></ElTableColumn
-              >
-              <ElTableColumn v-else :label="dimensionLabel" min-width="220"
-                ><template #default="{ row }"
-                  ><div class="identity"
-                    ><strong>{{ row.code || row.key }}</strong
-                    ><span>{{ row.label }}</span></div
-                  ></template
-                ></ElTableColumn
-              >
-              <ElTableColumn
-                v-if="result.query.tab === 'games'"
-                prop="provider"
-                label="供應商"
-                min-width="180"
-              />
-              <ElTableColumn
-                v-for="metric in metrics"
-                :key="metric.key"
-                :prop="metric.key"
-                :label="metric.label"
-                min-width="155"
-                align="right"
-                ><template #header
-                  ><button
-                    type="button"
-                    class="sort-control"
-                    :aria-label="sortLabel(metric.key, metric.label)"
-                    @click="sort(metric.key)"
-                    >{{ metric.label }} <span>{{ sortState(metric.key) }}</span></button
-                  ></template
-                ><template #default="{ row }"
-                  ><span class="metric-value"
-                    >{{ display(row[metric.key], metric.amount)
-                    }}<small v-if="metric.amount"> {{ result.query.currency }}</small></span
-                  ></template
-                ></ElTableColumn
-              >
-              <ElTableColumn label="操作" width="115"
-                ><template #default="{ row }"
-                  ><ElButton
-                    v-if="scope.canViewBets"
-                    link
-                    type="primary"
-                    :disabled="loading"
-                    @click="drill(row)"
-                    >查看注單</ElButton
-                  ><span v-else>無權限</span></template
-                ></ElTableColumn
-              > </ArtTable
-            >></div
-          >
-          <div class="pagination"
-            ><ElPagination
-              :current-page="page.page"
-              :page-size="page.size"
-              :total="page.total"
-              :page-sizes="[10, 20, 50]"
-              layout="total, sizes, prev, pager, next"
-              @current-change="pageChange"
-              @size-change="sizeChange"
-          /></div>
-        </template>
-      </template>
-      <ElEmpty
-        v-else-if="!loading && !failure && scope.canView"
-        description="尚未查詢：請選擇日期及單一原幣別"
+            <ElButton type="primary" native-type="submit" :disabled="!scope.canView">查詢</ElButton>
+            <ElButton @click="reset">重置</ElButton>
+          </div>
+          <div v-show="moreFiltersOpen" id="report-extra-filters" class="more-filters">
+            <div class="extra-filter-grid">
+              <ElFormItem v-if="overview || current.tab !== 'agents'" label="代理"
+                ><ElSelect
+                  v-model="draft.agent"
+                  clearable
+                  placeholder="全部授權範圍"
+                  aria-label="代理"
+                  ><ElOption
+                    v-for="item in agents"
+                    :key="item.id"
+                    :value="item.id"
+                    :label="item.label" /></ElSelect
+              ></ElFormItem>
+              <ElFormItem v-if="overview || current.tab !== 'merchants'" label="商戶"
+                ><ElSelect
+                  v-model="draft.merchant"
+                  clearable
+                  placeholder="全部授權範圍"
+                  aria-label="商戶"
+                  ><ElOption
+                    v-for="item in merchants"
+                    :key="item.id"
+                    :value="item.id"
+                    :label="item.label" /></ElSelect
+              ></ElFormItem>
+              <ElFormItem v-if="overview || current.tab !== 'games'" label="供應商"
+                ><ElSelect
+                  v-model="draft.provider"
+                  clearable
+                  placeholder="全部授權範圍"
+                  aria-label="供應商"
+                  ><ElOption
+                    v-for="item in providers"
+                    :key="item.id"
+                    :value="item.id"
+                    :label="item.label" /></ElSelect
+              ></ElFormItem>
+              <ElFormItem v-if="overview || current.tab !== 'games'" label="遊戲名稱／代碼"
+                ><ElInput v-model="draft.game" clearable placeholder="遊戲名稱或代碼"
+              /></ElFormItem>
+            </div>
+          </div>
+        </AppFilterForm>
+        <p class="context"
+          >平台時區：{{ scope.timezone || '缺設定' }} · 營運彙總資料 ·
+          {{
+            result
+              ? `已套用 ${result.query.from} 至 ${result.query.to}／${result.query.currency} · 資料更新 ${result.cutoff}`
+              : '請完成必填條件'
+          }}
+          <span v-if="appliedFilters"> · 限定範圍：{{ appliedFilters }}（可按重置清除）</span></p
+        >
+      </ElCard>
+      <ElAlert v-if="!scope.canView" title="無報表查看權限" type="error" :closable="false" />
+      <ElAlert v-else-if="failure" :title="failure" type="error" :closable="false"
+        ><ElButton @click="load">重新查詢</ElButton></ElAlert
+      >
+      <ElAlert
+        v-if="result?.issues.length"
+        :title="result.issues.join('；')"
+        type="warning"
+        :closable="false"
       />
+      <div v-loading="loading" class="result-area">
+        <template v-if="result && !failure && scope.canView">
+          <ReportOperationalMetrics :stats="result.totals" :currency="result.query.currency" />
+          <p v-if="!overview && result.query.tab === 'agents'" class="context">
+            <RouterLink v-if="canViewFinancial" to="/finance/reconciliation/agents"
+              >前往代理對帳</RouterLink
+            >
+            <span v-else>目前無財務資料查看權限。</span>
+          </p>
+          <template v-if="overview">
+            <div class="overview-links"
+              ><ElButton type="primary" @click="openReport">查看同範圍報表</ElButton></div
+            >
+            <p class="context"
+              >目前待辦：尚未接入可核對的待辦狀態來源，因此不顯示待辦數字。營運指標僅計入上方已套用範圍。</p
+            >
+          </template>
+          <template v-else>
+            <div class="table-tools"
+              ><span
+                >共 {{ display(result.rows.length) }} 列 ·
+                {{ reportTabLabels[result.query.tab] }}</span
+              ><ElButton v-if="scope.canExport" :disabled="loading" @click="download"
+                >匯出 CSV</ElButton
+              ></div
+            >
+            <div class="table-region"
+              ><ArtTable
+                :key="result.query.tab"
+                :data="page.items"
+                row-key="key"
+                empty-text="本範圍沒有資料"
+                height="auto"
+                empty-height="auto"
+                :show-table-header="false"
+                style="height: auto"
+              >
+                <ElTableColumn
+                  v-if="result.query.tab === 'operations'"
+                  prop="date"
+                  label="日期"
+                  min-width="150"
+                  ><template #header
+                    ><button
+                      type="button"
+                      class="sort-control"
+                      :aria-label="sortLabel('date', '日期')"
+                      @click="sort('date')"
+                      >日期 <span>{{ sortState('date') }}</span></button
+                    ></template
+                  ><template #default="{ row }">{{ row.label }}</template></ElTableColumn
+                >
+                <ElTableColumn v-else :label="dimensionLabel" min-width="220"
+                  ><template #default="{ row }"
+                    ><div class="identity"
+                      ><strong>{{ row.code || row.key }}</strong
+                      ><span>{{ row.label }}</span></div
+                    ></template
+                  ></ElTableColumn
+                >
+                <ElTableColumn
+                  v-if="result.query.tab === 'games'"
+                  prop="provider"
+                  label="供應商"
+                  min-width="180"
+                />
+                <ElTableColumn
+                  v-for="metric in metrics"
+                  :key="metric.key"
+                  :prop="metric.key"
+                  :label="metric.label"
+                  min-width="155"
+                  align="right"
+                  ><template #header
+                    ><button
+                      type="button"
+                      class="sort-control"
+                      :aria-label="sortLabel(metric.key, metric.label)"
+                      @click="sort(metric.key)"
+                      >{{ metric.label }} <span>{{ sortState(metric.key) }}</span></button
+                    ></template
+                  ><template #default="{ row }"
+                    ><span class="metric-value"
+                      >{{ display(row[metric.key], metric.amount)
+                      }}<small v-if="metric.amount"> {{ result.query.currency }}</small></span
+                    ></template
+                  ></ElTableColumn
+                >
+                <ElTableColumn label="GGR" min-width="160" align="right"
+                  ><template #default="{ row }"
+                    >{{ display(reportOutcome(row).ggr, true) }}
+                    <small>{{ result.query.currency }}</small></template
+                  ></ElTableColumn
+                >
+                <ElTableColumn label="實際 RTP" min-width="110" align="right"
+                  ><template #default="{ row }">{{
+                    reportOutcome(row).rtp ?? '—'
+                  }}</template></ElTableColumn
+                >
+                <ElTableColumn label="操作" width="115"
+                  ><template #default="{ row }"
+                    ><ElButton
+                      v-if="scope.canViewBets"
+                      link
+                      type="primary"
+                      :disabled="loading"
+                      @click="drill(row)"
+                      >查看注單</ElButton
+                    ><span v-else>無權限</span></template
+                  ></ElTableColumn
+                >
+              </ArtTable></div
+            >
+            <div class="pagination"
+              ><ElPagination
+                :current-page="page.page"
+                :page-size="page.size"
+                :total="page.total"
+                :page-sizes="[10, 20, 50]"
+                layout="total, sizes, prev, pager, next"
+                @current-change="pageChange"
+                @size-change="sizeChange"
+            /></div>
+          </template>
+        </template>
+        <ElEmpty
+          v-else-if="!loading && !failure && scope.canView"
+          description="尚未查詢：請選擇日期及單一原幣別"
+        />
+      </div>
     </div>
+    <ElDialog v-model="showExampleBets" title="注單明細" width="80%">
+      <ElTable :data="exampleBets" max-height="500">
+        <ElTableColumn prop="id" label="注單編號" min-width="240" />
+        <ElTableColumn prop="time" label="時間" min-width="180" />
+        <ElTableColumn prop="merchantName" label="商戶" min-width="140" />
+        <ElTableColumn prop="gameName" label="遊戲" min-width="140" />
+        <ElTableColumn prop="currency" label="幣別" width="80" />
+        <ElTableColumn prop="amount" label="投注金額" min-width="120" />
+      </ElTable>
+    </ElDialog>
   </section>
 </template>
 <script setup lang="ts">
   import AppFilterForm from '@/components/business/game-provider/app-filter-form/index.vue'
+  import { reportOutcome } from '@/domain/report-outcome'
   import { computed, nextTick, reactive, ref, watch, onBeforeUnmount } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { ElMessage } from 'element-plus'
   import AppPageHeader from '@/components/business/game-provider/app-page-header/index.vue'
-  import ReportFinancialSummary from '@/components/business/ReportFinancialSummary.vue'
+  import SettlementReports from '@/components/business/SettlementReports.vue'
   import ReportOperationalMetrics from '@/components/business/ReportOperationalMetrics.vue'
   import {
     formatReportMetric,
@@ -285,7 +322,6 @@
   } from '@/domain/report-presentation'
   import { useReportFourTabs } from '@/composables/useReportFourTabs'
   import { createDateRangeShortcuts } from '@/utils/form/date-range-shortcuts'
-  import { reportSampleDate } from '@/mock/game-provider/report-four-tabs'
   import {
     reportTabs,
     reportTabLabels,
@@ -305,9 +341,19 @@
   } from '@/domain/report-four-tabs'
   import { listPage } from '@/domain/list-query'
   const props = defineProps<{ overview?: boolean }>()
+  const moreFiltersOpen = ref(false)
   const route = useRoute(),
     router = useRouter(),
     { scope, source, lastCurrency, rememberCurrency, canViewFinancial } = useReportFourTabs()
+  const reportSection = computed<'operations' | 'settlements' | 'payments' | 'margin'>({
+    get: () =>
+      ['settlements', 'payments', 'margin'].includes(String(route.query.section))
+        ? (route.query.section as 'settlements' | 'payments' | 'margin')
+        : 'operations',
+    set: (section) => {
+      router.replace({ path: route.path, query: { ...route.query, section } })
+    }
+  })
   const dateShortcuts = createDateRangeShortcuts(() => scope.value.timezone)
   const today = () => {
     try {
@@ -320,7 +366,7 @@
     parseFourQuery(
       props.overview ? { ...route.query, tab: 'operations' } : route.query,
       today(),
-      lastCurrency()
+      lastCurrency() || 'USD'
     )
   const current = ref(readQuery())
   const draft = reactive<FourQuery>({ ...current.value }),
@@ -522,6 +568,14 @@
     }
   }
   function drill(row: FourRow) {
+    if (!scope.value.canViewBets || loading.value) return
+    if (row.betKeys.some((k) => JSON.parse(k)[0] === 'report-example')) {
+      exampleBets.value = source.bets.filter((b) =>
+        row.betKeys.includes(JSON.stringify([b.source, b.environment, b.merchantId, b.id]))
+      )
+      showExampleBets.value = true
+      return
+    }
     if (result.value && !loading.value)
       try {
         router.push(reportDrilldown(result.value, row, scope.value))
@@ -529,6 +583,8 @@
         ElMessage.error(e instanceof Error ? e.message : '無權限')
       }
   }
+  const showExampleBets = ref(false)
+  const exampleBets = ref<typeof source.bets>([])
   watch(() => [route.fullPath, scope.value], load, { immediate: true })
   onBeforeUnmount(() => gate.next())
 </script>
@@ -536,21 +592,92 @@
   .four-reports {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+    gap: 20px;
     min-width: 0;
   }
   .four-reports > * {
     min-width: 0;
   }
+  .report-navigation {
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 8px;
+    padding: 8px 24px 0;
+  }
+  .report-navigation :deep(.el-tabs__header) {
+    margin: 0;
+  }
+  .report-navigation :deep(.el-tabs__nav-wrap::after) {
+    height: 0;
+  }
+  .report-navigation :deep(.el-tabs__item) {
+    height: 48px;
+    font-size: 14px;
+  }
+  .dimension-tabs {
+    padding: 0 4px;
+  }
+  .dimension-tabs :deep(.el-tabs__item) {
+    font-size: 13px;
+    height: 40px;
+  }
+  .query-card {
+    border-radius: 8px;
+    border-color: var(--el-border-color-lighter);
+    margin-bottom: 20px;
+  }
+  .query-card :deep(.el-card__header) {
+    padding: 20px 24px;
+  }
+  .query-card :deep(.el-card__body) {
+    padding: 18px 24px;
+  }
+  .query-heading h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--el-text-color-primary);
+  }
+  .query-heading p {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    margin: 6px 0 0;
+  }
+  .result-area :deep(.el-table th.el-table__cell) {
+    background: var(--el-fill-color-light);
+    height: 48px;
+    font-weight: 500;
+  }
+  .result-area :deep(.el-table td.el-table__cell) {
+    height: 52px;
+    font-variant-numeric: tabular-nums;
+  }
   .report-filters {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    align-items: start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 20px;
+    align-items: center;
   }
   .report-filters :deep(.el-form-item) {
-    margin-bottom: 10px;
+    margin: 0;
     min-width: 0;
+    flex: 0 1 240px;
+  }
+  .report-filters :deep(.el-form-item.dates) {
+    flex-basis: 430px;
+  }
+  .report-filters :deep(.el-form-item__label) {
+    width: auto !important;
+    padding-right: 12px;
+  }
+  .report-filters :deep(.el-form-item__content) {
+    min-width: 0;
+  }
+  .report-filters :deep(.el-input__wrapper),
+  .report-filters :deep(.el-select__wrapper),
+  .report-filters :deep(.el-range-editor) {
+    min-height: 36px;
+    box-sizing: border-box;
   }
   .report-filters :deep(.el-date-editor),
   .report-filters :deep(.el-select) {
@@ -561,7 +688,12 @@
     display: flex;
     gap: 8px;
     align-self: center;
-    grid-column: 1 / -1;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .form-actions :deep(.el-button) {
+    margin-left: 0;
+    height: 36px;
   }
   .context {
     font-size: 12px;
@@ -570,7 +702,9 @@
     overflow-wrap: anywhere;
   }
   .more-filters {
-    grid-column: 1 / -1;
+    flex: 0 0 100%;
+    border-top: 1px solid var(--el-border-color-lighter);
+    padding-top: 16px;
   }
   summary {
     cursor: pointer;
@@ -585,9 +719,9 @@
   }
   .extra-filter-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    padding-top: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    padding-top: 0;
   }
   .operational-totals {
     margin-top: 12px;
@@ -617,12 +751,22 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 12px;
-    margin: 16px 0;
+    margin: 24px 0 0;
+    padding: 20px 24px;
+    border: 1px solid var(--el-border-color-lighter);
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    background: var(--el-bg-color);
   }
   .table-region {
     max-width: 100%;
     min-width: 0;
     overflow: auto;
+    padding: 0 20px 16px;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-lighter);
+    border-top: 0;
+    border-radius: 0 0 8px 8px;
   }
   .identity {
     display: grid;
@@ -639,6 +783,9 @@
     padding: 16px 0;
   }
   @media (max-width: 900px) {
+    .extra-filter-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     .report-filters {
       grid-template-columns: 1fr 1fr;
     }
@@ -647,6 +794,14 @@
     }
   }
   @media (max-width: 720px) {
+    .report-filters :deep(.el-form-item),
+    .report-filters :deep(.el-form-item.dates) {
+      flex-basis: 100%;
+    }
+    .form-actions {
+      width: 100%;
+      margin-left: 0;
+    }
     .report-filters {
       grid-template-columns: minmax(0, 1fr);
     }

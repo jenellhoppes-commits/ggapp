@@ -173,6 +173,7 @@ export interface MerchantLineGameConfiguration {
 }
 
 export interface MerchantRecord {
+  collectionMode?: 'AgentCollect' | 'PlatformCollect'
   id: string
   code: string
   name: string
@@ -257,6 +258,12 @@ export type ReconciliationDifferenceType =
   | 'Other'
 
 export interface FinanceCalculationSnapshot {
+  reportDimensions?: {
+    providerId: string
+    gameType: string
+    conditionVersion: string
+    sourceBetIds: string[]
+  }
   /** Missing on legacy demo snapshots; never infer a contract version from formulaVersion. */
   contractReferences?: import('../domain/settlement-contracts').SettlementContractReference[]
   contractTimeBasis?: 'betAt' | 'settledAt'

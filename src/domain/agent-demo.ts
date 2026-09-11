@@ -98,38 +98,43 @@ export function agentPublishedRates(
   return rates
     .filter(
       (r) =>
-        r.status === 'Published' && (currencies.has(r.fromCurrency) || currencies.has(r.toCurrency))
+        ['Published', 'Locked'].includes(r.status) &&
+        (currencies.has(r.fromCurrency) || currencies.has(r.toCurrency))
     )
     .map((r) => ({
       id: r.id,
       date: r.date,
       fromCurrency: r.fromCurrency,
       toCurrency: r.toCurrency,
-      finalRate: r.finalRate
+      finalRate: r.finalRate,
+      status: r.status
     }))
 }
 
 export const agentDemoNotices = [
   {
     id: 'demo-guide',
-    title: '代理作業操作導覽（演示）',
+    title: '代理作業與授權範圍',
+    publishedAt: '2026-09-10 09:00',
     category: '操作說明',
     content:
-      '從代理關係及商戶管理查看授權範圍，透過商務條件調整直屬下級代理或直屬商戶的費率。此公告為介面演示，並非平台正式投遞。'
+      '可由代理關係查看授權樹，並在商戶管理查詢直屬及轄下商戶。商務條件僅開放直屬對象管理；自身取得條件唯讀，其他代理及更上層成本不開放查看。'
   },
   {
     id: 'demo-rates',
-    title: '費率生效規則說明（演示）',
+    title: 'GGR 商務比例與版本生效規則',
+    publishedAt: '2026-09-09 14:30',
     category: '商務條件',
     content:
-      '新費率須填寫生效日期，依平台時區及下注時間選取版本；未修改時沿用原費率。下級費率不得高於自身取得費率，可以相同。不回寫既有對帳單。'
+      '商務計算僅採 GGR，依供應商及遊戲類型設定比例。下發比例不得低於自身同供應商、同類型成本；未取得的類型不可向下開放。變更必須保存生效日期及版本，不覆寫歷史結算。商務比例與遊戲 RTP 分開管理。'
   },
   {
     id: 'demo-settlement',
-    title: '對帳服務開放範圍（演示）',
+    title: '商戶收付模式與核帳作業',
+    publishedAt: '2026-09-08 10:00',
     category: '服務說明',
     content:
-      '目前僅演示對帳頁面與異議草稿，沒有正式帳單、佣金計算或付款服務。草稿只保存在此瀏覽器，不會送出。'
+      '僅直屬且當期為代理統收的商戶單可由對應代理核帳／交付，實際收款方固定本代理。平台代收商戶單唯讀；平台與代理共用原單，一方鎖定後不能重複確認。結算金額取整後形成應收，捨去尾數不留至下期；未交付的整數欠款可結轉。'
   }
 ] as const
 

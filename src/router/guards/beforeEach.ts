@@ -146,6 +146,7 @@ async function handleRouteGuard(
 ): Promise<void> {
   const settingStore = useSettingStore()
   const userStore = useUserStore()
+  userStore.refreshAgentSession()
 
   // 启动进度条
   if (settingStore.showNprogress) {

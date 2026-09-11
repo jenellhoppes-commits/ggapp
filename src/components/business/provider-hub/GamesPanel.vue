@@ -138,11 +138,42 @@
             <ElFormItem label="展示名稱" required
               ><ElInput v-model="edit.name" maxlength="80" :disabled="!canManage"
             /></ElFormItem>
-            <ElFormItem label="遊戲類型" required>
-              <ElSelect v-model="edit.type" :disabled="!canManage" placeholder="請選擇遊戲類型">
-                <ElOption label="沿用供應商預設類型" value="__inherit" />
-                <ElOption v-for="type in gameTypes" :key="type" :label="type" :value="type" />
-              </ElSelect>
+            <ElFormItem required>
+              <template #label>
+                <div class="game-type-label">
+                  <span>遊戲類型</span>
+                  <ElTag :type="edit.type === '__inherit' ? 'info' : 'warning'" effect="plain">
+                    {{ edit.type === '__inherit' ? '沿用供應商預設' : '單遊戲覆寫' }}
+                  </ElTag>
+                  <ElButton
+                    v-if="edit.type !== '__inherit'"
+                    link
+                    type="primary"
+                    :disabled="!canManage"
+                    @click="edit.type = '__inherit'"
+                  >
+                    恢復沿用供應商預設
+                  </ElButton>
+                </div>
+              </template>
+              <div class="game-type-control">
+                <ElSelect
+                  v-model="edit.type"
+                  :disabled="!canManage"
+                  placeholder="請選擇遊戲類型"
+                  aria-label="遊戲類型"
+                >
+                  <ElOption label="沿用供應商預設類型" value="__inherit" />
+                  <ElOption v-for="type in gameTypes" :key="type" :label="type" :value="type" />
+                </ElSelect>
+                <small>
+                  {{
+                    edit.type === '__inherit'
+                      ? `目前沿用：${providerDefaultType}`
+                      : `目前覆寫：${edit.type}`
+                  }}
+                </small>
+              </div>
             </ElFormItem>
             <ElFormItem label="狀態">
               <ElSelect v-model="edit.status" :disabled="!canManage" aria-label="遊戲狀態">
@@ -339,6 +370,11 @@
       page: 1
     })
   const providerName = (id: string) => store.state.providers.find((p) => p.id === id)?.name || id
+  const providerDefaultType = computed(
+    () =>
+      store.state.providers.find((provider) => provider.id === selected.value?.providerId)?.profile
+        ?.defaultGameType || '未分類'
+  )
   const formatTime = (value?: string) =>
     value ? new Date(value).toLocaleString('zh-TW', { hour12: false }) : '尚未同步'
   const lines = (g: DemoGame) =>
@@ -541,6 +577,20 @@
   }
   .edit-form .el-select {
     width: 100%;
+  }
+  .game-type-control {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+  }
+  .game-type-control small {
+    color: var(--el-text-color-secondary);
+  }
+  .game-type-label {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
   }
   @media (max-width: 900px) {
     .toolbar {

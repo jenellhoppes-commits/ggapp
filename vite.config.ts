@@ -48,7 +48,8 @@ export default ({ mode }: { mode: string }) => {
       }
     },
     build: {
-      target: 'es2015',
+      // Financial arithmetic uses BigInt; older targets lower exponentiation to Math.pow.
+      target: 'es2020',
       outDir: 'dist',
       chunkSizeWarningLimit: 2000,
       minify: 'terser',

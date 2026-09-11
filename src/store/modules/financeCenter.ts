@@ -1,4 +1,14 @@
 import { defineStore } from 'pinia'
+import { reportSampleBills } from '@/domain/report-sample-bills'
+import { useProviderDemoStore } from './providerDemo'
+import { useCollectionModeStore } from './collectionMode'
+import { useUserStore } from './user'
+import { mayDeliver } from '@/domain/collection-mode'
+import {
+  prepareReconciliationDelivery,
+  RECONCILIATION_DELIVERY_KEY,
+  type ReconciliationDelivery
+} from '@/domain/reconciliation-delivery'
 import { computed, ref } from 'vue'
 import { useBusinessPartnerStore } from './businessPartner'
 import { useGameCatalogStore } from './gameCatalog'
@@ -406,6 +416,53 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
     )
 
   const agentReconciliations = ref<AgentReconciliationRecord[]>(buildAgentReconciliations())
+  // The same report-only TWD examples are projected into separate bills, never into wallets.
+  const twdExamples = transactionStore.bets
+    .filter((b) => b.id.startsWith('RPT-') && b.currency === 'USD')
+    .map((b) => ({
+      ...b,
+      id: `TWD-${b.id}`,
+      roundId: `TWD-${b.roundId}`,
+      currency: 'TWD',
+      lineUid: `REPORT-TWD-${b.lineUid}`
+    }))
+  const reportSamples = reportSampleBills(
+    [...transactionStore.bets, ...twdExamples],
+    useProviderDemoStore().state.games
+  )
+  merchantReconciliations.value.push(...reportSamples.merchants)
+  agentReconciliations.value.push(...reportSamples.agents)
+  providerReconciliations.value.push(...reportSamples.providers)
+
+  const reportActivityRows = (
+    record: MerchantReconciliationRecord | ProviderReconciliationRecord,
+    by: 'day' | 'game'
+  ) => {
+    const bets = reportSamples.activity[record.id]
+    if (!bets) return null
+    const groups = new Map<string, typeof bets>()
+    for (const bet of bets) {
+      const key = by === 'day' ? bet.time.slice(0, 10) : bet.gameId
+      groups.set(key, [...(groups.get(key) || []), bet])
+    }
+    return [...groups.entries()].map(([key, items]) => {
+      const betAmount = items.reduce((n, b) => n + b.betAmount, 0),
+        payoutAmount = items.reduce((n, b) => n + b.payoutAmount, 0)
+      const ggr = betAmount - payoutAmount
+      return {
+        date: key,
+        gameId: items[0].gameId,
+        gameCode: items[0].gameCode,
+        gameName: items[0].gameName,
+        betCount: items.length,
+        betAmount,
+        validBet: betAmount,
+        payoutAmount,
+        ggr,
+        settlementAmount: Number(((ggr * record.snapshot.ratePercent) / 100).toFixed(6))
+      }
+    })
+  }
 
   const settlementCurrencyList = Array.from(
     new Set(
@@ -675,6 +732,7 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
     )
 
   const getDailyRows = (record: MerchantReconciliationRecord): ReconciliationDailyRow[] =>
+    reportActivityRows(record, 'day') ??
     Array.from({ length: 7 }, (_, index) => {
       const ratio = [0.13, 0.15, 0.14, 0.16, 0.12, 0.17, 0.13][index]
       const betAmount = roundMoney(record.betAmount * ratio)
@@ -695,6 +753,7 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
     })
 
   const getGameRows = (record: MerchantReconciliationRecord): ReconciliationGameRow[] =>
+    reportActivityRows(record, 'game') ??
     gameStore.games.slice(0, 5).map((game, index) => {
       const ratio = [0.3, 0.24, 0.19, 0.15, 0.12][index]
       const validBet = roundMoney(record.validBet * ratio)
@@ -1258,7 +1317,215 @@ export const useFinanceCenterStore = defineStore('financeCenterStore', () => {
     return true
   }
 
+  const deliveryRaw = ref(localStorage.getItem(RECONCILIATION_DELIVERY_KEY))
+  let deliveryReadError = false
+  const deliveries = ref<ReconciliationDelivery[]>([])
+  try {
+    const saved = JSON.parse(deliveryRaw.value || '[]')
+    if (
+      !Array.isArray(saved) ||
+      saved.some(
+        (d) =>
+          !d.id ||
+          !Array.isArray(d.sources) ||
+          !Number.isFinite(d.paid) ||
+          !Number.isFinite(d.carry)
+      )
+    )
+      throw new Error('帳本格式錯誤')
+    deliveries.value = saved
+  } catch {
+    deliveryReadError = true
+  }
+  const deliveryOpening = (kind: ReconciliationDelivery['kind'], id: string) => {
+    const existing = deliveries.value.find((d) => d.id === id)
+    if (existing) return existing.opening
+    const record =
+      kind === 'provider'
+        ? findProviderReconciliation(id)
+        : kind === 'agent'
+          ? findAgentReconciliation(id)
+          : findMerchantReconciliation(id)
+    if (!record) return 0
+    const party =
+      'providerId' in record
+        ? record.providerId
+        : 'merchantId' in record
+          ? record.merchantId
+          : record.agentId
+    const consumed = new Set(deliveries.value.flatMap((d) => d.sources))
+    return Number(
+      deliveries.value
+        .filter(
+          (d) =>
+            d.kind === kind &&
+            d.party === party &&
+            d.currency === record.snapshot.settlementCurrency &&
+            d.period < record.period &&
+            !consumed.has(d.id)
+        )
+        .reduce((sum, d) => sum + d.carry, 0)
+        .toFixed(6)
+    )
+  }
+  const applyDelivery = (d: ReconciliationDelivery) => {
+    const record =
+      d.kind === 'provider'
+        ? findProviderReconciliation(d.id)
+        : d.kind === 'agent'
+          ? findAgentReconciliation(d.id)
+          : findMerchantReconciliation(d.id)
+    if (!record) return
+    if (d.source) Object.assign(record, d.source)
+    record.status = 'Locked'
+    record.confirmedSettlementAmount = d.paid
+    record.confirmationNote = d.reason
+    record.updatedAt = d.time
+    record.confirmationAdjustmentAmount = d.difference
+    record.finalSettlementAmount = d.due
+    record.adjustmentAmount = Number(
+      (Number(d.source?.adjustmentAmount || 0) + d.difference).toFixed(6)
+    )
+    addLog(
+      d.kind === 'provider'
+        ? 'Provider Reconciliation'
+        : d.kind === 'agent'
+          ? 'Agent Reconciliation'
+          : 'Merchant Reconciliation',
+      d.id,
+      '核帳／交付並鎖定',
+      String(d.system),
+      `實收付 ${d.paid}；調整 ${d.difference}；下期 ${d.carry}`,
+      d.reason
+    )
+    actionLogs.value[0].id = `DELIVERY-${d.id}`
+    actionLogs.value[0].time = d.time
+    actionLogs.value[0].operator = d.operator
+  }
+  // Only seed new, dedicated report bills. Never replace a saved delivery or a historical bill.
+  if (!deliveryReadError) {
+    for (const [kind, records] of [
+      ['merchant', reportSamples.merchants],
+      ['agent', reportSamples.agents],
+      ['provider', reportSamples.providers]
+    ] as const) {
+      records.slice(0, 2).forEach((record, index) => {
+        if (deliveries.value.some((d) => d.id === record.id)) return
+        const party =
+          'merchantId' in record
+            ? record.merchantId
+            : 'providerId' in record
+              ? record.providerId
+              : record.agentId
+        const due = Math.trunc(record.finalSettlementAmount)
+        const paid = index === 0 ? due : Math.max(0, due - 100)
+        deliveries.value.push({
+          id: record.id,
+          kind,
+          party,
+          period: record.period,
+          currency: record.currency,
+          system: record.finalSettlementAmount,
+          difference: 0,
+          opening: 0,
+          due,
+          paid,
+          carry: due - paid,
+          sources: [],
+          reason: paid === due ? '已核帳收付' : '部分收付，餘款保留至下期',
+          operator: 'Finance',
+          time: '2026-09-10T05:00:00.000Z',
+          recipient:
+            kind === 'provider'
+              ? party
+              : kind === 'merchant' && 'agentId' in record
+                ? record.agentId
+                : '平台',
+          collectionMode: kind === 'merchant' ? 'AgentCollect' : undefined,
+          source: JSON.parse(JSON.stringify(record))
+        })
+      })
+    }
+  }
+  deliveries.value.forEach(applyDelivery)
+  const deliverReconciliation = (
+    kind: ReconciliationDelivery['kind'],
+    id: string,
+    paid: number,
+    difference: number,
+    reason: string,
+    defer: boolean,
+    recipient?: string
+  ) => {
+    if (deliveryReadError) throw new Error('已保存的交付帳本無法讀取，請先修復帳本；不會覆寫原資料')
+    if (localStorage.getItem(RECONCILIATION_DELIVERY_KEY) !== deliveryRaw.value)
+      throw new Error('帳本已異動，請重新載入後核帳')
+    const record =
+      kind === 'provider'
+        ? findProviderReconciliation(id)
+        : kind === 'agent'
+          ? findAgentReconciliation(id)
+          : findMerchantReconciliation(id)
+    if (!record || ['Locked', 'Cancelled'].includes(record.status)) throw new Error('本單不可交付')
+    const user = useUserStore()
+    const merchant =
+      'merchantId' in record ? partnerStore.findMerchant(record.merchantId) : undefined
+    const mode = merchant
+      ? useCollectionModeStore().at(
+          merchant.id,
+          record.periodStart.slice(0, 10),
+          merchant.collectionMode
+        )
+      : 'PlatformCollect'
+    if (!mayDeliver(user.activeRoles(), user.info.agentId, kind, merchant?.agentId, mode))
+      throw new Error('此帳期收付模式不允許目前帳號操作')
+    const platform = user.info.roles?.some((r) => ['R_SUPER', 'R_ADMIN'].includes(r))
+    const actualRecipient =
+      'providerId' in record
+        ? record.providerId
+        : recipient || (mode === 'AgentCollect' ? merchant?.agentId : 'platform')
+    if (
+      kind === 'merchant' &&
+      (!['platform', merchant?.agentId].includes(actualRecipient) ||
+        (!platform && actualRecipient !== merchant?.agentId))
+    )
+      throw new Error('實際收款方不符合本單權限')
+    const party =
+      'providerId' in record
+        ? record.providerId
+        : 'merchantId' in record
+          ? record.merchantId
+          : record.agentId
+    const delivery = prepareReconciliationDelivery(
+      deliveries.value,
+      {
+        id,
+        kind,
+        party,
+        period: record.period,
+        currency: record.snapshot.settlementCurrency,
+        system: record.finalSettlementAmount,
+        difference,
+        paid,
+        reason,
+        operator: user.info.userName || '平台',
+        collectionMode: mode,
+        recipient: actualRecipient,
+        source: JSON.parse(JSON.stringify(record))
+      },
+      defer
+    )
+    const raw = JSON.stringify([...deliveries.value, delivery])
+    localStorage.setItem(RECONCILIATION_DELIVERY_KEY, raw)
+    deliveryRaw.value = raw
+    deliveries.value.push(delivery)
+    applyDelivery(delivery)
+  }
   return {
+    reportActivityRows,
+    deliveries,
+    deliveryOpening,
+    deliverReconciliation,
     providerReconciliations,
     merchantReconciliations,
     agentReconciliations,

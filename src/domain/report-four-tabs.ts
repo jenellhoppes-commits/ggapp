@@ -1,3 +1,4 @@
+import { reportOutcome } from './report-outcome'
 /** R03-REPORTS-4TABS: one isolated source and exact original-event aggregation. */
 export const reportTabs = ['operations', 'agents', 'merchants', 'games'] as const
 export type ReportTab = (typeof reportTabs)[number]
@@ -479,7 +480,9 @@ export function fourCsv(result: FourResult, scope: ReportScope) {
     '迄日',
     '平台時區',
     '資料更新時間',
-    '來源版本'
+    '來源版本',
+    'GGR',
+    '實際 RTP'
   ]
   const lines = result.rows.map((r) =>
     [
@@ -495,7 +498,9 @@ export function fourCsv(result: FourResult, scope: ReportScope) {
       result.query.to,
       result.timezone,
       result.cutoff,
-      result.version
+      result.version,
+      reportOutcome(r).ggr,
+      reportOutcome(r).rtp
     ]
       .map((v, i) => reportCsvText(v, i >= 3 && i <= 6 && v !== null))
       .join(',')

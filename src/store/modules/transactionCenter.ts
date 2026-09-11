@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useMemberCenterStore } from './memberCenter'
 import { useGameCatalogStore } from './gameCatalog'
+import { useBusinessPartnerStore } from './businessPartner'
+import { reportSampleActivity } from '@/domain/report-sample-activity'
 import type {
   BetBoardStage,
   BetCenterRecord,
@@ -335,6 +337,14 @@ export const useTransactionCenterStore = defineStore('transactionCenterStore', (
     })
   )
 
+  for (const sample of reportSampleActivity(
+    bets.value.filter(
+      (b) => !memberStore.members.find((m) => m.id === b.memberId)?.tags.includes('Test')
+    ),
+    useBusinessPartnerStore().merchants
+  )) {
+    if (!bets.value.some((b) => b.id === sample.id)) bets.value.push(sample)
+  }
   const resultAccessLogs = ref<BetResultAccessLog[]>([])
 
   const transactions = ref<TransactionCenterRecord[]>(
